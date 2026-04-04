@@ -1,0 +1,659 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Matching Module{% endblock %}
+
+{% block body %}
+    <div class="card">
+        <h2 style="margin-top:0;">Matching Module</h2>
+        <p class="muted">Friendships, connections, meetings, and messaging aligned with your account activity.</p>
+        <div class="row" style="margin-bottom:10px;">
+            <span class="stat" style="padding:8px 10px;"><b id="unread-msg-count" style="font-size:16px;">{{ unreadMessages }}</b> unread messages</span>
+            <span class="stat" style="padding:8px 10px;"><b id="unread-notif-count" style="font-size:16px;">{{ unreadNotifications }}</b> unread notifications</span>
+        </div>
+
+        <h3>Pending Friend Requests</h3>
+        <table>
+            <thead><tr><th>ID</th><th>From</th><th>To</th><th>Status</th><th>Created</th></tr></thead>
+            <tbody>
+            {% for f in pending %}
+                <tr>
+                    <td>{{ f.friendship_id }}</td>
+                    <td>{{ f.user1_id }}</td>
+                    <td>{{ f.user2_id }}</td>
+                    <td>{{ f.status }}</td>
+                    <td>{{ f.created_date }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="muted">No pending requests</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <h3 style="margin-top:16px;">Accepted Friendships</h3>
+        <table>
+            <thead><tr><th>ID</th><th>User 1</th><th>User 2</th><th>Status</th><th>Accepted</th></tr></thead>
+            <tbody>
+            {% for f in friends %}
+                <tr>
+                    <td>{{ f.friendship_id }}</td>
+                    <td>{{ f.user1_id }}</td>
+                    <td>{{ f.user2_id }}</td>
+                    <td>{{ f.status }}</td>
+                    <td>{{ f.accepted_date ?: '-' }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="muted">No accepted friendships</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <h3 style="margin-top:16px;">Message Inbox</h3>
+        <div class="card" style="padding:0; border:1px solid #e5e7eb; margin-bottom:14px; overflow:auto;">
+            <table>
+                <thead><tr><th>User</th><th>Presence</th><th>Last Message</th><th>Time</th><th>Unread</th><th>Open</th></tr></thead>
+                <tbody id="inbox-body">
+                {% for c in conversations %}
+                    <tr data-other-user-id="{{ c.other_user_id }}">
+                        <td>{{ c.other_full_name ?: c.other_username }}</td>
+                        <td>
+                            <span data-presence-for="{{ c.other_user_id }}" style="display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700; {{ c.is_online ? 'background:#dcfce7; color:#166534;' : 'background:#e2e8f0; color:#334155;' }}">
+                                {{ c.is_online ? 'Online' : 'Offline' }}
+                            </span>
+                        </td>
+                        <td>{{ c.last_message ?: '-' }}</td>
+                        <td>{{ c.last_message_at ?: '-' }}</td>
+                        <td>{{ c.unread_count }}</td>
+                        <td><a href="{{ path('app_matching_index', { chatWith: c.other_user_id }) }}">View</a></td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6" class="muted">No conversations yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if selectedConversationUser > 0 %}
+            <h3>Conversation with User #{{ selectedConversationUser }}</h3>
+            <div class="card" style="padding:0; border:1px solid #e5e7eb; margin-bottom:10px; overflow:auto; max-height:420px;" id="conversation-wrap">
+                <table>
+                    <thead><tr><th>From</th><th>To</th><th>Message</th><th>Sent</th><th>Read</th></tr></thead>
+                    <tbody id="conversation-body">
+                    {% for m in conversation %}
+                        <tr data-message-id="{{ m.message_id }}">
+                            <td>{{ m.sender_id }}</td>
+                            <td>{{ m.receiver_id }}</td>
+                            <td>{{ m.content }}</td>
+                            <td>{{ m.sent_at }}</td>
+                            <td>{{ m.is_read ? 'Yes' : 'No' }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5" class="muted">No messages in this conversation.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <form method="post" action="{{ path('app_matching_message_send') }}" class="row" style="display:grid; gap:8px; max-width:620px;" id="chat-send-form">
+                <input type="hidden" name="receiver_id" value="{{ selectedConversationUser }}">
+                <textarea name="content" rows="3" placeholder="Type message or use microphone for voice..." required id="chat-message-input"></textarea>
+                <div class="row" style="gap:8px; display:flex;">
+                    <button type="button" id="chat-record-btn" class="btn btn-secondary" style="flex: 0 0 auto;">
+                        🎤 Record Voice
+                    </button>
+                    <button type="button" id="chat-ai-reply-btn" class="btn btn-secondary" style="flex: 0 0 auto; display:none;">
+                        ✨ AI Suggest
+                    </button>
+                    <button type="submit" class="btn btn-primary">📤 Send</button>
+                </div>
+            </form>
+            <div id="chat-stt-status" class="muted" style="margin-top:6px; display:none;"></div>
+            <div id="typing-indicator" class="muted" style="margin-top:8px; display:none; font-style:italic;">User is typing...</div>
+        {% endif %}
+
+        <h3 style="margin-top:16px;">Notification Center</h3>
+        <form method="post" action="{{ path('app_matching_notification_read_all') }}" style="margin-bottom:8px;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('matching_notification_read_all') }}">
+            <button type="submit">Mark all as read</button>
+        </form>
+        <div class="card" style="padding:0; border:1px solid #e5e7eb; overflow:auto;">
+            <table>
+                <thead><tr><th>Type</th><th>Content</th><th>Related User</th><th>Created</th><th>Read</th><th>Action</th></tr></thead>
+                <tbody id="notifications-body">
+                {% for n in notifications %}
+                    <tr data-notification-id="{{ n.notification_id }}">
+                        <td>{{ n.type }}</td>
+                        <td>{{ n.content }}</td>
+                        <td>{{ n.related_full_name ?: n.related_username ?: '-' }}</td>
+                        <td>{{ n.created_at }}</td>
+                        <td>{{ n.is_read ? 'Yes' : 'No' }}</td>
+                        <td>
+                            {% if not n.is_read %}
+                                <form method="post" action="{{ path('app_matching_notification_read') }}">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('matching_notification_read') }}">
+                                    <input type="hidden" name="notification_id" value="{{ n.notification_id }}">
+                                    <button type="submit">Mark read</button>
+                                </form>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6" class="muted">No notifications yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const selectedConversationUser = {{ selectedConversationUser }};
+            const currentUserId = {{ userId }};
+            const msgCount = document.getElementById('unread-msg-count');
+            const notifCount = document.getElementById('unread-notif-count');
+            const conversationBody = document.getElementById('conversation-body');
+            const conversationWrap = document.getElementById('conversation-wrap');
+            const sendForm = document.getElementById('chat-send-form');
+            const chatInput = document.getElementById('chat-message-input');
+            const typingIndicator = document.getElementById('typing-indicator');
+            const notificationsBody = document.getElementById('notifications-body');
+            const recordBtn = document.getElementById('chat-record-btn');
+            const sttStatus = document.getElementById('chat-stt-status');
+
+            const typingEndpoint = '{{ path('app_matching_typing') }}';
+            const sttEndpoint = '{{ path('app_matching_stt_transcribe') }}';
+            const notificationReadEndpoint = '{{ path('app_matching_notification_read') }}';
+            const notificationReadToken = '{{ csrf_token('matching_notification_read') }}';
+
+            const parseMessageId = (tr) => Number(tr?.getAttribute('data-message-id') || 0);
+            const existingRows = conversationBody ? Array.from(conversationBody.querySelectorAll('tr[data-message-id]')) : [];
+            let lastMessageId = existingRows.length ? Math.max(...existingRows.map(parseMessageId)) : 0;
+            const parseNotificationId = (tr) => Number(tr?.getAttribute('data-notification-id') || 0);
+            const notificationRows = notificationsBody ? Array.from(notificationsBody.querySelectorAll('tr[data-notification-id]')) : [];
+            let lastNotificationId = notificationRows.length ? Math.max(...notificationRows.map(parseNotificationId)) : 0;
+            let typingTimer = null;
+            let mediaRecorder = null;
+            let mediaStream = null;
+            let audioChunks = [];
+            let recording = false;
+
+            const setCounts = (data) => {
+                if (msgCount && typeof data.unreadMessages !== 'undefined') {
+                    msgCount.textContent = String(data.unreadMessages);
+                }
+                if (notifCount && typeof data.unreadNotifications !== 'undefined') {
+                    notifCount.textContent = String(data.unreadNotifications);
+                }
+            };
+
+            const appendMessageRow = (m) => {
+                if (!conversationBody || !m || !m.message_id) {
+                    return;
+                }
+                if (conversationBody.querySelector('tr[data-message-id="' + String(m.message_id) + '"]')) {
+                    return;
+                }
+
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-message-id', String(m.message_id));
+
+                const from = document.createElement('td');
+                from.textContent = String(m.sender_id ?? '-');
+
+                const to = document.createElement('td');
+                to.textContent = String(m.receiver_id ?? '-');
+
+                const content = document.createElement('td');
+                content.textContent = String(m.content ?? '');
+
+                const sentAt = document.createElement('td');
+                sentAt.textContent = String(m.sent_at ?? '');
+
+                const isRead = document.createElement('td');
+                isRead.textContent = Number(m.is_read) === 1 ? 'Yes' : 'No';
+
+                tr.appendChild(from);
+                tr.appendChild(to);
+                tr.appendChild(content);
+                tr.appendChild(sentAt);
+                tr.appendChild(isRead);
+                conversationBody.appendChild(tr);
+
+                if (conversationWrap) {
+                    conversationWrap.scrollTop = conversationWrap.scrollHeight;
+                }
+            };
+
+            const updatePresence = (presenceMap) => {
+                if (!presenceMap || typeof presenceMap !== 'object') {
+                    return;
+                }
+
+                Object.keys(presenceMap).forEach((userId) => {
+                    const el = document.querySelector('[data-presence-for="' + String(userId) + '"]');
+                    if (!el) {
+                        return;
+                    }
+
+                    const online = Boolean(presenceMap[userId]);
+                    el.textContent = online ? 'Online' : 'Offline';
+                    el.style.background = online ? '#dcfce7' : '#e2e8f0';
+                    el.style.color = online ? '#166534' : '#334155';
+                });
+            };
+
+            const prependNotificationRow = (n) => {
+                if (!notificationsBody || !n || !n.notification_id) {
+                    return;
+                }
+                if (notificationsBody.querySelector('tr[data-notification-id="' + String(n.notification_id) + '"]')) {
+                    return;
+                }
+
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-notification-id', String(n.notification_id));
+
+                const escapeHtml = (value) => String(value)
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#39;');
+
+                const related = n.related_full_name || n.related_username || '-';
+                tr.innerHTML =
+                    '<td>' + escapeHtml(n.type || '-') + '</td>' +
+                    '<td>' + escapeHtml(n.content || '-') + '</td>' +
+                    '<td>' + escapeHtml(related) + '</td>' +
+                    '<td>' + escapeHtml(n.created_at || '-') + '</td>' +
+                    '<td>No</td>' +
+                    '<td>' +
+                        '<form method="post" action="' + notificationReadEndpoint + '">' +
+                            '<input type="hidden" name="_csrf_token" value="' + notificationReadToken + '">' +
+                            '<input type="hidden" name="notification_id" value="' + String(n.notification_id) + '">' +
+                            '<button type="submit">Mark read</button>' +
+                        '</form>' +
+                    '</td>';
+
+                if (notificationsBody.firstChild) {
+                    notificationsBody.insertBefore(tr, notificationsBody.firstChild);
+                } else {
+                    notificationsBody.appendChild(tr);
+                }
+            };
+
+            const sendTyping = async (isTyping) => {
+                if (selectedConversationUser <= 0) {
+                    return;
+                }
+
+                try {
+                    await fetch(typingEndpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: new URLSearchParams({
+                            receiver_id: String(selectedConversationUser),
+                            is_typing: isTyping ? '1' : '0'
+                        })
+                    });
+                } catch (e) {
+                    // Ignore transient typing status errors.
+                }
+            };
+
+            const setSttStatus = (text, isError) => {
+                if (!sttStatus) {
+                    return;
+                }
+                sttStatus.style.display = text ? 'block' : 'none';
+                sttStatus.textContent = text || '';
+                sttStatus.style.color = isError ? '#b91c1c' : '#334155';
+            };
+
+            const stopTracks = () => {
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach((t) => t.stop());
+                    mediaStream = null;
+                }
+            };
+
+            const transcribeRecordedAudio = async () => {
+                if (audioChunks.length === 0) {
+                    setSttStatus('No audio captured.', true);
+                    return;
+                }
+
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                const form = new FormData();
+                form.append('audio_file', blob, 'recording.webm');
+
+                setSttStatus('Transcribing audio...', false);
+
+                try {
+                    const response = await fetch(sttEndpoint, {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        body: form
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok || !data.ok) {
+                        throw new Error(data.error || 'Transcription failed.');
+                    }
+
+                    const transcript = String(data.text || '').trim();
+                    if (!transcript) {
+                        setSttStatus('No speech detected.', true);
+                        return;
+                    }
+
+                    const prefix = chatInput.value.trim().length > 0 ? (chatInput.value.trimEnd() + ' ') : '';
+                    chatInput.value = prefix + transcript;
+                    chatInput.focus();
+                    setSttStatus('Transcription inserted.', false);
+                } catch (e) {
+                    setSttStatus(e.message || 'Transcription failed.', true);
+                }
+            };
+
+            const startRecording = async () => {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    setSttStatus('Microphone recording is not supported in this browser.', true);
+                    return;
+                }
+
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(mediaStream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data && event.data.size > 0) {
+                            audioChunks.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = async () => {
+                        stopTracks();
+                        await transcribeRecordedAudio();
+                    };
+
+                    mediaRecorder.start();
+                    recording = true;
+                    if (recordBtn) {
+                        recordBtn.textContent = 'Stop Recording';
+                    }
+                    setSttStatus('Recording... click again to stop.', false);
+                } catch (e) {
+                    stopTracks();
+                    setSttStatus('Unable to access microphone.', true);
+                }
+            };
+
+            const stopRecording = () => {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                } else {
+                    stopTracks();
+                }
+
+                recording = false;
+                if (recordBtn) {
+                    recordBtn.textContent = 'Start Recording';
+                }
+            };
+
+            const markConversationRead = async () => {
+                if (!selectedConversationUser) {
+                    return;
+                }
+
+                try {
+                    await fetch('{{ path('app_matching_conversation_read') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: new URLSearchParams({ other_user_id: String(selectedConversationUser) })
+                    });
+                } catch (e) {
+                    // Ignore transient read-mark errors.
+                }
+            };
+
+            const handleRealtimePayload = async (data) => {
+                setCounts(data);
+                updatePresence(data.presence);
+
+                if (Array.isArray(data.newNotifications) && data.newNotifications.length > 0) {
+                    for (let i = data.newNotifications.length - 1; i >= 0; i -= 1) {
+                        prependNotificationRow(data.newNotifications[i]);
+                    }
+                }
+
+                if (typeof data.latestNotificationId !== 'undefined') {
+                    lastNotificationId = Number(data.latestNotificationId) || lastNotificationId;
+                }
+
+                if (Array.isArray(data.newMessages) && data.newMessages.length > 0) {
+                    data.newMessages.forEach(appendMessageRow);
+                    const newest = Number(data.newMessages[data.newMessages.length - 1].message_id || 0);
+                    if (newest > lastMessageId) {
+                        lastMessageId = newest;
+                    }
+                    await markConversationRead();
+                } else if (typeof data.latestMessageId !== 'undefined') {
+                    lastMessageId = Math.max(lastMessageId, Number(data.latestMessageId) || 0);
+                }
+
+                if (typingIndicator) {
+                    typingIndicator.style.display = data.typing ? 'block' : 'none';
+                }
+            };
+
+            const startPollingFallback = () => {
+                const poll = async () => {
+                    const pollUrl = new URL('{{ path('app_matching_realtime_poll') }}', window.location.origin);
+                    if (selectedConversationUser > 0) {
+                        pollUrl.searchParams.set('chatWith', String(selectedConversationUser));
+                        pollUrl.searchParams.set('afterMessageId', String(lastMessageId));
+                    }
+                    pollUrl.searchParams.set('afterNotificationId', String(lastNotificationId));
+
+                    try {
+                        const res = await fetch(pollUrl.toString(), {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+
+                        if (!res.ok) {
+                            setTimeout(poll, 2500);
+                            return;
+                        }
+
+                        const data = await res.json();
+                        await handleRealtimePayload(data);
+                    } catch (e) {
+                        // Ignore transient polling errors and retry.
+                    }
+
+                    setTimeout(poll, 1800);
+                };
+
+                poll();
+            };
+
+            const connectSse = () => {
+                if (typeof EventSource === 'undefined') {
+                    startPollingFallback();
+                    return;
+                }
+
+                const streamUrl = new URL('{{ path('app_matching_realtime_stream') }}', window.location.origin);
+                if (selectedConversationUser > 0) {
+                    streamUrl.searchParams.set('chatWith', String(selectedConversationUser));
+                    streamUrl.searchParams.set('afterMessageId', String(lastMessageId));
+                }
+                streamUrl.searchParams.set('afterNotificationId', String(lastNotificationId));
+
+                const source = new EventSource(streamUrl.toString());
+
+                source.addEventListener('update', async (event) => {
+                    let data = {};
+                    try {
+                        data = JSON.parse(event.data || '{}');
+                    } catch (e) {
+                        return;
+                    }
+
+                    await handleRealtimePayload(data);
+                });
+
+                source.addEventListener('done', () => {
+                    source.close();
+                    setTimeout(connectSse, 300);
+                });
+
+                source.onerror = () => {
+                    source.close();
+                    startPollingFallback();
+                };
+            };
+
+            let socketConnection = null;
+
+            const connectViaTcpSocket = () => {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const socketUrl = protocol + '//' + window.location.hostname + ':9090';
+
+                try {
+                    socketConnection = new WebSocket(socketUrl);
+
+                    socketConnection.onopen = () => {
+                        console.log('[Chat] Connected to TCP socket server');
+                        // Register user
+                        const userId = {{ app.user.id ?? 0 }};
+                        if (userId > 0) {
+                            socketConnection.send('REGISTER:' + userId);
+                        }
+                    };
+
+                    socketConnection.onmessage = async (event) => {
+                        const msg = event.data.trim();
+                        if (msg.startsWith('MSG:')) {
+                            const parts = msg.split(':', 4);
+                            if (parts.length === 4) {
+                                const fromId = parseInt(parts[1]);
+                                const toId = parseInt(parts[2]);
+                                const content = parts[3] || '';
+
+                                // Update UI if message is from current conversation
+                                if (selectedConversationUser === fromId) {
+                                    lastMessageId = Math.max(lastMessageId, fromId);
+                                    await markConversationRead();
+                                    // Re-fetch messages to display new message
+                                    window.location.reload();
+                                }
+                            }
+                        }
+                    };
+
+                    socketConnection.onerror = (error) => {
+                        console.warn('[Chat] Socket error, falling back to SSE:', error);
+                        socketConnection = null;
+                        connectSse();
+                    };
+
+                    socketConnection.onclose = () => {
+                        console.log('[Chat] Socket closed, attempting reconnect...');
+                        socketConnection = null;
+                        setTimeout(connectViaTcpSocket, 2000);
+                    };
+                } catch (e) {
+                    console.warn('[Chat] TCP socket unavailable, using SSE:', e);
+                    connectSse();
+                }
+            };
+
+            // Try TCP socket first, fall back to SSE
+            if (selectedConversationUser > 0 && typeof WebSocket !== 'undefined') {
+                connectViaTcpSocket();
+            } else {
+                connectSse();
+            }
+                if (recordBtn) {
+                    recordBtn.addEventListener('click', async () => {
+                        if (!recording) {
+                            await startRecording();
+                        } else {
+                            stopRecording();
+                        }
+                    });
+                }
+
+                chatInput.addEventListener('input', () => {
+                    sendTyping(true);
+                    if (typingTimer !== null) {
+                        clearTimeout(typingTimer);
+                    }
+                    typingTimer = setTimeout(() => {
+                        sendTyping(false);
+                    }, 1200);
+                });
+
+                chatInput.addEventListener('blur', () => {
+                    sendTyping(false);
+                });
+
+                sendForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const content = chatInput.value.trim();
+                    if (!content) {
+                        return;
+                    }
+
+                    try {
+                        // Send via TCP socket if available (for instant relay)
+                        if (socketConnection && socketConnection.readyState === WebSocket.OPEN) {
+                            const userId = {{ app.user.id ?? 0 }};
+                            socketConnection.send('MSG:' + userId + ':' + selectedConversationUser + ':' + content);
+                        }
+
+                        // Also persist via HTTP (ensures database storage)
+                        const response = await fetch('{{ path('app_matching_message_send') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: new URLSearchParams({
+                                receiver_id: String(selectedConversationUser),
+                                content
+                            })
+                        });
+
+                        if (response.ok) {
+                            sendTyping(false);
+                            chatInput.value = '';
+                            setSttStatus('', false);
+                        }
+                    } catch (err) {
+                        // Ignore transient send errors in UI; backend remains source of truth.
+                    }
+                });
+            }
+
+            // Initialize realtime connection (TCP socket first, fallback to SSE/polling)
+            if (selectedConversationUser > 0 && typeof WebSocket !== 'undefined') {
+                connectViaTcpSocket();
+            } else {
+                connectSse();
+            }
+        })();
+    </script>
+{% endblock %}

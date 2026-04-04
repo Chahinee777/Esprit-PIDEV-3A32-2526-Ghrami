@@ -1,0 +1,318 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Friends & Connections{% endblock %}
+
+{% block body %}
+<div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div>
+            <h1 style="margin: 0;">Friends & Connections</h1>
+            <p style="color: #666; margin-top: 8px;">Discover users, manage friend requests, and build your network</p>
+        </div>
+        <div style="text-align: right;">
+            <p style="margin: 0; font-size: 14px; color: #666;">
+                <strong style="color: #000;">{{ friendStats.total_friends }}</strong> Friends
+                <span style="margin: 0 10px; color: #ccc;">•</span>
+                <strong style="color: #f59e0b;">{{ friendStats.pending_count }}</strong> Pending
+            </p>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div style="border-bottom: 2px solid #e5e7eb; margin-bottom: 30px;">
+        <div style="display: flex; gap: 20px;">
+            <button class="tab-btn active" data-tab="browse" style="padding: 10px 0; border: none; background: none; cursor: pointer; font-size: 16px; font-weight: 600; border-bottom: 3px solid #667eea; color: #667eea;">
+                👥 Browse Users
+            </button>
+            <button class="tab-btn" data-tab="pending" style="padding: 10px 0; border: none; background: none; cursor: pointer; font-size: 16px; font-weight: 600; color: #999;">
+                ⏳ Pending Requests <span style="background: #f59e0b; color: white; padding: 2px 8px; margin-left: 8px; border-radius: 999px; font-size: 12px;">{{ friendStats.pending_count }}</span>
+            </button>
+            <button class="tab-btn" data-tab="friends" style="padding: 10px 0; border: none; background: none; cursor: pointer; font-size: 16px; font-weight: 600; color: #999;">
+                ⭐ My Friends <span style="background: #10b981; color: white; padding: 2px 8px; margin-left: 8px; border-radius: 999px; font-size: 12px;">{{ friendStats.total_friends }}</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Browse Users Tab -->
+    <div id="browse-tab" class="tab-content">
+        <div style="margin-bottom: 20px;">
+            <input type="text" id="browse-search" placeholder="🔍 Search by username, name..." 
+                   style="width: 100%; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+
+        <div id="browse-users-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+            {% for user in available_users %}
+                <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; text-align: center; transition: all 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" class="user-card">
+                    <div style="width: 80px; height: 80px; margin: 0 auto 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; font-weight: bold;">
+                        {{ user.username[0]|upper }}
+                    </div>
+                    
+                    <h3 style="margin: 0 0 4px 0; font-size: 18px;">{{ user.full_name ?: user.username }}</h3>
+                    <p style="margin: 0 0 12px 0; color: #999; font-size: 14px;">@{{ user.username }}</p>
+                    
+                    {% if user.bio %}
+                        <p style="margin: 0 0 12px 0; color: #666; font-size: 13px; line-height: 1.5;">{{ user.bio }}</p>
+                    {% endif %}
+
+                    <div style="margin: 12px 0; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                        <p style="margin: 0; font-size: 12px; color: #999;">
+                            📍 {{ user.location ?: 'No location' }}
+                        </p>
+                    </div>
+
+                    <button class="friend-action-btn" data-user-id="{{ user.id }}" data-action="send-request" 
+                            style="width: 100%; margin-top: 12px; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: opacity 0.2s ease;">
+                        ➕ Add Friend
+                    </button>
+                </div>
+            {% else %}
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px;">
+                    <p style="color: #999; font-size: 16px;">No users available to add</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Pending Requests Tab -->
+    <div id="pending-tab" class="tab-content" style="display: none;">
+        <div id="pending-requests-container">
+            {% if pending_requests is empty %}
+                <div style="text-align: center; padding: 40px 20px; background: #f9fafb; border-radius: 12px;">
+                    <p style="color: #999; font-size: 16px;">No pending friend requests</p>
+                </div>
+            {% else %}
+                {% for request in pending_requests %}
+                    <div style="display: flex; align-items: center; padding: 16px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; flex: 1;">
+                            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; margin-right: 16px;">
+                                {{ request.user_full_name[0]|upper }}
+                            </div>
+                            <div>
+                                <h4 style="margin: 0; font-size: 16px;">{{ request.user_full_name ?: request.username }}</h4>
+                                <p style="margin: 4px 0 0 0; color: #999; font-size: 13px;">@{{ request.username }}</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="friend-request-btn" data-request-id="{{ request.friendship_id }}" data-action="accept"
+                                    style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                ✓ Accept
+                            </button>
+                            <button class="friend-request-btn" data-request-id="{{ request.friendship_id }}" data-action="reject"
+                                    style="padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                ✕ Reject
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- My Friends Tab -->
+    <div id="friends-tab" class="tab-content" style="display: none;">
+        <div style="margin-bottom: 20px;">
+            <input type="text" id="friends-search" placeholder="🔍 Search your friends..." 
+                   style="width: 100%; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+
+        <div id="friends-container">
+            {% if my_friends is empty %}
+                <div style="text-align: center; padding: 40px 20px; background: #f9fafb; border-radius: 12px;">
+                    <p style="color: #999; font-size: 16px;">No friends yet. Start adding some friends! 👋</p>
+                </div>
+            {% else %}
+                {% for friend in my_friends %}
+                    <div style="display: flex; align-items: center; padding: 16px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; flex: 1;">
+                            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold; margin-right: 16px;">
+                                {{ friend.friend_full_name[0]|upper }}
+                            </div>
+                            <div>
+                                <h4 style="margin: 0; font-size: 16px;">{{ friend.friend_full_name ?: friend.friend_username }}</h4>
+                                <p style="margin: 4px 0 0 0; color: #999; font-size: 13px;">@{{ friend.friend_username }}</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <a href="{{ path('app_matching_index', { chatWith: friend.friend_id }) }}"
+                               style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block;">
+                                💬 Message
+                            </a>
+                            <button class="friend-remove-btn" data-friend-id="{{ friend.friendship_id }}"
+                                    style="padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                ✕ Remove
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tab switching
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabName = this.dataset.tab;
+            
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            // Remove active state from all buttons
+            tabButtons.forEach(b => {
+                b.style.color = '#999';
+                b.style.borderBottom = 'none';
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').style.display = 'block';
+            this.style.color = '#667eea';
+            this.style.borderBottom = '3px solid #667eea';
+        });
+    });
+
+    // Browse search
+    document.getElementById('browse-search').addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase();
+        document.querySelectorAll('.user-card').forEach(card => {
+            const name = card.textContent.toLowerCase();
+            card.style.display = name.includes(query) ? 'block' : 'none';
+        });
+    });
+
+    // Friends search
+    document.getElementById('friends-search')?.addEventListener('input', function(e) {
+        const query = e.target.value.toLowerCase();
+        const container = document.getElementById('friends-container');
+        const cards = container.querySelectorAll('div[style*="justify-content: space-between"]');
+        cards.forEach(card => {
+            const text = card.textContent.toLowerCase();
+            card.style.display = text.includes(query) ? 'flex' : 'none';
+        });
+    });
+
+    // Add friend button
+    document.querySelectorAll('.friend-action-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const userId = this.dataset.userId;
+            
+            try {
+                const response = await fetch('/matching/friend/request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new URLSearchParams({
+                        to_user_id: String(userId)
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.ok) {
+                    this.textContent = '✓ Request Sent';
+                    this.disabled = true;
+                    this.style.opacity = '0.5';
+                }
+            } catch (err) {
+                alert('Error sending friend request');
+                console.error(err);
+            }
+        });
+    });
+
+    // Accept/Reject friend requests
+    document.querySelectorAll('.friend-request-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const requestId = this.dataset.requestId;
+            const action = this.dataset.action;
+            const endpoint = action === 'accept' ? '/matching/friend/accept' : '/matching/friend/reject';
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new URLSearchParams({ friendship_id: String(requestId) })
+                });
+                
+                const data = await response.json();
+                if (data.ok) {
+                    this.closest('div[style*="padding: 16px"]').remove();
+                    
+                    // Update pending count
+                    const newCount = parseInt(document.querySelector('[data-tab="pending"] span').textContent) - 1;
+                    document.querySelector('[data-tab="pending"] span').textContent = newCount;
+                }
+            } catch (err) {
+                alert('Error processing request');
+                console.error(err);
+            }
+        });
+    });
+
+    // Remove friend button
+    document.querySelectorAll('.friend-remove-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            if (!confirm('Remove this friend?')) return;
+            
+            const friendshipId = this.dataset.friendId;
+            
+            try {
+                const response = await fetch('/matching/friend/remove', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new URLSearchParams({ friendship_id: String(friendshipId) })
+                });
+                
+                const data = await response.json();
+                if (data.ok) {
+                    this.closest('div[style*="padding: 16px"]').remove();
+                }
+            } catch (err) {
+                alert('Error removing friend');
+                console.error(err);
+            }
+        });
+    });
+
+    // Hover effects
+    document.querySelectorAll('.user-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+            this.style.transform = 'translateY(-5px)';
+        });
+        card.addEventListener('mouseleave', function() {
+            this.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
+
+<style>
+    .tab-btn {
+        transition: all 0.3s ease;
+    }
+    
+    .tab-btn:hover {
+        color: #667eea;
+    }
+    
+    .user-card {
+        transform: translateY(0);
+        transition: all 0.3s ease;
+    }
+</style>
+{% endblock %}

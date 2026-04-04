@@ -1,4 +1,1 @@
-# Enable stateless CSRF protection for forms and logins/logouts
-framework:
-    csrf_protection:
-        check_header: true
+# Turbo configuration - CSRF protection is handled via framework.csrf_protection

@@ -1,0 +1,127 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Discover Connections - Ghrami{% endblock %}
+
+{% block body %}
+<div style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
+    <!-- Header -->
+    <div style="margin-bottom: 40px;">
+        <h1 style="font-size: 48px; font-weight: 800; color: #1c1e21; margin: 0 0 8px 0;">🔍 Discover Connections</h1>
+        <p style="font-size: 16px; color: #65676b; margin: 0;">Find people who share your passions and match your interests.</p>
+    </div>
+
+    {% if recommendations is empty %}
+        <div style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); padding: 60px 40px; text-align: center;">
+            <div style="font-size: 64px; margin-bottom: 16px;">🎯</div>
+            <h3 style="font-size: 20px; color: #1c1e21; margin: 0 0 8px 0;">No recommendations yet</h3>
+            <p style="font-size: 14px; color: #65676b; margin: 0 0 24px 0;">Add more hobbies to improve your recommendations.</p>
+            <a href="{{ path('app_progress_index') }}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">Add Hobbies</a>
+        </div>
+    {% else %}
+        <!-- Recommendations Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+            {% for rec in recommendations %}
+                <div style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); overflow: hidden; transition: all 0.3s;" 
+                     onmouseover="this.style.boxShadow='0 12px 24px rgba(0, 0, 0, 0.15)'; this.style.transform='translateY(-4px)'" 
+                     onmouseout="this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.08)'; this.style.transform='translateY(0)'">
+                    
+                    <!-- Match Badge -->
+                    <div style="position: relative; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px; color: white; text-align: center;">
+                        <div style="font-size: 32px; font-weight: 800;">{{ rec.matchPercentage }}%</div>
+                        <div style="font-size: 12px; opacity: 0.9;">Match Score</div>
+                    </div>
+
+                    <!-- User Info -->
+                    <div style="padding: 20px; text-align: center;">
+                        {% if rec.user.profile_picture %}
+                            <img src="{{ rec.user.profile_picture }}" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px; object-fit: cover;">
+                        {% else %}
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto 12px;"></div>
+                        {% endif %}
+                        
+                        <h3 style="font-size: 18px; font-weight: 700; color: #1c1e21; margin: 0 0 4px 0;">{{ rec.user.full_name ?: rec.user.username }}</h3>
+                        <p style="font-size: 13px; color: #65676b; margin: 0 0 8px 0;">@{{ rec.user.username }}</p>
+                        
+                        {% if rec.user.location %}
+                            <p style="font-size: 12px; color: #8a8d91; margin: 0 0 12px 0;">📍 {{ rec.user.location }}</p>
+                        {% endif %}
+                        
+                        {% if rec.user.bio %}
+                            <p style="font-size: 13px; color: #65676b; margin: 0 0 16px 0; line-height: 1.4;">{{ rec.user.bio[:80] }}{% if rec.user.bio|length > 80 %}...{% endif %}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Common Interests -->
+                    {% if rec.commonInterests|length > 0 %}
+                        <div style="padding: 0 20px 16px;">
+                            <div style="font-size: 12px; color: #8a8d91; font-weight: 600; margin-bottom: 8px;">🎯 Common Interests</div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                {% for interest in rec.commonInterests|slice(0, 3) %}
+                                    <span style="background: #f0f2f5; color: #1c1e21; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500;">{{ interest }}</span>
+                                {% endfor %}
+                                {% if rec.commonInterests|length > 3 %}
+                                    <span style="background: #f0f2f5; color: #1c1e21; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500;">+{{ rec.commonInterests|length - 3 }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Action Buttons -->
+                    <div style="padding: 16px; border-top: 1px solid #e4e6eb; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <button onclick="sendConnection({{ rec.user.user_id }})" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.3s;"
+                                onmouseover="this.style.boxShadow='0 4px 12px rgba(102,126,234,0.3)'" 
+                                onmouseout="this.style.boxShadow='none'">
+                            ➕ Connect
+                        </button>
+                        <a href="{{ path('app_profile_view', {'userId': rec.user.user_id}) }}" style="background: white; color: #667eea; border: 2px solid #667eea; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; text-align: center; transition: all 0.3s; cursor: pointer;"
+                           onmouseover="this.style.background='#667eea'; this.style.color='white'" 
+                           onmouseout="this.style.background='white'; this.style.color='#667eea'">
+                            👤 View Profile
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    // P2 Fix 10: Connection Discovery
+    async function sendConnection(recipientId) {
+        try {
+            const response = await fetch('{{ path('app_discovery_api_connect') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new URLSearchParams({
+                    _csrf_token: '{{ csrf_token('json') }}',
+                    receiver_id: recipientId
+                })
+            });
+            const data = await response.json();
+            if (data.ok) {
+                alert('✅ Connection request sent!');
+                location.reload();
+            } else {
+                alert('❌ ' + (data.error || 'Failed to send connection request'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to send connection request');
+        }
+    }
+</script>
+
+<style>
+    @media (max-width: 768px) {
+        div[style*="grid-template-columns: repeat"] {
+            grid-template-columns: 1fr !important;
+        }
+        h1 {
+            font-size: 32px !important;
+        }
+    }
+</style>
+{% endblock %}

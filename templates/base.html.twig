@@ -1,17 +1,266 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
-        {% block stylesheets %}
-        {% endblock %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="Ghrami - La plateforme tunisienne de développement personnel et d'apprentissage par les hobbies">
+    <meta name="theme-color" content="#667eea">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/assets/ghrami.svg') }}">
+    <link rel="shortcut icon" href="{{ asset('images/assets/ghrami.svg') }}">
+    
+    <title>{% block title %}Ghrami - Connectez. Partagez. Explorez.{% endblock %}</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    {% block stylesheets %}
+        <link rel="stylesheet" href="{{ asset('css/ghrami-design-system.css') }}">
+        <style>
+            body {
+                background-color: #f0f2f5;
+                color: #1c1e21;
+            }
+            main {
+                min-height: calc(100vh - 70px);
+            }
 
-        {% block javascripts %}
-            {% block importmap %}{{ importmap('app') }}{% endblock %}
-        {% endblock %}
-    </head>
-    <body>
+            /* ── Nav icon wrapper ── */
+            .nav-icon-btn {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            /* ── Red dot badge – fixed ── */
+            .nav-icon-btn .red-dot {
+                position: absolute;
+                top: 2px;
+                right: 2px;
+                width: 10px;
+                height: 10px;
+                background-color: #ef4444;
+                border: 2px solid #ffffff;
+                border-radius: 50%;
+                display: none;          /* hidden until JS reveals it */
+                pointer-events: none;
+            }
+            .nav-icon-btn .red-dot.visible {
+                display: block;
+            }
+
+            /* ── Profile avatar button ── */
+            .profile-trigger {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                border: 2px solid #e4e6eb;
+                overflow: hidden;
+                cursor: pointer;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .profile-trigger img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+            .profile-trigger span {
+                color: #fff;
+                font-weight: 700;
+                font-size: 17px;
+                line-height: 1;
+            }
+
+            /* ── Profile dropdown ── */
+            .profile-dropdown-wrapper {
+                position: relative;
+                display: inline-block;
+            }
+            .profile-dropdown-wrapper details > summary {
+                list-style: none;
+                outline: none;
+            }
+            .profile-dropdown-wrapper details > summary::-webkit-details-marker {
+                display: none;
+            }
+            .profile-dropdown-menu {
+                position: absolute;
+                top: calc(100% + 8px);
+                right: 0;
+                background: #ffffff;
+                border: 1px solid #e4e6eb;
+                border-radius: 10px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+                overflow: hidden;
+                min-width: 200px;
+                z-index: 1000;
+            }
+            .profile-dropdown-menu a {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 16px;
+                text-decoration: none;
+                color: #1c1e21;
+                font-size: 14px;
+                font-weight: 500;
+                transition: background 0.15s ease;
+                border-bottom: 1px solid #f0f2f5;
+            }
+            .profile-dropdown-menu a:last-child {
+                border-bottom: none;
+            }
+            .profile-dropdown-menu a:hover {
+                background-color: #f0f2f5;
+            }
+            .profile-dropdown-menu a.danger {
+                color: #dc3545;
+            }
+        </style>
+    {% endblock %}
+    {% block javascripts %}
+        {% block importmap %}{{ importmap('app') }}{% endblock %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                fetch('{{ path('app_notifications_api_count') }}')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.unreadCount > 0) {
+                            const dot = document.querySelector('[data-notif-dot]');
+                            if (dot) dot.classList.add('visible');
+                        }
+                    })
+                    .catch(err => console.warn('Notification count failed:', err));
+            });
+        </script>
+    {% endblock %}
+</head>
+<body>
+
+<!-- ═══════════════════════════════════
+     TOP NAVIGATION BAR
+     ═══════════════════════════════════ -->
+<nav class="navbar top-nav">
+
+    <!-- Brand -->
+    <div class="navbar-brand">
+        <a href="{{ path('app_dashboard') }}" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:#1c1e21;">
+            <img src="{{ asset('images/assets/ghrami.svg') }}" alt="Ghrami" style="height:70px;">
+        </a>
+    </div>
+
+    {% if app.user %}
+
+    <!-- Search -->
+    <div class="navbar-search">
+        <input type="text" class="search-input"
+               placeholder="🔍 Rechercher hobbies, personnes, groupes..."
+               id="globalSearch">
+    </div>
+
+    <!-- Nav icons -->
+    <div class="navbar-nav">
+
+        <!-- Home -->
+        <a href="{{ path('app_dashboard') }}" class="nav-link" title="Accueil">
+            <span style="font-size:20px;">🏠</span>
+        </a>
+
+        <!-- Friends -->
+        <a href="{{ path('app_friends_index') }}" class="nav-link" title="Amis">
+            <span style="font-size:20px;">👥</span>
+        </a>
+
+        <!-- Notifications -->
+        <a href="{{ path('app_notifications_index') }}"
+           class="nav-link nav-icon-btn" title="Notifications">
+            <span style="font-size:20px;">🔔</span>
+            <span class="red-dot" data-notif-dot></span>
+        </a>
+
+        <!-- Messages -->
+        <a href="{{ path('app_messages_index') }}"
+           class="nav-link nav-icon-btn" title="Messages">
+            <span style="font-size:20px;">💬</span>
+            {# add data-msg-dot + similar JS if you want message badge too #}
+        </a>
+
+        <!-- Profile dropdown -->
+        <div class="profile-dropdown-wrapper" style="margin-left:4px;">
+            <details>
+                <summary>
+                    <div class="profile-trigger" title="{{ app.user.fullName }}">
+                        {% if app.user.profilePicture %}
+                            <img src="{% if app.user.profilePicture starts with 'http' %}{{ app.user.profilePicture }}{% else %}{{ asset('images/profile_pictures/' ~ app.user.profilePicture) }}{% endif %}"
+                                 alt="{{ app.user.fullName }}">
+                        {% else %}
+                            <span>{{ app.user.fullName[0:1]|upper }}</span>
+                        {% endif %}
+                    </div>
+                </summary>
+                <div class="profile-dropdown-menu">
+                    <a href="{{ path('app_profile') }}">👤 Mon Profil</a>
+                    {% if is_granted('ROLE_ADMIN') %}
+                        <a href="{{ path('app_admin_dashboard') }}">⚙️ Admin</a>
+                    {% endif %}
+                    <a href="{{ path('app_logout') }}" class="danger">🚪 Déconnexion</a>
+                </div>
+            </details>
+        </div>
+
+    </div><!-- /.navbar-nav -->
+
+    {% else %}
+    <div class="navbar-nav" style="margin-left:auto;"></div>
+    {% endif %}
+
+</nav>
+
+<!-- ═══════════════════════════════════
+     MAIN CONTENT
+     ═══════════════════════════════════ -->
+<main style="min-height:calc(100vh - 70px);background-color:#f0f2f5;">
+    <div class="container-fluid" style="padding:20px;">
+
+        {% if app.flashes('success') %}
+            {% for message in app.flashes('success') %}
+                <div class="alert alert-success" role="alert">
+                    ✓ {{ message }}
+                    <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if app.flashes('error') %}
+            {% for message in app.flashes('error') %}
+                <div class="alert alert-danger" role="alert">
+                    ✗ {{ message }}
+                    <button class="alert-close" onclick="this.parentElement.style.display='none';">✕</button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
         {% block body %}{% endblock %}
-    </body>
+
+    </div>
+</main>
+
+<script>
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+</script>
+
+<script src="{{ asset('js/stt-handler.js') }}"></script>
+</body>
 </html>
