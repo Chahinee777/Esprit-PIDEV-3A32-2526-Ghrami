@@ -1,0 +1,1522 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Meetings & Connections - Ghrami{% endblock %}
+
+{% block body %}
+<div class="meetings-container">
+    <!-- DASHBOARD STATS -->
+    <section class="dashboard-stats">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🤝</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ stats.connections }}</div>
+                    <div class="stat-label">Active Connections</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📅</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ stats.upcoming }}</div>
+                    <div class="stat-label">Upcoming Meetings</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ stats.pending }}</div>
+                    <div class="stat-label">Pending Requests</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✨</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ stats.scheduled }}</div>
+                    <div class="stat-label">Scheduled Meetings</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NAVIGATION TABS -->
+    <section class="nav-tabs">
+        <button class="tab-btn active" data-tab="discovery">💫 Discover</button>
+        <button class="tab-btn" data-tab="connections">🔗 Connections</button>
+        <button class="tab-btn" data-tab="meetings">📅 Meetings</button>
+    </section>
+
+    <!-- DISCOVERY TAB -->
+    <section class="tab-content active" id="discovery-tab">
+        <div class="section-header">
+            <h2>🌟 Find Your Match</h2>
+        </div>
+        <div id="discoveryGrid" class="discovery-grid">
+            <div class="loading-placeholder">Loading matches...</div>
+        </div>
+    </section>
+
+    <!-- CONNECTIONS TAB -->
+    <section class="tab-content" id="connections-tab">
+        <div class="section-header">
+            <h2>🔗 Manage Connections</h2>
+            <button class="btn-primary" id="btnCreateConnection" style="align-self: flex-start; margin-top: 0;">+ New Connection</button>
+        </div>
+
+        <!-- Pending Requests Section -->
+        <div id="pendingSection" style="display: none;">
+            <h3 style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 24px 0 16px 0; text-transform: uppercase; letter-spacing: 0.5px;">⏳ Pending Requests</h3>
+            <div id="pendingList" class="pending-list"></div>
+        </div>
+
+        <!-- Filter buttons -->
+        <div class="filter-buttons" style="display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 24px 0;">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="accepted">Accepted</button>
+            <button class="filter-btn" data-filter="skill">🎯 Skill Exchange</button>
+            <button class="filter-btn" data-filter="activity">🏃 Activity</button>
+            <button class="filter-btn" data-filter="hobby">🎨 Hobby</button>
+        </div>
+
+        <!-- Connections Grid -->
+        <div id="connectionsGrid" class="connections-list">
+            <div class="loading-placeholder">Loading connections...</div>
+        </div>
+    </section>
+
+    <!-- MEETINGS TAB -->
+    <section class="tab-content" id="meetings-tab">
+        <div class="section-header">
+            <h2>📅 Your Meetings</h2>
+            <button class="btn-primary" id="btnCreateMeeting" style="align-self: flex-start; margin-top: 0;">+ Schedule Meeting</button>
+        </div>
+
+        <!-- Meetings Filter -->
+        <div class="meeting-filters" style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+            <label style="margin: 0; font-weight: 600; font-size: 13px;">Filter:</label>
+            <select id="meetingFilterSelect" style="padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px;">
+                <option value="upcoming">Upcoming</option>
+                <option value="past">Past</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="physical">Physical Only</option>
+                <option value="virtual">Virtual Only</option>
+            </select>
+        </div>
+
+        <!-- Meetings List -->
+        <div id="meetingsList" class="meetings-list">
+            <div class="loading-placeholder">Loading meetings...</div>
+        </div>
+    </section>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODALS
+═══════════════════════════════════════════════ -->
+
+<!-- Quick Connect Modal (from Discovery card) -->
+<div class="modal" id="quickConnectModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header gradient-teal">
+            <div>
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;opacity:.75;margin-bottom:4px;">QUICK CONNECT</div>
+                <h2>⚡ Send Connection Request</h2>
+            </div>
+            <button class="close-btn" onclick="closeModal('quickConnectModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;align-items:center;gap:14px;background:#f0fdf4;border-radius:12px;padding:14px;margin-bottom:20px;">
+                <div class="user-avatar" id="quickConnectAvatar" style="margin:0;flex-shrink:0;width:48px;height:48px;font-size:22px;"></div>
+                <div>
+                    <div id="quickConnectName" style="font-size:16px;font-weight:700;color:#1e293b;"></div>
+                    <div style="font-size:12px;color:#64748b;">Your connection request will be sent to this user.</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Connection Type</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label class="type-radio-label">
+                        <input type="radio" name="qc-type" value="skill"> 🎯 Skill Exchange
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="qc-type" value="activity"> 🏃 Activity
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="qc-type" value="hobby"> 🎨 Hobby
+                    </label>
+                    <label class="type-radio-label active">
+                        <input type="radio" name="qc-type" value="general" checked> 🤝 General
+                    </label>
+                </div>
+            </div>
+            <div id="qcSkillsSection" style="display: none;">
+                <div class="form-group">
+                    <label>Your skill to share</label>
+                    <input type="text" id="qcInitiatorSkill" class="form-control" placeholder="e.g., Guitar, Python, Photography…">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Skill you want to learn</label>
+                    <input type="text" id="qcReceiverSkill" class="form-control" placeholder="e.g., Piano, Data Science, Cooking…">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('quickConnectModal')">Cancel</button>
+            <button class="btn-primary" id="btnQcConfirm">💫 Send Request</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create Connection Modal (from Connections tab) -->
+<div class="modal" id="createConnectionModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header gradient-cyan">
+            <div>
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;opacity:.75;margin-bottom:4px;">NEW CONNECTION</div>
+                <h2>🤝 Create Connection</h2>
+            </div>
+            <button class="close-btn" onclick="closeModal('createConnectionModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Target User ID</label>
+                <input type="number" id="ccUserId" class="form-control" placeholder="Enter user ID (e.g. 42)">
+                <div id="ccUserLookup" style="margin-top:8px;font-size:12px;min-height:18px;"></div>
+            </div>
+            <div class="form-group">
+                <label>Connection Type</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label class="type-radio-label active">
+                        <input type="radio" name="cc-type" value="skill" checked> 🎯 Skill Exchange
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="cc-type" value="activity"> 🏃 Activity
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="cc-type" value="hobby"> 🎨 Hobby
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="cc-type" value="general"> 🤝 General
+                    </label>
+                </div>
+            </div>
+            <div id="ccSkillsSection">
+                <div class="form-group">
+                    <label>Your skill to share</label>
+                    <input type="text" id="ccInitiatorSkill" class="form-control" placeholder="e.g., Guitar, Python, Photoshop…">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Skill you want to learn</label>
+                    <input type="text" id="ccReceiverSkill" class="form-control" placeholder="e.g., Piano, Data Science, Cooking…">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('createConnectionModal')">Cancel</button>
+            <button class="btn-primary" id="btnCcConfirm">🤝 Send Request</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create Meeting Modal -->
+<div class="modal" id="createMeetingModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width:560px;">
+        <div class="modal-header gradient-indigo">
+            <div>
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;opacity:.75;margin-bottom:4px;">NEW MEETING</div>
+                <h2>📅 Schedule Meeting</h2>
+            </div>
+            <button class="close-btn" onclick="closeModal('createMeetingModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <!-- Connection -->
+            <div class="form-group">
+                <label>Connection</label>
+                <select id="cmConnection" class="form-control" required>
+                    <option value="">-- Select a connection --</option>
+                </select>
+            </div>
+            <!-- Meeting Type -->
+            <div class="form-group">
+                <label>Meeting Type</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label class="type-radio-label active">
+                        <input type="radio" name="cm-type" value="virtual" checked> 💻 Virtual
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="cm-type" value="physical"> 📍 In-Person
+                    </label>
+                </div>
+            </div>
+            <!-- Physical Location (hidden when virtual) -->
+            <div id="cmLocationField" style="display: none;" class="form-group">
+                <label>Location / Address <span style="color:#dc2626;">*</span></label>
+                <input type="text" id="cmLocation" class="form-control" placeholder="Enter meeting location or address">
+            </div>
+            <!-- Date & Time -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="form-group">
+                    <label>Date <span style="color:#dc2626;">*</span></label>
+                    <input type="date" id="cmDate" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Time (HH:MM) <span style="color:#dc2626;">*</span></label>
+                    <input type="time" id="cmTime" class="form-control" value="14:00">
+                </div>
+            </div>
+            <!-- Duration Chips -->
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Duration</label>
+                <div id="cmDurationChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                    <button type="button" class="dur-chip" data-min="30">30 min</button>
+                    <button type="button" class="dur-chip" data-min="45">45 min</button>
+                    <button type="button" class="dur-chip active" data-min="60">1 hour</button>
+                    <button type="button" class="dur-chip" data-min="90">1h 30</button>
+                    <button type="button" class="dur-chip" data-min="120">2 hours</button>
+                    <button type="button" class="dur-chip" data-min="custom">✏ Custom</button>
+                </div>
+                <input type="number" id="cmDurationCustom" class="form-control" value="60" min="1" max="1440" placeholder="Minutes" style="display:none;max-width:140px;">
+                <input type="hidden" id="cmDurationValue" value="60">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('createMeetingModal')">Cancel</button>
+            <button class="btn-primary" id="btnCmConfirm">✅ Confirm Meeting</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Meeting Modal -->
+<div class="modal" id="editMeetingModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width:520px;">
+        <div class="modal-header gradient-amber">
+            <div>
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;opacity:.75;margin-bottom:4px;">EDIT MEETING</div>
+                <h2>✏️ Modify Meeting</h2>
+            </div>
+            <button class="close-btn" onclick="closeModal('editMeetingModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="emMeetingId">
+            <!-- Meeting Type -->
+            <div class="form-group">
+                <label>Meeting Type</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label class="type-radio-label active">
+                        <input type="radio" name="em-type" value="virtual" checked> 💻 Virtual
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="em-type" value="physical"> 📍 In-Person
+                    </label>
+                </div>
+            </div>
+            <!-- Location -->
+            <div class="form-group" id="emLocationField" style="display:none;">
+                <label>Location / Address <span style="color:#dc2626;">*</span></label>
+                <input type="text" id="emLocation" class="form-control" placeholder="Enter meeting location">
+            </div>
+            <!-- Date & Time -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="form-group">
+                    <label>Date <span style="color:#dc2626;">*</span></label>
+                    <input type="date" id="emDate" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Time (HH:MM) <span style="color:#dc2626;">*</span></label>
+                    <input type="time" id="emTime" class="form-control">
+                </div>
+            </div>
+            <!-- Duration Chips -->
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Duration</label>
+                <div id="emDurationChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                    <button type="button" class="dur-chip" data-min="30">30 min</button>
+                    <button type="button" class="dur-chip" data-min="45">45 min</button>
+                    <button type="button" class="dur-chip active" data-min="60">1 hour</button>
+                    <button type="button" class="dur-chip" data-min="90">1h 30</button>
+                    <button type="button" class="dur-chip" data-min="120">2 hours</button>
+                    <button type="button" class="dur-chip" data-min="custom">✏ Custom</button>
+                </div>
+                <input type="number" id="emDurationCustom" class="form-control" value="60" min="1" max="1440" placeholder="Minutes" style="display:none;max-width:140px;">
+                <input type="hidden" id="emDurationValue" value="60">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('editMeetingModal')">Cancel</button>
+            <button class="btn-primary" id="btnEmConfirm" style="background:linear-gradient(to right,#b45309,#d97706);">💾 Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- User Profile Modal -->
+<div class="modal" id="profileModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width:560px;">
+        <div class="modal-header gradient-slate">
+            <div>
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;opacity:.75;margin-bottom:4px;">USER PROFILE</div>
+                <h2 id="profileModalTitle">👤 Profile</h2>
+            </div>
+            <button class="close-btn" onclick="closeModal('profileModal')">✕</button>
+        </div>
+        <div class="modal-body" id="profileModalBody">
+            <div class="loading-placeholder">Loading profile...</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('profileModal')">Close</button>
+            <button class="btn-primary" id="profileConnectBtn" style="display:none;">💫 Connect</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ── Layout ─────────────────────────────────── */
+.meetings-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+}
+.dashboard-stats { margin-bottom: 40px; }
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+.stat-card {
+    background: white; border-radius: 16px; padding: 20px;
+    display: flex; align-items: center; gap: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+}
+.stat-icon { font-size: 32px; }
+.stat-value { font-size: 28px; font-weight: 700; color: #1e293b; }
+.stat-label { font-size: 13px; color: #64748b; margin-top: 4px; }
+
+/* ── Tabs ───────────────────────────────────── */
+.nav-tabs {
+    display: flex; gap: 12px; margin-bottom: 30px;
+    border-bottom: 2px solid #e2e8f0; padding-bottom: 16px;
+}
+.tab-btn {
+    background: none; border: none; padding: 8px 16px;
+    font-size: 15px; font-weight: 600; color: #64748b;
+    cursor: pointer; border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+.tab-btn.active { color: #667eea; border-bottom-color: #667eea; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── Section header ─────────────────────────── */
+.section-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 30px;
+}
+.section-header h2 { font-size: 24px; color: #1e293b; margin: 0; }
+
+/* ── Filter pills ───────────────────────────── */
+.filter-btn {
+    padding: 6px 16px; border-radius: 20px;
+    border: 1.5px solid #e2e8f0; background: white;
+    font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer;
+    transition: all 0.2s ease;
+}
+.filter-btn.active, .filter-btn:hover {
+    background: #4f46e5; color: white; border-color: #4f46e5;
+}
+
+/* ── Discovery grid ─────────────────────────── */
+.discovery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+}
+.discovery-card {
+    background: white; border-radius: 20px; overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.discovery-card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 8px 24px rgba(102,126,234,0.2);
+}
+.card-gradient-bg {
+    height: 100px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: relative;
+}
+.card-avatar {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: white; border: 3px solid white;
+    position: absolute; bottom: -40px; left: 50%;
+    transform: translateX(-50%); overflow: hidden;
+    display: flex; align-items: center; justify-content: center; font-size: 32px;
+}
+.card-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.card-body { padding: 50px 16px 16px; text-align: center; }
+.card-name { font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 6px 0; }
+.card-location { font-size: 12px; color: #64748b; margin: 0 0 8px 0; }
+.card-score-badge {
+    display: inline-block; padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; margin-top: 6px;
+    background: #dbeafe; color: #1e40af;
+}
+.card-reason {
+    background: #f8f9ff; border: 1px solid #e0e7ff; border-radius: 10px;
+    padding: 8px 10px; font-size: 12px; color: #4f46e5; margin: 10px 0;
+}
+.card-interests { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+.interest-tag {
+    background: #e8eaf6; color: #3f51b5;
+    padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+}
+.card-actions { display: flex; gap: 8px; margin-top: 10px; }
+.card-actions button { flex: 1; padding: 8px; border: none; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+.btn-view { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+.btn-view:hover { background: #e0f2fe; }
+.btn-connect { background: linear-gradient(135deg, #667eea 0%, #7c3aed 100%); color: white; }
+.btn-connect:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* ── Connection cards ───────────────────────── */
+.connections-list { display: flex; flex-direction: column; gap: 14px; }
+.connection-card {
+    background: white; border-radius: 14px; padding: 16px 20px;
+    border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.conn-avatar {
+    width: 52px; height: 52px; border-radius: 50%; overflow: hidden;
+    flex-shrink: 0; background: #f0f9ff;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+}
+.conn-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.conn-info { flex: 1; min-width: 180px; }
+.conn-name { font-size: 15px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0; }
+.conn-username { font-size: 12px; color: #94a3b8; margin: 0 0 6px 0; }
+.conn-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.conn-skills { font-size: 12px; color: #475569; margin-top: 4px; }
+.conn-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.conn-actions button {
+    padding: 6px 14px; border: none; border-radius: 8px;
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+}
+.btn-schedule { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.btn-schedule:hover { background: #bbf7d0; }
+.btn-delete-conn { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+.btn-delete-conn:hover { background: #fecaca; }
+
+/* ── Pending requests ───────────────────────── */
+.pending-list { display: flex; flex-direction: column; gap: 12px; }
+.pending-card {
+    display: flex; align-items: center; gap: 12px;
+    background: #fff8e1; padding: 14px 16px;
+    border-radius: 12px; border: 1px solid #fbbf24;
+}
+.pending-avatar { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+.pending-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pending-info { flex: 1; }
+.pending-name { font-size: 14px; font-weight: 600; color: #1e293b; margin: 0 0 2px 0; }
+.pending-type { font-size: 12px; color: #64748b; margin: 0; }
+.pending-actions { display: flex; gap: 8px; }
+
+/* ── Meetings list ──────────────────────────── */
+.meetings-list { display: flex; flex-direction: column; gap: 16px; }
+.meeting-card {
+    background: white; border-radius: 14px; border: 1px solid #e2e8f0;
+    overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.meeting-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 20px; background: #f8f9fa; border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap; gap: 10px;
+}
+.meeting-datetime { font-size: 15px; font-weight: 700; color: #1e293b; }
+.meeting-badges { display: flex; gap: 8px; align-items: center; }
+.meeting-body { padding: 16px 20px; }
+.meeting-location { font-size: 13px; color: #475569; margin: 6px 0; word-break: break-all; }
+.meeting-meta { font-size: 12px; color: #94a3b8; margin: 4px 0; }
+.meeting-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.meeting-actions button, .meeting-actions a {
+    padding: 7px 14px; border: none; border-radius: 8px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s ease; text-decoration: none; display: inline-block;
+}
+.btn-join { background: linear-gradient(to right, #667eea, #764ba2); color: white; }
+.btn-join:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-complete { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.btn-complete:hover { background: #bbf7d0; }
+.btn-edit { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.btn-edit:hover { background: #bfdbfe; }
+.btn-cancel-meeting { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.btn-cancel-meeting:hover { background: #fde68a; }
+.btn-delete-meeting { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+.btn-delete-meeting:hover { background: #fecaca; }
+.btn-copy { background: #f0f0f0; color: #64748b; border: 1px solid #e2e8f0; padding: 7px 10px; }
+.btn-copy:hover { background: #e8e8e8; }
+
+/* ── Status badges ──────────────────────────── */
+.status-badge {
+    display: inline-block; padding: 4px 10px; border-radius: 10px;
+    font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.status-scheduled { background: #fef3c7; color: #92400e; }
+.status-completed { background: #dcfce7; color: #15803d; }
+.status-cancelled { background: #fee2e2; color: #dc2626; }
+.status-pending { background: #fef9c3; color: #854d0e; }
+.status-accepted { background: #d1fae5; color: #065f46; }
+.status-rejected { background: #fee2e2; color: #991b1b; }
+
+/* ── Type badge ─────────────────────────────── */
+.type-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 10px;
+    font-size: 11px; font-weight: 600; background: #e0e7ff; color: #3730a3;
+}
+.type-virtual { background: #e0f2fe; color: #0369a1; }
+.type-physical { background: #fef3c7; color: #92400e; }
+
+/* ── Modals ─────────────────────────────────── */
+.modal {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1000; align-items: center; justify-content: center;
+}
+.modal.active { display: flex; }
+.modal-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); cursor: pointer;
+}
+.modal-content {
+    position: relative; background: white; border-radius: 16px;
+    width: 90%; max-width: 500px; max-height: 90vh;
+    overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal-header {
+    padding: 20px 24px; border-radius: 16px 16px 0 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    color: white; position: sticky; top: 0; z-index: 1;
+}
+.modal-header h2 { margin: 0; font-size: 18px; font-weight: 700; }
+.close-btn {
+    background: rgba(255,255,255,0.2); border: none; color: white;
+    width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+    font-size: 16px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.modal-body { padding: 24px; }
+.modal-footer {
+    padding: 16px 24px; display: flex; gap: 12px;
+    justify-content: flex-end; border-top: 1px solid #e2e8f0;
+    position: sticky; bottom: 0; background: white;
+}
+
+/* ── Gradients ──────────────────────────────── */
+.gradient-teal   { background: linear-gradient(135deg, #134e4a, #0d9488); }
+.gradient-cyan   { background: linear-gradient(135deg, #0c4a6e, #0369a1); }
+.gradient-indigo { background: linear-gradient(135deg, #1e1b4b, #4338ca); }
+.gradient-amber  { background: linear-gradient(135deg, #78350f, #d97706); }
+.gradient-slate  { background: linear-gradient(135deg, #0f172a, #334155); }
+
+/* ── Forms ──────────────────────────────────── */
+.form-group { margin-bottom: 20px; }
+.form-group label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: #1e293b; margin-bottom: 8px;
+}
+.form-control {
+    width: 100%; padding: 10px 14px;
+    border: 1.5px solid #e2e8f0; border-radius: 10px;
+    font-size: 13px; font-family: inherit; box-sizing: border-box;
+}
+.form-control:focus {
+    outline: none; border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+}
+.type-radio-label {
+    display: flex; align-items: center; gap: 8px; padding: 10px;
+    border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer;
+    margin: 0; font-weight: 500; font-size: 13px; color: #475569;
+    transition: all 0.2s ease;
+}
+.type-radio-label.active, .type-radio-label:has(input:checked) {
+    border-color: #4f46e5; background: #eef2ff; color: #3730a3;
+}
+.type-radio-label input[type="radio"] { accent-color: #4f46e5; }
+
+/* ── Duration chips ─────────────────────────── */
+.dur-chip {
+    padding: 7px 14px; border-radius: 20px;
+    border: 1.5px solid #e2e8f0; background: white;
+    font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer;
+    transition: all 0.2s ease;
+}
+.dur-chip.active, .dur-chip:hover {
+    background: #4f46e5; color: white; border-color: #4f46e5;
+    box-shadow: 0 2px 8px rgba(79,70,229,0.3);
+}
+
+/* ── Common buttons ─────────────────────────── */
+.btn-primary {
+    background: linear-gradient(to right, #4f46e5, #7c3aed); color: white;
+    padding: 10px 20px; border: none; border-radius: 10px;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(79,70,229,0.3); }
+.btn-cancel {
+    background: #f0f0f0; color: #64748b; padding: 10px 20px;
+    border: none; border-radius: 10px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s ease;
+}
+.btn-cancel:hover { background: #e8e8e8; }
+.btn-accept-connection { background: #dcfce7; color: #15803d; padding: 6px 12px; border: none; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.btn-accept-connection:hover { background: #bbf7d0; }
+.btn-reject-connection { background: #fee2e2; color: #dc2626; padding: 6px 12px; border: none; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.btn-reject-connection:hover { background: #fecaca; }
+
+/* ── Misc ───────────────────────────────────── */
+.user-avatar {
+    width: 64px; height: 64px; border-radius: 50%; background: #f0f9ff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin: 0 auto 16px; overflow: hidden;
+}
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.loading-placeholder { text-align: center; padding: 40px; color: #64748b; font-size: 14px; }
+.empty-state { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 14px; }
+.toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    background: #1e293b; color: white; padding: 12px 20px;
+    border-radius: 10px; font-size: 13px; font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+}
+.toast.toast-error { background: #dc2626; }
+.toast.toast-success { background: #15803d; }
+@keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; pointer-events: none; } }
+
+@media (max-width: 768px) {
+    .discovery-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .connection-card { flex-direction: column; align-items: flex-start; }
+    .conn-actions { margin-left: 0; }
+}
+</style>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+const state = {
+    currentTab: 'discovery',
+    quickConnectUserId: null,
+    quickConnectUserName: null,
+    allConnections: [],       // full list for client-side filter
+    currentConnectionFilter: 'all',
+    currentMeetingFilter: 'upcoming',
+};
+
+// ═══════════════════════════════════════════════
+// TOAST UTILITY
+// ═══════════════════════════════════════════════
+function showToast(msg, type = 'info') {
+    const t = document.createElement('div');
+    t.className = 'toast' + (type === 'error' ? ' toast-error' : type === 'success' ? ' toast-success' : '');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+}
+
+// ═══════════════════════════════════════════════
+// MODAL HELPERS
+// ═══════════════════════════════════════════════
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+// DURATION CHIPS – shared setup for two modals
+// ═══════════════════════════════════════════════
+function setupDurationChips(chipContainerId, customInputId, hiddenId) {
+    const container = document.getElementById(chipContainerId);
+    const customInput = document.getElementById(customInputId);
+    const hidden = document.getElementById(hiddenId);
+    if (!container) return;
+    container.querySelectorAll('.dur-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            container.querySelectorAll('.dur-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            const min = chip.dataset.min;
+            if (min === 'custom') {
+                customInput.style.display = 'block';
+                customInput.focus();
+                hidden.value = customInput.value || 60;
+            } else {
+                customInput.style.display = 'none';
+                hidden.value = min;
+            }
+        });
+    });
+    customInput.addEventListener('input', () => { hidden.value = customInput.value; });
+}
+
+// ═══════════════════════════════════════════════
+// DISCOVERY / MATCHES
+// ═══════════════════════════════════════════════
+async function loadMatches() {
+    try {
+        const response = await fetch('/api/discovery/matches');
+        const data = await response.json();
+        const grid = document.getElementById('discoveryGrid');
+        if (!data.ok || !data.matches || data.matches.length === 0) {
+            grid.innerHTML = '<div class="empty-state">No matches found. Set up your profile to find connections!</div>';
+            return;
+        }
+        grid.innerHTML = data.matches.map(match => {
+            const scoreColor = match.percentage >= 60 ? '#15803d' : match.percentage >= 40 ? '#4f46e5' : '#d97706';
+            const safeName = (match.full_name || '').replace(/'/g, "\\'");
+            const safePic  = (match.profile_picture || '').replace(/'/g, "\\'");
+            return `
+            <div class="discovery-card">
+                <div class="card-gradient-bg"></div>
+                <div class="card-avatar">${match.profile_picture ? `<img src="${match.profile_picture}" alt="">` : '👤'}</div>
+                <div class="card-body">
+                    <h3 class="card-name">${escapeHtml(match.full_name || match.username)}</h3>
+                    ${match.location ? `<p class="card-location">📍 ${escapeHtml(match.location)}</p>` : `<p class="card-location">@${escapeHtml(match.username)}</p>`}
+                    <span class="card-score-badge" style="background:${scoreColor}20;color:${scoreColor};">${match.percentage}% Match</span>
+                    ${match.reason ? `<div class="card-reason">💫 ${escapeHtml(match.reason)}</div>` : ''}
+                    <div class="card-interests">
+                        ${(match.common_interests || []).map(i => `<span class="interest-tag">${escapeHtml(i)}</span>`).join('')}
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn-view" onclick="openProfileModal(${match.id})">👤 View</button>
+                        <button class="btn-connect" onclick="openQuickConnect(${match.id}, '${safeName}', '${safePic}')">💫 Connect</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (err) {
+        console.error(err);
+        document.getElementById('discoveryGrid').innerHTML = '<div class="empty-state">Error loading matches.</div>';
+    }
+}
+
+function openQuickConnect(userId, name, pic) {
+    state.quickConnectUserId  = userId;
+    state.quickConnectUserName = name;
+    document.getElementById('quickConnectName').textContent = name;
+    document.getElementById('quickConnectAvatar').innerHTML = pic ? `<img src="${pic}" alt="">` : '👤';
+    // reset form
+    document.querySelectorAll('input[name="qc-type"]').forEach(r => {
+        r.checked = (r.value === 'general');
+        r.closest('.type-radio-label').classList.toggle('active', r.value === 'general');
+    });
+    document.getElementById('qcSkillsSection').style.display = 'none';
+    document.getElementById('qcInitiatorSkill').value = '';
+    document.getElementById('qcReceiverSkill').value = '';
+    openModal('quickConnectModal');
+}
+
+// ═══════════════════════════════════════════════
+// PROFILE MODAL
+// ═══════════════════════════════════════════════
+async function openProfileModal(userId) {
+    openModal('profileModal');
+    document.getElementById('profileModalBody').innerHTML = '<div class="loading-placeholder">Loading profile...</div>';
+    document.getElementById('profileConnectBtn').style.display = 'none';
+
+    try {
+        const resp = await fetch(`/api/discovery/user/${userId}`);
+        const data = await resp.json();
+        if (!data.ok) { document.getElementById('profileModalBody').innerHTML = '<div class="empty-state">User not found.</div>'; return; }
+
+        const u = data.user;
+        document.getElementById('profileModalTitle').textContent = `👤 ${u.full_name || u.username}`;
+
+        const hobbiesHtml = data.hobbies.length
+            ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">${data.hobbies.map(h => `<span class="interest-tag">${escapeHtml(h)}</span>`).join('')}</div>`
+            : '<p style="color:#94a3b8;font-size:13px;">No interests listed.</p>';
+
+        const badgesHtml = data.badges.length
+            ? data.badges.map(b => `<div style="display:flex;align-items:center;gap:10px;padding:8px;background:#fefce8;border-radius:8px;margin-top:6px;"><span>🏆</span><div><div style="font-size:13px;font-weight:600;">${escapeHtml(b.badge_name)}</div><div style="font-size:11px;color:#64748b;">${escapeHtml(b.description || '')}</div></div></div>`).join('')
+            : '';
+
+        document.getElementById('profileModalBody').innerHTML = `
+            <div style="display:flex;align-items:center;gap:16px;background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:20px;">
+                <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">
+                    ${u.profile_picture ? `<img src="${u.profile_picture}" style="width:100%;height:100%;object-fit:cover;">` : '👤'}
+                </div>
+                <div>
+                    <div style="font-size:18px;font-weight:700;color:#1e293b;">${escapeHtml(u.full_name || u.username)}</div>
+                    <div style="font-size:13px;color:#94a3b8;">@${escapeHtml(u.username)}</div>
+                    ${u.location ? `<div style="font-size:12px;color:#4f46e5;margin-top:2px;">📍 ${escapeHtml(u.location)}</div>` : ''}
+                </div>
+            </div>
+            ${u.bio ? `<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px;">BIO</div><p style="font-size:13px;color:#334155;margin:0;">${escapeHtml(u.bio)}</p></div>` : ''}
+            ${data.hobbies.length ? `<div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px;">INTERESTS & SKILLS</div>${hobbiesHtml}</div>` : ''}
+            ${badgesHtml ? `<div><div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:4px;">ACHIEVEMENTS</div>${badgesHtml}</div>` : ''}
+        `;
+
+        // Show connect button
+        const connectBtn = document.getElementById('profileConnectBtn');
+        connectBtn.style.display = 'inline-block';
+        connectBtn.onclick = () => {
+            closeModal('profileModal');
+            openQuickConnect(u.id, u.full_name || u.username, u.profile_picture || '');
+        };
+    } catch (err) {
+        console.error(err);
+        document.getElementById('profileModalBody').innerHTML = '<div class="empty-state">Failed to load profile.</div>';
+    }
+}
+
+// ═══════════════════════════════════════════════
+// CONNECTIONS
+// ═══════════════════════════════════════════════
+async function loadConnections() {
+    try {
+        const resp = await fetch('/api/connections');
+        const data = await resp.json();
+        if (!data.ok) return;
+        state.allConnections = data.connections || [];
+        renderPending(data.pending || []);
+        renderConnections(state.allConnections, state.currentConnectionFilter);
+    } catch (err) { console.error(err); }
+}
+
+function renderPending(pending) {
+    const section = document.getElementById('pendingSection');
+    if (!pending.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    document.getElementById('pendingList').innerHTML = pending.map(c => `
+        <div class="pending-card">
+            <div class="pending-avatar">
+                ${c.profile_picture ? `<img src="${c.profile_picture}" alt="">` : '<div style="width:100%;height:100%;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:22px;">👤</div>'}
+            </div>
+            <div class="pending-info">
+                <p class="pending-name">${escapeHtml(c.full_name || c.username || 'Unknown')}</p>
+                <p class="pending-type">Type: ${escapeHtml(c.connection_type || '')}
+                    ${c.initiator_skill ? ` · Offers: <strong>${escapeHtml(c.initiator_skill)}</strong>` : ''}
+                    ${c.receiver_skill  ? ` · Wants: <strong>${escapeHtml(c.receiver_skill)}</strong>` : ''}
+                </p>
+            </div>
+            <div class="pending-actions">
+                <button class="btn-accept-connection" onclick="acceptConnection('${c.connection_id}')">✓ Accept</button>
+                <button class="btn-reject-connection" onclick="rejectConnection('${c.connection_id}')">✕ Reject</button>
+            </div>
+        </div>`).join('');
+}
+
+function renderConnections(connections, filter) {
+    const grid = document.getElementById('connectionsGrid');
+    let list = connections;
+
+    if (filter === 'accepted') {
+        list = connections.filter(c => (c.status || '').toLowerCase() === 'accepted');
+    } else if (['skill', 'activity', 'hobby', 'general'].includes(filter)) {
+        list = connections.filter(c => (c.connection_type || '').toLowerCase() === filter);
+    }
+
+    if (!list.length) {
+        grid.innerHTML = '<div class="empty-state">No connections match this filter.</div>';
+        return;
+    }
+
+    grid.innerHTML = list.map(c => {
+        const status   = (c.status || 'pending').toLowerCase();
+        const type     = (c.connection_type || 'general').toLowerCase();
+        const isAccepted = status === 'accepted';
+        const skillsHtml = (c.initiator_skill || c.receiver_skill)
+            ? `<div class="conn-skills">
+                ${c.initiator_skill ? `🎯 Offers: <strong>${escapeHtml(c.initiator_skill)}</strong>` : ''}
+                ${c.initiator_skill && c.receiver_skill ? ' &nbsp;·&nbsp; ' : ''}
+                ${c.receiver_skill  ? `📚 Wants: <strong>${escapeHtml(c.receiver_skill)}</strong>` : ''}
+               </div>`
+            : '';
+        const typeIcon = { skill: '🎯', activity: '🏃', hobby: '🎨', general: '🤝' }[type] || '🔗';
+        return `
+        <div class="connection-card">
+            <div class="conn-avatar">
+                ${c.profile_picture ? `<img src="${c.profile_picture}" alt="">` : '👤'}
+            </div>
+            <div class="conn-info">
+                <p class="conn-name">${escapeHtml(c.full_name || c.username || 'Unknown')}</p>
+                <p class="conn-username">@${escapeHtml(c.username || '')}</p>
+                <div class="conn-badges">
+                    <span class="status-badge status-${status}">${status.toUpperCase()}</span>
+                    <span class="type-badge">${typeIcon} ${escapeHtml(c.connection_type || type)}</span>
+                </div>
+                ${skillsHtml}
+            </div>
+            <div class="conn-actions">
+                ${isAccepted ? `<button class="btn-schedule" onclick="openScheduleMeetingModal('${c.connection_id}', '${escapeAttr(c.full_name || c.username || '')}')">📅 Schedule</button>` : ''}
+                <button class="btn-delete-conn" onclick="deleteConnection('${c.connection_id}')">🗑 Delete</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function acceptConnection(connId) {
+    try {
+        const resp = await fetch(`/api/connections/${connId}/accept`, { method: 'POST' });
+        const data = await resp.json();
+        if (data.ok) { showToast('Connection accepted! 🎉', 'success'); loadConnections(); }
+        else showToast(data.error || 'Failed to accept.', 'error');
+    } catch (err) { console.error(err); }
+}
+
+async function rejectConnection(connId) {
+    try {
+        const resp = await fetch(`/api/connections/${connId}/reject`, { method: 'POST' });
+        const data = await resp.json();
+        if (data.ok) { showToast('Connection rejected.'); loadConnections(); }
+        else showToast(data.error || 'Failed to reject.', 'error');
+    } catch (err) { console.error(err); }
+}
+
+async function deleteConnection(connId) {
+    if (!confirm('Are you sure you want to remove this connection?')) return;
+    try {
+        const resp = await fetch(`/api/connections/${connId}/delete`, { method: 'POST' });
+        const data = await resp.json();
+        if (data.ok) { showToast('Connection removed.'); loadConnections(); }
+        else showToast(data.error || 'Failed to delete.', 'error');
+    } catch (err) { console.error(err); }
+}
+
+// ═══════════════════════════════════════════════
+// MEETINGS
+// ═══════════════════════════════════════════════
+async function loadMeetings(filter = 'upcoming') {
+    state.currentMeetingFilter = filter;
+    try {
+        const resp = await fetch(`/api/meetings/list?filter=${encodeURIComponent(filter)}`);
+        const data = await resp.json();
+        if (!data.ok) return;
+        renderMeetings(data.meetings || [], filter);
+    } catch (err) { console.error(err); }
+}
+
+function renderMeetings(meetings, filter) {
+    const list = document.getElementById('meetingsList');
+    if (!meetings.length) {
+        list.innerHTML = '<div class="empty-state">No meetings found for this filter.</div>';
+        return;
+    }
+
+    list.innerHTML = meetings.map(m => {
+        const dt      = m.datetime ? new Date(m.datetime) : null;
+        const dateStr = dt ? dt.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) : 'TBD';
+        const timeStr = dt ? dt.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
+        const status  = (m.status || 'scheduled').toLowerCase();
+        const mType   = (m.type || 'virtual').toLowerCase();
+        const isPast  = dt ? dt < new Date() : false;
+
+        // Button availability rules (matches desktop logic):
+        // • Complete: status=scheduled AND the meeting datetime has passed
+        // • Edit:     status=scheduled (any time)
+        // • Cancel:   status=scheduled
+        // • Delete:   status=completed OR cancelled
+        const canComplete = status === 'scheduled' && isPast;
+        const canEdit     = status === 'scheduled';
+        const canCancel   = status === 'scheduled';
+        const canDelete   = status === 'completed' || status === 'cancelled';
+        const hasJoinLink = mType === 'virtual' && m.google_meet_link && m.google_meet_link.startsWith('http');
+
+        const locationIcon = mType === 'virtual' ? '💻' : '📍';
+        const locationHtml = m.location
+            ? `<p class="meeting-location">${locationIcon} ${escapeHtml(m.location)}</p>`
+            : '';
+        const participantsHtml = m.participant_count > 0
+            ? `<p class="meeting-meta">👥 ${m.participant_count} participant${m.participant_count > 1 ? 's' : ''}</p>`
+            : '';
+        const durationHtml = m.duration
+            ? `<p class="meeting-meta">⏱ ${m.duration} min</p>`
+            : '';
+
+        return `
+        <div class="meeting-card">
+            <div class="meeting-header">
+                <div>
+                    <div class="meeting-datetime">📅 ${dateStr} ${timeStr ? '· ' + timeStr : ''}</div>
+                    <div style="font-size:12px;color:#64748b;margin-top:2px;">${escapeHtml(m.connection_name || 'Meeting')}</div>
+                </div>
+                <div class="meeting-badges">
+                    <span class="status-badge status-${status}">${status.toUpperCase()}</span>
+                    <span class="type-badge type-${mType}">${mType === 'virtual' ? '💻 Virtual' : '📍 Physical'}</span>
+                </div>
+            </div>
+            <div class="meeting-body">
+                ${locationHtml}
+                ${durationHtml}
+                ${participantsHtml}
+                <div class="meeting-actions">
+                    ${hasJoinLink ? `<a href="${m.google_meet_link}" target="_blank" class="btn-join">🚀 Join</a>
+                        <button class="btn-copy" onclick="copyToClipboard('${escapeAttr(m.google_meet_link)}', this)" title="Copy Meet link">📋</button>` : ''}
+                    ${canEdit     ? `<button class="btn-edit"           onclick="openEditMeetingModal('${m.id}', '${mType}', '${escapeAttr(m.location||'')}', '${escapeAttr(m.datetime||'')}', ${m.duration || 60})">✏️ Edit</button>` : ''}
+                    ${canComplete ? `<button class="btn-complete"        data-action="complete" data-id="${m.id}">✅ Complete</button>` : ''}
+                    ${canCancel   ? `<button class="btn-cancel-meeting"  data-action="cancel"  data-id="${m.id}">❌ Cancel</button>` : ''}
+                    ${canDelete   ? `<button class="btn-delete-meeting"  data-action="delete"  data-id="${m.id}">🗑️ Delete</button>` : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    // Wire action buttons
+    list.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            handleMeetingAction(this.dataset.action, this.dataset.id, state.currentMeetingFilter);
+        });
+    });
+}
+
+async function handleMeetingAction(action, meetingId, currentFilter) {
+    const routes = {
+        complete: `/api/meetings/${meetingId}/mark-complete`,
+        cancel:   `/api/meetings/${meetingId}/cancel`,
+        delete:   `/api/meetings/${meetingId}/delete`,
+    };
+    if (!routes[action]) return;
+    if (!confirm(`Are you sure you want to ${action} this meeting?`)) return;
+
+    try {
+        const resp = await fetch(routes[action], { method: 'POST' });
+        const data = await resp.json();
+        if (!data.ok) {
+            // "mark-complete" returns detailed error info when meeting is in the future
+            if (action === 'complete' && data.scheduled_at) {
+                const scheduledDate = new Date(data.scheduled_at);
+                const formatted = scheduledDate.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + ' ' +
+                                  scheduledDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+                showToast(`⏳ Cannot complete yet. Meeting is scheduled for ${formatted}. ${data.remaining ? '(' + data.remaining + ' remaining)' : ''}`, 'error');
+            } else {
+                showToast(data.error || `Failed to ${action} meeting.`, 'error');
+            }
+            return;
+        }
+        showToast(`Meeting ${action === 'complete' ? 'marked as completed ✅' : action === 'cancel' ? 'cancelled' : 'deleted'}.`, 'success');
+        loadMeetings(currentFilter || 'upcoming');
+    } catch (err) { console.error(err); }
+}
+
+function copyToClipboard(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✅';
+        setTimeout(() => btn.textContent = orig, 1800);
+    });
+}
+
+// ═══════════════════════════════════════════════
+// OPEN SCHEDULE-MEETING MODAL (from connection card)
+// ═══════════════════════════════════════════════
+async function openScheduleMeetingModal(connectionId, connectionName) {
+    // Pre-load connections dropdown, then pre-select this connection
+    await populateConnectionDropdown('cmConnection');
+    const sel = document.getElementById('cmConnection');
+    sel.value = connectionId;
+    // Reset rest of form
+    resetCreateMeetingForm();
+    openModal('createMeetingModal');
+}
+
+async function populateConnectionDropdown(selectId) {
+    try {
+        const resp = await fetch('/api/connections');
+        const data = await resp.json();
+        if (!data.ok) return;
+        const select = document.getElementById(selectId);
+        const accepted = (data.connections || []).filter(c => (c.status || '').toLowerCase() === 'accepted');
+        select.innerHTML = '<option value="">-- Select a connection --</option>';
+        accepted.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.connection_id;
+            opt.textContent = `${c.full_name || c.username} (${c.connection_type})`;
+            select.appendChild(opt);
+        });
+    } catch (err) { console.error(err); }
+}
+
+function resetCreateMeetingForm() {
+    document.getElementById('cmDate').value = '';
+    document.getElementById('cmTime').value = '14:00';
+    document.getElementById('cmLocation').value = '';
+    document.getElementById('cmLocationField').style.display = 'none';
+    document.getElementById('cmDurationValue').value = '60';
+    document.getElementById('cmDurationCustom').style.display = 'none';
+    document.getElementById('cmDurationChips').querySelectorAll('.dur-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.min === '60');
+    });
+    document.querySelectorAll('input[name="cm-type"]').forEach(r => {
+        r.checked = (r.value === 'virtual');
+        r.closest('.type-radio-label').classList.toggle('active', r.value === 'virtual');
+    });
+}
+
+// ═══════════════════════════════════════════════
+// EDIT MEETING MODAL
+// ═══════════════════════════════════════════════
+function openEditMeetingModal(meetingId, type, location, datetime, duration) {
+    document.getElementById('emMeetingId').value = meetingId;
+
+    // Set type
+    document.querySelectorAll('input[name="em-type"]').forEach(r => {
+        r.checked = (r.value === type);
+        r.closest('.type-radio-label').classList.toggle('active', r.value === type);
+    });
+    document.getElementById('emLocationField').style.display = type === 'physical' ? 'block' : 'none';
+    document.getElementById('emLocation').value = type === 'physical' ? location : '';
+
+    // Set date/time from ISO datetime
+    if (datetime) {
+        const dt = new Date(datetime);
+        const yyyy = dt.getFullYear();
+        const mm   = String(dt.getMonth() + 1).padStart(2, '0');
+        const dd   = String(dt.getDate()).padStart(2, '0');
+        document.getElementById('emDate').value = `${yyyy}-${mm}-${dd}`;
+        const hh   = String(dt.getHours()).padStart(2, '0');
+        const min  = String(dt.getMinutes()).padStart(2, '0');
+        document.getElementById('emTime').value = `${hh}:${min}`;
+    }
+
+    // Duration chips
+    document.getElementById('emDurationValue').value = duration;
+    document.getElementById('emDurationCustom').style.display = 'none';
+    const presets = [30, 45, 60, 90, 120];
+    document.getElementById('emDurationChips').querySelectorAll('.dur-chip').forEach(c => {
+        const isMatch = parseInt(c.dataset.min) === duration;
+        c.classList.toggle('active', isMatch);
+    });
+    if (!presets.includes(duration)) {
+        // Select "custom"
+        document.getElementById('emDurationChips').querySelectorAll('.dur-chip').forEach(c => {
+            c.classList.toggle('active', c.dataset.min === 'custom');
+        });
+        document.getElementById('emDurationCustom').style.display = 'block';
+        document.getElementById('emDurationCustom').value = duration;
+    }
+
+    openModal('editMeetingModal');
+}
+
+// ═══════════════════════════════════════════════
+// VALIDATION HELPERS
+// ═══════════════════════════════════════════════
+function validateMeetingDatetime(dateVal, timeVal) {
+    if (!dateVal || !timeVal) return 'Please enter both date and time.';
+    const dt = new Date(`${dateVal}T${timeVal}:00`);
+    if (isNaN(dt.getTime())) return 'Invalid date or time format.';
+    if (dt <= new Date()) return 'The meeting date and time must be in the future.';
+    return null;
+}
+
+// ═══════════════════════════════════════════════
+// ESCAPE HELPERS
+// ═══════════════════════════════════════════════
+function escapeHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+function escapeAttr(str) {
+    return String(str || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+// ═══════════════════════════════════════════════
+// DOM READY
+// ═══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Tab switching ──
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(this.dataset.tab + '-tab').classList.add('active');
+            if (this.dataset.tab === 'discovery') loadMatches();
+            else if (this.dataset.tab === 'connections') loadConnections();
+            else if (this.dataset.tab === 'meetings') loadMeetings(state.currentMeetingFilter);
+        });
+    });
+
+    // ── Modal overlays ──
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', () => overlay.closest('.modal').classList.remove('active'));
+    });
+
+    // ── Duration chips setup ──
+    setupDurationChips('cmDurationChips', 'cmDurationCustom', 'cmDurationValue');
+    setupDurationChips('emDurationChips', 'emDurationCustom', 'emDurationValue');
+
+    // ── Set today's date as min for date pickers ──
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('cmDate').min = today;
+    document.getElementById('emDate').min = today;
+
+    // ─────────────────────────────────────────────
+    // QUICK CONNECT
+    // ─────────────────────────────────────────────
+    document.querySelectorAll('input[name="qc-type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            document.querySelectorAll('input[name="qc-type"]').forEach(r =>
+                r.closest('.type-radio-label').classList.remove('active'));
+            this.closest('.type-radio-label').classList.add('active');
+            document.getElementById('qcSkillsSection').style.display = this.value === 'skill' ? 'block' : 'none';
+        });
+    });
+
+    document.getElementById('btnQcConfirm').addEventListener('click', async () => {
+        const type = document.querySelector('input[name="qc-type"]:checked')?.value || 'general';
+        const initiatorSkill = document.getElementById('qcInitiatorSkill').value.trim();
+        const receiverSkill  = document.getElementById('qcReceiverSkill').value.trim();
+
+        if (type === 'skill' && !initiatorSkill && !receiverSkill) {
+            showToast('For a skill exchange, please specify at least one skill.', 'error'); return;
+        }
+
+        try {
+            const resp = await fetch('/api/connections/quick-connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    receiver_id:    state.quickConnectUserId,
+                    type:           type,
+                    initiator_skill: initiatorSkill || null,
+                    receiver_skill:  receiverSkill  || null,
+                }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                closeModal('quickConnectModal');
+                showToast(`Connection request sent to ${state.quickConnectUserName}! 🎉`, 'success');
+                loadMatches();
+            } else {
+                showToast(data.error || 'Failed to send request.', 'error');
+            }
+        } catch (err) { console.error(err); }
+    });
+
+    // ─────────────────────────────────────────────
+    // CREATE CONNECTION (from Connections tab)
+    // ─────────────────────────────────────────────
+    document.getElementById('btnCreateConnection').addEventListener('click', () => {
+        document.getElementById('ccUserId').value = '';
+        document.getElementById('ccUserLookup').textContent = '';
+        document.getElementById('ccInitiatorSkill').value = '';
+        document.getElementById('ccReceiverSkill').value = '';
+        document.getElementById('ccSkillsSection').style.display = 'block'; // skill is default
+        document.querySelectorAll('input[name="cc-type"]').forEach(r => {
+            r.checked = (r.value === 'skill');
+            r.closest('.type-radio-label').classList.toggle('active', r.value === 'skill');
+        });
+        openModal('createConnectionModal');
+    });
+
+    // Live user lookup for Create Connection modal
+    let lookupTimer = null;
+    document.getElementById('ccUserId').addEventListener('input', function () {
+        clearTimeout(lookupTimer);
+        const val = this.value.trim();
+        const lookup = document.getElementById('ccUserLookup');
+        if (!val) { lookup.textContent = ''; return; }
+        lookup.textContent = '…';
+        lookupTimer = setTimeout(async () => {
+            try {
+                const resp = await fetch(`/api/connections/lookup-user/${encodeURIComponent(val)}`);
+                const data = await resp.json();
+                if (data.ok) {
+                    lookup.style.color = '#15803d';
+                    lookup.textContent = `✓  ${data.full_name || data.username}  (@${data.username})`;
+                } else {
+                    lookup.style.color = '#dc2626';
+                    lookup.textContent = `✗  ${data.error || 'User not found'}`;
+                }
+            } catch (err) { lookup.textContent = ''; }
+        }, 400);
+    });
+
+    document.querySelectorAll('input[name="cc-type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            document.querySelectorAll('input[name="cc-type"]').forEach(r =>
+                r.closest('.type-radio-label').classList.remove('active'));
+            this.closest('.type-radio-label').classList.add('active');
+            document.getElementById('ccSkillsSection').style.display = this.value === 'skill' ? 'block' : 'none';
+        });
+    });
+
+    document.getElementById('btnCcConfirm').addEventListener('click', async () => {
+        const userId = parseInt(document.getElementById('ccUserId').value);
+        if (!userId || isNaN(userId)) { showToast('Please enter a valid user ID.', 'error'); return; }
+        const type = document.querySelector('input[name="cc-type"]:checked')?.value || 'general';
+        const initiatorSkill = document.getElementById('ccInitiatorSkill').value.trim();
+        const receiverSkill  = document.getElementById('ccReceiverSkill').value.trim();
+
+        if (type === 'skill' && !initiatorSkill && !receiverSkill) {
+            showToast('For a skill exchange, please specify at least one skill.', 'error'); return;
+        }
+
+        try {
+            const resp = await fetch('/api/connections/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId, type,
+                    initiator_skill: initiatorSkill || null,
+                    receiver_skill:  receiverSkill  || null,
+                }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                closeModal('createConnectionModal');
+                showToast('Connection request sent! 🎉', 'success');
+                loadConnections();
+            } else {
+                showToast(data.error || 'Failed to create connection.', 'error');
+            }
+        } catch (err) { console.error(err); }
+    });
+
+    // ─────────────────────────────────────────────
+    // CONNECTION FILTERS
+    // ─────────────────────────────────────────────
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            state.currentConnectionFilter = this.dataset.filter;
+            renderConnections(state.allConnections, state.currentConnectionFilter);
+        });
+    });
+
+    // ─────────────────────────────────────────────
+    // CREATE MEETING
+    // ─────────────────────────────────────────────
+    document.getElementById('btnCreateMeeting').addEventListener('click', async () => {
+        await populateConnectionDropdown('cmConnection');
+        resetCreateMeetingForm();
+        openModal('createMeetingModal');
+    });
+
+    document.querySelectorAll('input[name="cm-type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            document.querySelectorAll('input[name="cm-type"]').forEach(r =>
+                r.closest('.type-radio-label').classList.remove('active'));
+            this.closest('.type-radio-label').classList.add('active');
+            document.getElementById('cmLocationField').style.display = this.value === 'physical' ? 'block' : 'none';
+        });
+    });
+
+    document.getElementById('btnCmConfirm').addEventListener('click', async () => {
+        const connId   = document.getElementById('cmConnection').value;
+        const type     = document.querySelector('input[name="cm-type"]:checked')?.value || 'virtual';
+        const dateVal  = document.getElementById('cmDate').value;
+        const timeVal  = document.getElementById('cmTime').value;
+        const duration = parseInt(document.getElementById('cmDurationValue').value) || 60;
+        const location = document.getElementById('cmLocation').value.trim();
+
+        if (!connId) { showToast('Please select a connection.', 'error'); return; }
+        const dtErr = validateMeetingDatetime(dateVal, timeVal);
+        if (dtErr) { showToast(dtErr, 'error'); return; }
+        if (type === 'physical' && !location) { showToast('Please enter a location for an in-person meeting.', 'error'); return; }
+        if (duration <= 0 || duration > 1440) { showToast('Duration must be between 1 and 1440 minutes.', 'error'); return; }
+
+        try {
+            const resp = await fetch('/api/meetings/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    connection_id: connId,
+                    meeting_type:  type,
+                    scheduled_at:  `${dateVal} ${timeVal}:00`,
+                    duration,
+                    location:      type === 'physical' ? location : null,
+                }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                closeModal('createMeetingModal');
+                const linkMsg = data.meet_link && data.meet_link.startsWith('http')
+                    ? ` Google Meet link created.` : '';
+                showToast(`Meeting scheduled!${linkMsg} 📅`, 'success');
+                loadMeetings(state.currentMeetingFilter);
+            } else {
+                showToast(data.error || 'Failed to schedule meeting.', 'error');
+            }
+        } catch (err) { console.error(err); }
+    });
+
+    // ─────────────────────────────────────────────
+    // EDIT MEETING – type radio toggle
+    // ─────────────────────────────────────────────
+    document.querySelectorAll('input[name="em-type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            document.querySelectorAll('input[name="em-type"]').forEach(r =>
+                r.closest('.type-radio-label').classList.remove('active'));
+            this.closest('.type-radio-label').classList.add('active');
+            document.getElementById('emLocationField').style.display = this.value === 'physical' ? 'block' : 'none';
+        });
+    });
+
+    document.getElementById('btnEmConfirm').addEventListener('click', async () => {
+        const meetingId = document.getElementById('emMeetingId').value;
+        const type      = document.querySelector('input[name="em-type"]:checked')?.value || 'virtual';
+        const dateVal   = document.getElementById('emDate').value;
+        const timeVal   = document.getElementById('emTime').value;
+        const duration  = parseInt(document.getElementById('emDurationValue').value) || 60;
+        const location  = document.getElementById('emLocation').value.trim();
+
+        const dtErr = validateMeetingDatetime(dateVal, timeVal);
+        if (dtErr) { showToast(dtErr, 'error'); return; }
+        if (type === 'physical' && !location) { showToast('Please enter a location for an in-person meeting.', 'error'); return; }
+        if (duration <= 0 || duration > 1440) { showToast('Duration must be between 1 and 1440 minutes.', 'error'); return; }
+
+        try {
+            const resp = await fetch(`/api/meetings/${meetingId}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    meeting_type: type,
+                    scheduled_at: `${dateVal} ${timeVal}:00`,
+                    duration,
+                    location:     type === 'physical' ? location : null,
+                }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                closeModal('editMeetingModal');
+                showToast('Meeting updated! ✏️', 'success');
+                loadMeetings(state.currentMeetingFilter);
+            } else {
+                showToast(data.error || 'Failed to update meeting.', 'error');
+            }
+        } catch (err) { console.error(err); }
+    });
+
+    // ─────────────────────────────────────────────
+    // MEETING FILTER SELECT
+    // ─────────────────────────────────────────────
+    document.getElementById('meetingFilterSelect').addEventListener('change', function () {
+        loadMeetings(this.value);
+    });
+
+    // ─────────────────────────────────────────────
+    // INITIAL LOAD
+    // ─────────────────────────────────────────────
+    loadMatches();
+    loadConnections();
+    loadMeetings('upcoming');
+});
+</script>
+{% endblock %}

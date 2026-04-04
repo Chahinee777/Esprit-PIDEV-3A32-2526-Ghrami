@@ -1,0 +1,1 @@
+# Turbo configuration - CSRF protection is handled via framework.csrf_protection

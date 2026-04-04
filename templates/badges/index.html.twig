@@ -1,0 +1,363 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Badges - Ghrami{% endblock %}
+
+{% block body %}
+<div style="max-width: 1200px; margin: 30px auto; padding: 0 20px;">
+    
+    <!-- Return Button -->
+    <div style="margin-bottom: 20px;">
+        <button onclick="history.back()" style="background: white; border: 2px solid #e4e6eb; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; color: #667eea; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;" onmouseover="this.style.background='#f0f2f5'; this.style.borderColor='#667eea'" onmouseout="this.style.background='white'; this.style.borderColor='#e4e6eb'">
+            ← Retour
+        </button>
+    </div>
+    
+    <!-- Header Section -->
+    <div class="card" style="margin-bottom: 30px; padding: 30px;">
+        <div style="display: flex; align-items: center; gap: 30px; margin-bottom: 30px;">
+            <div style="font-size: 80px;">{{ rank.icon }}</div>
+            <div>
+                <h1 style="margin: 0 0 10px 0; font-size: 32px; font-weight: 700; color: #1c1e21;">{{ rank.name }}</h1>
+                <p style="margin: 0; color: #65676b; font-size: 16px;">{{ rank.subtitle }}</p>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding-top: 20px; border-top: 2px solid #e4e6eb;">
+            <div style="text-align: center;">
+                <p style="margin: 0; font-size: 12px; color: #65676b; text-transform: uppercase; font-weight: 600;">Badges Gagnés</p>
+                <p style="margin: 12px 0 0 0; font-size: 32px; font-weight: 700; color: #667eea;">{{ earned_count }}</p>
+            </div>
+            <div style="text-align: center;">
+                <p style="margin: 0; font-size: 12px; color: #65676b; text-transform: uppercase; font-weight: 600;">Total</p>
+                <p style="margin: 12px 0 0 0; font-size: 32px; font-weight: 700; color: #667eea;">{{ total_count }}</p>
+            </div>
+            <div style="text-align: center;">
+                <p style="margin: 0; font-size: 12px; color: #65676b; text-transform: uppercase; font-weight: 600;">Verrouillés</p>
+                <p style="margin: 12px 0 0 0; font-size: 32px; font-weight: 700; color: #ef4444;">{{ locked_count }}</p>
+            </div>
+            <div style="text-align: center;">
+                <p style="margin: 0; font-size: 12px; color: #65676b; text-transform: uppercase; font-weight: 600;">Complété</p>
+                <p style="margin: 12px 0 0 0; font-size: 32px; font-weight: 700; color: #667eea;">{{ completion_percentage | round }}%</p>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div style="margin-top: 20px;">
+            <div style="background: #e4e6eb; height: 12px; border-radius: 100px; overflow: hidden;">
+                <div style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: {{ completion_percentage }}%; transition: width 0.3s ease;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div style="display: flex; gap: 12px; margin-bottom: 30px; flex-wrap: wrap;">
+        <button class="filter-btn active" onclick="filterBadges('all')">🏆 Tous les badges</button>
+        {% for category in categories %}
+        <button class="filter-btn" onclick="filterBadges('{{ category | lower }}')">
+            {% if category == 'Social' %}👥 Social
+            {% elseif category == 'Hobbies' %}🎮 Hobbies
+            {% elseif category == 'Classes' %}📚 Classes
+            {% elseif category == 'Milestones' %}🎯 Jalons
+            {% elseif category == 'Activity' %}💪 Activité
+            {% else %}{{ category }}
+            {% endif %}
+        </button>
+        {% endfor %}
+    </div>
+
+    <!-- Badge Cards Debug Info -->
+    <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px; font-size: 14px; color: #1565c0;">
+        📊 Affichage de {{ badges | length }} badges ({{ earned_count }} gagnés / {{ total_count }} total)
+    </div>
+
+    <!-- Badges Grid -->
+    <div id="badges-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; min-height: 300px;">
+        {% for badge in badges %}
+        <div class="badge-card badge-card--{% if badge.is_earned %}earned{% else %}locked{% endif %} badge-card--{{ badge.rarity | lower }}" data-category="{{ badge.category | lower }}" style="display: block;">
+            
+            <!-- Badge Icon -->
+            <div class="badge-icon">
+                {{ badge.icon }}
+            </div>
+
+            <!-- Lock Icon for Locked Badges -->
+            {% if not badge.is_earned %}
+            <div class="badge-lock">🔒</div>
+            {% endif %}
+
+            <!-- Rarity Badge -->
+            <div class="badge-rarity">
+                {{ badge.rarity }}
+            </div>
+
+            <!-- Status Badge -->
+            <div class="badge-status">
+                {% if badge.is_earned %}✅ Obtenu{% else %}🔍 Verrouillé{% endif %}
+            </div>
+
+            <!-- Badge Name -->
+            <h3 class="badge-name">
+                {{ badge.name }}
+            </h3>
+
+            <!-- Badge Description -->
+            <p class="badge-description">
+                {% if badge.is_earned %}
+                    {{ badge.description }}
+                {% else %}
+                    🔑 {{ badge.hint }}
+                {% endif %}
+            </p>
+
+            <!-- Earned Date -->
+            {% if badge.is_earned and badge.earned_date %}
+            <div class="badge-earned-date">
+                Obtenu le {{ badge.earned_date | date('d/m/Y à H:i') }}
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+            <div style="font-size: 80px; margin-bottom: 20px;">🎯</div>
+            <h2 style="margin: 0 0 10px 0; color: #1c1e21;">Pas de badges pour le moment</h2>
+            <p style="margin: 0; color: #65676b; font-size: 16px;">Commencez à explorer Ghrami pour débloquer vos premiers badges !</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.filter-btn {
+    padding: 8px 16px;
+    border: 2px solid #e4e6eb;
+    border-radius: 20px;
+    background: white;
+    color: #1c1e21;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.filter-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+    background: #f0f2f5;
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: transparent;
+}
+
+/* Badge Card Base */
+.badge-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    transition: all 0.3s ease;
+    min-height: 300px;
+    border: 2px solid;
+    background: white;
+}
+
+.badge-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Badge Rarity Colors */
+.badge-card--locked {
+    background: linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%);
+    border-color: #90a4ae;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.badge-card--earned.badge-card--commun {
+    background: white;
+    border-color: #c3e6cb;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
+}
+
+.badge-card--earned.badge-card--rare {
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border-color: #93c5fd;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.22);
+}
+
+.badge-card--earned.badge-card--épique {
+    background: linear-gradient(135deg, #f3e8ff, #fce7f3);
+    border-color: #c084fc;
+    box-shadow: 0 2px 8px rgba(167, 139, 250, 0.28);
+}
+
+.badge-card--earned.badge-card--légendaire {
+    background: linear-gradient(135deg, #fff8e1, #fff3cd);
+    border-color: #ffc107;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.28);
+}
+
+/* Badge Icon */
+.badge-icon {
+    font-size: 56px;
+    margin-bottom: 12px;
+}
+
+.badge-card--locked .badge-icon {
+    opacity: 0.35;
+}
+
+.badge-card--earned .badge-icon {
+    opacity: 1;
+}
+
+/* Lock Icon */
+.badge-lock {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 20px;
+    opacity: 0.55;
+}
+
+/* Rarity and Status Badges */
+.badge-rarity,
+.badge-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 0 4px 10px 0;
+}
+
+.badge-card--earned.badge-card--légendaire .badge-rarity {
+    background: #fff3cd;
+    color: #b45309;
+}
+
+.badge-card--earned.badge-card--épique .badge-rarity {
+    background: #ede9fe;
+    color: #7c3aed;
+}
+
+.badge-card--earned.badge-card--rare .badge-rarity {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.badge-card--earned.badge-card--commun .badge-rarity {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-card--locked .badge-rarity {
+    background: #e4e6ea;
+    color: #8d949e;
+}
+
+.badge-status {
+    background: #f3f4f6;
+    color: #9ca3af;
+}
+
+.badge-card--earned .badge-status {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+/* Badge Name */
+.badge-name {
+    margin: 12px 0 8px 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1c1e21;
+}
+
+.badge-card--locked .badge-name {
+    color: #8d949e;
+}
+
+/* Badge Description */
+.badge-description {
+    margin: 0;
+    font-size: 13px;
+    color: #65676b;
+    line-height: 1.4;
+    flex-grow: 1;
+}
+
+.badge-card--locked .badge-description {
+    color: #b0b3b8;
+}
+
+/* Earned Date */
+.badge-earned-date {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 11px;
+    color: #65676b;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    #badges-container {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+}
+</style>
+
+<script>
+// Initialize - show all badges on page load
+document.addEventListener('DOMContentLoaded', function() {
+    filterBadges('all');
+});
+
+function filterBadges(category) {
+    const cards = document.querySelectorAll('.badge-card');
+    const buttons = document.querySelectorAll('.filter-btn');
+    
+    // Update active button
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    // Find and mark the clicked button as active
+    const clickedBtn = event?.target?.closest('.filter-btn');
+    if (clickedBtn) {
+        clickedBtn.classList.add('active');
+    } else {
+        // Fallback: mark first button as active
+        buttons[0]?.classList.add('active');
+    }
+    
+    // Filter cards - show/hide based on category
+    let visibleCount = 0;
+    cards.forEach(card => {
+        const cardCategory = card.getAttribute('data-category');
+        let shouldShow = false;
+        
+        if (category === 'all') {
+            shouldShow = true;
+        } else if (cardCategory === category) {
+            shouldShow = true;
+        }
+        
+        if (shouldShow) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    console.log('Filtering by category:', category, 'Visible cards:', visibleCount);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,300 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Progress Tracking{% endblock %}
+
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<div class="card">
+    <h2 style="margin-top:0;">Progress Tracking</h2>
+    <div class="card" style="padding:12px 14px; box-shadow:none; margin-bottom:10px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white;">
+        <p class="muted" style="margin:0; color:white; opacity:0.9;">Desktop-like hobby management with logs, milestones, and badges.</p>
+    </div>
+
+    <div class="grid" style="margin-bottom:14px;">
+        <div class="stat"><div>Hobbies</div><b>{{ stats.hobbies }}</b></div>
+        <div class="stat"><div>Total Hours</div><b>{{ stats.hours|number_format(1, '.', ',') }}</b></div>
+        <div class="stat"><div>Milestones</div><b>{{ stats.milestones_done }}/{{ stats.milestones_total }}</b></div>
+        <div class="stat"><div>Badges</div><b>{{ stats.badges }}</b></div>
+    </div>
+
+    <h3 style="margin-top:20px;">📊 Progress Charts</h3>
+    
+    <!-- Charts Grid -->
+    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap:15px; margin-bottom:20px;">
+        <!-- Heatmap: Day of Week -->
+        <div class="card" style="padding:15px; background:white; border:1px solid #e5e7eb;">
+            <h4 style="margin:0 0 10px 0; font-size:14px; font-weight:600;">Activity by Day of Week (Last 4 weeks)</h4>
+            <canvas id="chartHeatmap" style="max-height:200px;"></canvas>
+        </div>
+
+        <!-- Weekly Trends -->
+        <div class="card" style="padding:15px; background:white; border:1px solid #e5e7eb;">
+            <h4 style="margin:0 0 10px 0; font-size:14px; font-weight:600;">Weekly Hours (Last 12 weeks)</h4>
+            <canvas id="chartTrends" style="max-height:200px;"></canvas>
+        </div>
+
+        <!-- Milestone Progress -->
+        <div class="card" style="padding:15px; background:white; border:1px solid #e5e7eb;">
+            <h4 style="margin:0 0 10px 0; font-size:14px; font-weight:600;">Milestone Completion %</h4>
+            <canvas id="chartMilestones" style="max-height:200px;"></canvas>
+        </div>
+    </div>
+
+    <button id="refreshCharts" onclick="refreshProgressCharts()" style="margin-bottom:14px;">🔄 Refresh Charts</button>
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr; margin-bottom:14px;">
+        <div class="card" style="border:1px solid #e5e7eb;">
+            <h3 style="margin-top:0;">Add Hobby</h3>
+            <form method="post" action="{{ path('app_progress_hobby_add') }}" style="display:grid; gap:8px;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('progress_hobby') }}">
+                <input type="text" name="name" placeholder="Hobby name" required>
+                <input type="text" name="category" placeholder="Category">
+                <textarea name="description" rows="2" placeholder="Description"></textarea>
+                <button type="submit">Add hobby</button>
+            </form>
+        </div>
+        <div class="card" style="border:1px solid #e5e7eb;">
+            <h3 style="margin-top:0;">Award Badge</h3>
+            <form method="post" action="{{ path('app_progress_badge_award') }}" style="display:grid; gap:8px;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('progress_badge') }}">
+                <input type="text" name="name" placeholder="Badge name" required>
+                <textarea name="description" rows="2" placeholder="Badge description"></textarea>
+                <button type="submit">Award badge</button>
+            </form>
+        </div>
+    </div>
+
+    <h3>Hobbies</h3>
+    <div class="card" style="padding:0; border:1px solid #e5e7eb; margin-bottom:14px; overflow:auto;">
+        <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Hours</th><th>Description</th><th>Action</th></tr></thead>
+            <tbody>
+            {% for h in hobbies %}
+                <tr>
+                    <td>{{ h.hobby_id }}</td>
+                    <td>{{ h.name }}</td>
+                    <td>{{ h.category ?: '-' }}</td>
+                    <td>{{ h.hours_spent ?: 0 }}</td>
+                    <td>{{ h.description ?: '-' }}</td>
+                    <td>
+                        <form method="post" action="{{ path('app_progress_hobby_delete') }}" onsubmit="return confirm('Delete this hobby?');">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('progress_hobby_delete') }}">
+                            <input type="hidden" name="hobby_id" value="{{ h.hobby_id }}">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6" class="muted">No hobbies</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:14px;">
+        <div class="card" style="border:1px solid #e5e7eb;">
+            <h3 style="margin-top:0;">Log Progress</h3>
+            <form method="post" action="{{ path('app_progress_log_add') }}" style="display:grid; gap:8px;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('progress_log') }}">
+                <select name="hobby_id" required>
+                    <option value="">Select hobby</option>
+                    {% for h in hobbies %}
+                        <option value="{{ h.hobby_id }}">{{ h.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="number" name="hours" min="0" step="0.25" placeholder="Hours spent" required>
+                <input type="date" name="log_date">
+                <textarea name="notes" rows="2" placeholder="Notes"></textarea>
+                <button type="submit">Add log</button>
+            </form>
+        </div>
+        <div class="card" style="border:1px solid #e5e7eb;">
+            <h3 style="margin-top:0;">Add Milestone</h3>
+            <form method="post" action="{{ path('app_progress_milestone_add') }}" style="display:grid; gap:8px;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('progress_milestone') }}">
+                <select name="hobby_id" required>
+                    <option value="">Select hobby</option>
+                    {% for h in hobbies %}
+                        <option value="{{ h.hobby_id }}">{{ h.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="title" placeholder="Milestone title" required>
+                <input type="date" name="target_date">
+                <button type="submit">Add milestone</button>
+            </form>
+        </div>
+    </div>
+
+    <h3>Recent Progress Logs</h3>
+    <div class="card" style="padding:0; border:1px solid #e5e7eb; margin-bottom:14px; overflow:auto;">
+        <table>
+            <thead><tr><th>Hobby</th><th>Hours</th><th>Date</th><th>Notes</th></tr></thead>
+            <tbody>
+            {% for l in logs %}
+                <tr>
+                    <td>{{ l.hobby_name }}</td>
+                    <td>{{ l.hours_spent }}</td>
+                    <td>{{ l.log_date }}</td>
+                    <td>{{ l.notes ?: '-' }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="4" class="muted">No logs yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Milestones</h3>
+    <div class="card" style="padding:0; border:1px solid #e5e7eb; margin-bottom:14px; overflow:auto;">
+        <table>
+            <thead><tr><th>Hobby</th><th>Title</th><th>Target Date</th><th>Achieved</th><th>Action</th></tr></thead>
+            <tbody>
+            {% for m in milestones %}
+                <tr>
+                    <td>{{ m.hobby_name }}</td>
+                    <td>{{ m.title }}</td>
+                    <td>{{ m.target_date ?: '-' }}</td>
+                    <td>{{ m.is_achieved ? 'Yes' : 'No' }}</td>
+                    <td>
+                        <form method="post" action="{{ path('app_progress_milestone_toggle') }}">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('progress_milestone_toggle') }}">
+                            <input type="hidden" name="milestone_id" value="{{ m.milestone_id }}">
+                            <button type="submit">Toggle</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="muted">No milestones yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Badges</h3>
+    <div class="card" style="padding:0; border:1px solid #e5e7eb; overflow:auto;">
+        <table>
+            <thead><tr><th>Name</th><th>Description</th><th>Earned Date</th></tr></thead>
+            <tbody>
+            {% for b in badges %}
+                <tr>
+                    <td>{{ b.name }}</td>
+                    <td>{{ b.description ?: '-' }}</td>
+                    <td>{{ b.earned_date }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="3" class="muted">No badges yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let chartInstances = {};
+
+const chartColors = {
+    primary: 'rgba(79, 172, 254, 0.8)',
+    success: 'rgba(34, 197, 94, 0.8)',
+    danger: 'rgba(239, 68, 68, 0.8)',
+    warning: 'rgba(251, 146, 60, 0.8)',
+    info: 'rgba(59, 130, 246, 0.8)',
+};
+
+async function loadProgressCharts() {
+    try {
+        const response = await fetch('{{ path("app_progress_api_charts") }}');
+        const data = await response.json();
+        
+        // Render heatmap (day of week)
+        renderChart('chartHeatmap', 'bar', {
+            labels: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+            data: data.dayOfWeekHeatmap,
+        }, 'Activity by Day');
+        
+        // Render weekly trends
+        renderChart('chartTrends', 'line', data.weeklyTrends, 'Weekly Hours');
+        
+        // Render milestone progress
+        renderChart('chartMilestones', 'bar', {
+            labels: Object.keys(data.milestoneProgress).map(name => name.substring(0, 12)),
+            data: Object.values(data.milestoneProgress).map(m => m.percentage),
+        }, 'Milestone %');
+    } catch (error) {
+        console.error('Failed to load progress charts:', error);
+    }
+}
+
+function renderChart(elementId, type, data, title) {
+    const ctx = document.getElementById(elementId);
+    if (!ctx) return;
+    
+    if (chartInstances[elementId]) {
+        chartInstances[elementId].destroy();
+    }
+    
+    const colors = [
+        'rgba(79, 172, 254, 0.8)',
+        'rgba(34, 197, 94, 0.8)',
+        'rgba(239, 68, 68, 0.8)',
+        'rgba(251, 146, 60, 0.8)',
+        'rgba(168, 85, 247, 0.8)',
+    ];
+    
+    const config = {
+        type: type,
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: title,
+                data: data.data,
+                backgroundColor: type === 'line' ? 'transparent' : colors[0],
+                borderColor: colors[0],
+                borderWidth: type === 'line' ? 2 : 1,
+                fill: type === 'line' ? false : true,
+                tension: type === 'line' ? 0.3 : 0,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            animation: {
+                duration: 500,
+            },
+            plugins: {
+                legend: {
+                    display: false,
+                },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                },
+            },
+        },
+    };
+    
+    chartInstances[elementId] = new Chart(ctx, config);
+}
+
+function refreshProgressCharts() {
+    const btn = document.getElementById('refreshCharts');
+    btn.disabled = true;
+    btn.textContent = '⏳ Loading...';
+    
+    loadProgressCharts().then(() => {
+        btn.textContent = '🔄 Refresh Charts';
+        btn.disabled = false;
+    }).catch(error => {
+        console.error('Error:', error);
+        btn.textContent = '❌ Error';
+        setTimeout(() => {
+            btn.textContent = '🔄 Refresh Charts';
+            btn.disabled = false;
+        }, 2000);
+    });
+}
+
+// Load on page ready
+document.addEventListener('DOMContentLoaded', loadProgressCharts);
+</script>
+{% endblock %}

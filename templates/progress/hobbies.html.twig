@@ -1,0 +1,407 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}My Hobbies & Interests{% endblock %}
+
+{% block body %}
+<div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div>
+            <h1 style="margin: 0;">My Hobbies & Interests</h1>
+            <p style="color: #666; margin-top: 8px;">Track your hobby progress, milestones, and learning journey</p>
+        </div>
+        <div style="text-align: right;">
+            <p style="margin: 0; font-size: 14px; color: #666;">
+                <strong style="color: #000;">{{ hobbyStats.total_hobbies }}</strong> Hobbies
+                <span style="margin: 0 10px; color: #ccc;">•</span>
+                <strong style="color: #667eea;">{{ hobbyStats.total_hours|default(0) }}</strong> Hours Tracked
+            </p>
+            <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+                <!-- P2 Fix 13: Gemini AI Insights Button -->
+                <button id="ai-insights-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.3s;"
+                        onmouseover="this.style.transform='scale(1.05)'" 
+                        onmouseout="this.style.transform='scale(1)'"
+                        onclick="getAIInsights()">
+                    🤖 AI Insights
+                </button>
+                <button id="add-hobby-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    ➕ Add New Hobby
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 30px;">
+        <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; text-align: center;">
+            <p style="margin: 0; color: #999; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Total Milestones</p>
+            <h2 style="margin: 8px 0 0 0; color: #667eea; font-size: 32px;">{{ hobbyStats.total_milestones|default(0) }}</h2>
+        </div>
+        <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; text-align: center;">
+            <p style="margin: 0; color: #999; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Completed</p>
+            <h2 style="margin: 8px 0 0 0; color: #10b981; font-size: 32px;">{{ hobbyStats.completed_milestones|default(0) }}</h2>
+        </div>
+        <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%); border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; text-align: center;">
+            <p style="margin: 0; color: #999; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Progress Avg</p>
+            <h2 style="margin: 8px 0 0 0; color: #f59e0b; font-size: 32px;">{{ hobbyStats.avg_progress|default(0) }}%</h2>
+        </div>
+    </div>
+
+    <!-- Search & Filter -->
+    <div style="margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
+        <input type="text" id="hobby-search" placeholder="🔍 Search hobbies..." 
+               style="flex: 1; min-width: 200px; padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        <select id="category-filter" style="padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; cursor: pointer;">
+            <option value="">All Categories</option>
+            <option value="Sports & Fitness">Sports & Fitness</option>
+            <option value="Arts & Crafts">Arts & Crafts</option>
+            <option value="Music">Music</option>
+            <option value="Cooking">Cooking</option>
+            <option value="Gaming">Gaming</option>
+            <option value="Reading">Reading</option>
+            <option value="Technology">Technology</option>
+            <option value="Photography">Photography</option>
+            <option value="Gardening">Gardening</option>
+            <option value="Writing">Writing</option>
+            <option value="Learning Languages">Learning Languages</option>
+            <option value="Dancing">Dancing</option>
+            <option value="Traveling">Traveling</option>
+            <option value="Other">Other</option>
+        </select>
+        <select id="sort-by" style="padding: 12px 16px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; cursor: pointer;">
+            <option value="recent">Recently Added</option>
+            <option value="progress">Most Progress</option>
+            <option value="name">Name (A-Z)</option>
+        </select>
+    </div>
+
+    <!-- Hobbies Grid -->
+    <div id="hobbies-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">
+        {% if hobbies is empty %}
+            <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; background: #f9fafb; border-radius: 12px;">
+                <p style="color: #999; font-size: 18px; margin: 0;">No hobbies yet</p>
+                <p style="color: #ccc; font-size: 14px; margin-top: 8px;">Start by adding your first hobby to track your progress!</p>
+            </div>
+        {% else %}
+            {% for hobby in hobbies %}
+                <div class="hobby-card" data-category="{{ hobby.category }}" data-name="{{ hobby.name }}" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; transition: all 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                        <div>
+                            <h3 style="margin: 0 0 4px 0; font-size: 18px;">{{ hobby.name }}</h3>
+                            <p style="margin: 0; color: #999; font-size: 13px;">📁 {{ hobby.category }}</p>
+                        </div>
+                        <button class="hobby-menu-btn" data-hobby-id="{{ hobby.hobby_id }}" style="background: none; border: none; font-size: 18px; cursor: pointer;">⋮</button>
+                    </div>
+
+                    {% if hobby.progress %}
+                        <div style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-size: 12px; font-weight: 600;">Progress</span>
+                                <span style="font-size: 12px; color: #667eea; font-weight: 700;">{{ hobby.progress }}%</span>
+                            </div>
+                            <div style="height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
+                                <div style="height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); width: {{ hobby.progress }}%; transition: width 0.3s ease;"></div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if hobby.description %}
+                        <p style="margin: 0 0 16px 0; color: #666; font-size: 13px; line-height: 1.5;">{{ hobby.description }}</p>
+                    {% endif %}
+
+                    <div style="background: #f9fafb; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12px;">
+                            <div>
+                                <span style="color: #999;">Total Hours</span>
+                                <p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 700; color: #667eea;">{{ hobby.total_hours|default(0) }}</p>
+                            </div>
+                            <div>
+                                <span style="color: #999;">Sessions</span>
+                                <p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 700; color: #10b981;">{{ hobby.session_count|default(0) }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if hobby.next_milestone %}
+                        <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%); border: 1px solid #fcd34d; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                            <p style="margin: 0 0 8px 0; font-size: 12px; color: #999;">Next Milestone</p>
+                            <h4 style="margin: 0 0 4px 0; font-size: 14px;">{{ hobby.next_milestone.name }}</h4>
+                            <div style="height: 4px; background: #fef3c7; border-radius: 2px; overflow: hidden;">
+                                <div style="height: 100%; background: #f59e0b; width: {{ hobby.next_milestone.progress|default(0) }}%;"></div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="hobby-log-btn" data-hobby-id="{{ hobby.hobby_id }}" style="flex: 1; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            ➕ Log Time
+                        </button>
+                        <button class="hobby-edit-btn" data-hobby-id="{{ hobby.hobby_id }}" style="flex: 1; padding: 10px; background: #f0f1f3; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            ✏️ Edit
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Add Hobby Modal -->
+<div id="add-hobby-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 500px; width: 90%;">
+        <h2 style="margin: 0 0 20px 0;">Add New Hobby</h2>
+        <form id="add-hobby-form">
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Name</label>
+                <input type="text" name="name" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px;">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Category</label>
+                <select name="category" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                    <option>Sports & Fitness</option>
+                    <option>Arts & Crafts</option>
+                    <option>Music</option>
+                    <option>Cooking</option>
+                    <option>Gaming</option>
+                    <option>Reading</option>
+                    <option>Technology</option>
+                    <option>Photography</option>
+                    <option>Gardening</option>
+                    <option>Writing</option>
+                    <option>Learning Languages</option>
+                    <option>Dancing</option>
+                    <option>Traveling</option>
+                    <option>Other</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Description (optional)</label>
+                <textarea name="description" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; resize: vertical; height: 80px;"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="button" onclick="document.getElementById('add-hobby-modal').style.display='none'" style="flex: 1; padding: 10px; background: #e5e7eb; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    Cancel
+                </button>
+                <button type="submit" style="flex: 1; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    Create Hobby
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Log Time Modal -->
+<div id="log-time-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 500px; width: 90%;">
+        <h2 style="margin: 0 0 20px 0;">Log Time for Hobby</h2>
+        <form id="log-time-form">
+            <input type="hidden" name="hobby_id" id="log-time-hobby-id">
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Hours</label>
+                <input type="number" name="hours" min="0" max="24" step="0.5" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px;">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Date</label>
+                <input type="date" name="date" required style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px;">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Notes (optional)</label>
+                <textarea name="notes" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; resize: vertical; height: 80px;"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="button" onclick="document.getElementById('log-time-modal').style.display='none'" style="flex: 1; padding: 10px; background: #e5e7eb; color: #333; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    Cancel
+                </button>
+                <button type="submit" style="flex: 1; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    Log Time
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show add hobby modal
+    document.getElementById('add-hobby-btn').addEventListener('click', function() {
+        document.getElementById('add-hobby-modal').style.display = 'flex';
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('add-hobby-modal').addEventListener('click', function(e) {
+        if (e.target === this) this.style.display = 'none';
+    });
+
+    document.getElementById('log-time-modal').addEventListener('click', function(e) {
+        if (e.target === this) this.style.display = 'none';
+    });
+
+    // Add hobby form
+    document.getElementById('add-hobby-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        try {
+            const response = await fetch('/progress/api/hobby/create', {
+                method: 'POST',
+                body: new URLSearchParams(formData)
+            });
+            
+            if (response.ok) {
+                location.reload();
+            }
+        } catch (err) {
+            alert('Error creating hobby');
+            console.error(err);
+        }
+    });
+
+    // Log time form
+    document.getElementById('log-time-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        try {
+            const response = await fetch('/progress/api/log', {
+                method: 'POST',
+                body: new URLSearchParams(formData)
+            });
+            
+            if (response.ok) {
+                location.reload();
+            }
+        } catch (err) {
+            alert('Error logging time');
+            console.error(err);
+        }
+    });
+
+    // Log time button
+    document.querySelectorAll('.hobby-log-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('log-time-hobby-id').value = this.dataset.hobbyId;
+            document.getElementById('log-time-modal').style.display = 'flex';
+        });
+    });
+
+    // Search filter
+    document.getElementById('hobby-search').addEventListener('input', function(e) {
+        filterHobbies();
+    });
+
+    document.getElementById('category-filter').addEventListener('change', function(e) {
+        filterHobbies();
+    });
+
+    function filterHobbies() {
+        const searchValue = document.getElementById('hobby-search').value.toLowerCase();
+        const categoryValue = document.getElementById('category-filter').value;
+        
+        document.querySelectorAll('.hobby-card').forEach(card => {
+            const name = card.dataset.name.toLowerCase();
+            const category = card.dataset.category;
+            
+            const matchesSearch = name.includes(searchValue);
+            const matchesCategory = !categoryValue || category === categoryValue;
+            
+            card.style.display = (matchesSearch && matchesCategory) ? 'block' : 'none';
+        });
+    }
+
+    // Hover effects
+    document.querySelectorAll('.hobby-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+            this.style.transform = 'translateY(-5px)';
+        });
+        card.addEventListener('mouseleave', function() {
+            this.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+            this.style.transform = 'translateY(0)';
+        });
+    });
+
+    // P2 Fix 13: Gemini AI Insights
+    window.getAIInsights = async function() {
+        const btn = document.getElementById('ai-insights-btn');
+        btn.disabled = true;
+        btn.textContent = '⏳ Loading...';
+
+        try {
+            const response = await fetch('{{ path('app_progress_api_hobby_insights') }}', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            const data = await response.json();
+
+            if (!data.ok) {
+                alert('❌ ' + (data.error || 'Failed to get insights'));
+                return;
+            }
+
+            // Show insights in a modal
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.6); display: flex; align-items: center; 
+                justify-content: center; z-index: 1000;
+            `;
+
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white; border-radius: 12px; padding: 30px; max-width: 600px;
+                max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            `;
+
+            content.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0; color: #1c1e21; font-size: 24px;">🤖 AI Hobby Insights</h2>
+                    <button onclick="this.closest('.modal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #ccc;">✕</button>
+                </div>
+
+                <div style="margin-bottom: 20px; padding: 12px; background: #f0f2f5; border-radius: 8px;">
+                    <p style="margin: 0; font-size: 13px; color: #65676b;">
+                        <strong>Your hobbies:</strong> ${data.hobbies}<br>
+                        <strong>Total hours:</strong> ${data.hours}
+                    </p>
+                </div>
+
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; line-height: 1.6;">
+                    ${data.insights.split('\n').map(line => `<p style="margin: 8px 0;">${line.trim()}</p>`).join('')}
+                </div>
+
+                <button onclick="this.closest('.modal').remove()" style="width: 100%; margin-top: 20px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">
+                    Close
+                </button>
+            `;
+
+            modal.appendChild(content);
+            modal.classList.add('modal');
+            modal.onclick = function(e) {
+                if (e.target === this) this.remove();
+            };
+            document.body.appendChild(modal);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to get AI insights');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🤖 AI Insights';
+        }
+    };
+});
+</script>
+
+<style>
+    .hobby-card {
+        transform: translateY(0);
+        transition: all 0.3s ease;
+    }
+    
+    #add-hobby-modal, #log-time-modal {
+        display: none;
+    }
+</style>
+{% endblock %}
