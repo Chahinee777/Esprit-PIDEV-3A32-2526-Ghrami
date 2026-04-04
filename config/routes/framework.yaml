@@ -1,0 +1,2 @@
+# Error route handling is built-in to FrameworkBundle in Symfony 6.4+
+# Debug bundle routing is auto-registered when debug bundle is enabled

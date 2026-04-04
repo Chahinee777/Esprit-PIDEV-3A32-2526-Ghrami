@@ -1,0 +1,439 @@
+{% extends 'auth_layout.html.twig' %}
+
+{% block title %}Register | Ghrami{% endblock %}
+
+{% block auth_body %}
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .gr-wrap {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 35fr 65fr;
+    font-family: 'Sora', sans-serif;
+  }
+
+  /* ── LEFT ── */
+  .gr-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 48px 40px;
+    background: #ffffff;
+    overflow-y: auto;
+  }
+
+  .gr-left-inner { width: 100%; max-width: 400px; }
+
+  .gr-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 36px;
+  }
+  .gr-logo-placeholder {
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 12px;
+  }
+  .gr-logo-placeholder img { width: 100%; height: 100%; object-fit: contain; }
+  .gr-logo-placeholder.gr-logo-fallback::after {
+    content: "Logo"; font-size: 13px; font-weight: 600; color: #adb0bb; letter-spacing: .5px;
+  }
+  .gr-logo-placeholder.gr-logo-fallback img { display: none; }
+  .gr-brand-name {
+    font-size: 22px; font-weight: 800;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .gr-brand-by { font-size: 11px; color: #b0b3bb; font-weight: 500; margin-top: 2px; letter-spacing: .6px; }
+
+  .gr-heading { font-size: 24px; font-weight: 800; color: #0d0f14; letter-spacing: -.5px; margin-bottom: 4px; }
+  .gr-sub { font-size: 13px; color: #9095a0; margin-bottom: 28px; }
+
+  .gr-error {
+    background: #fff1f0; border-left: 4px solid #e53e3e;
+    border-radius: 8px; padding: 12px 16px;
+    color: #c53030; font-size: 13px; font-weight: 500;
+    margin-bottom: 20px;
+  }
+  .gr-error ul { margin: 6px 0 0 0; padding-left: 16px; }
+  .gr-error li { margin-bottom: 2px; }
+
+  .gr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+  .gr-field { margin-bottom: 16px; }
+  .gr-label { display: block; font-size: 12px; font-weight: 600; color: #0d0f14; margin-bottom: 6px; }
+
+  .gr-input {
+    width: 100%; padding: 11px 14px;
+    border: 1.5px solid #eaecf2; border-radius: 10px;
+    font-size: 13px; font-family: 'Sora', sans-serif; color: #0d0f14;
+    background: #f9fafc; outline: none;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  .gr-input::placeholder { color: #c2c5cf; }
+  .gr-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102,126,234,.12);
+    background: #fff;
+  }
+
+  .gr-input.gr-input-error {
+    border-color: #e53e3e;
+    background: #fff5f5;
+  }
+  .gr-input.gr-input-error:focus {
+    border-color: #e53e3e;
+    box-shadow: 0 0 0 4px rgba(229,62,62,.12);
+    background: #fff;
+  }
+
+  textarea.gr-input { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+  .gr-hint { font-size: 11px; color: #adb0bb; margin-top: 5px; }
+
+  .gr-field-error {
+    font-size: 12px; color: #c53030; margin-top: 5px;
+    display: block;
+  }
+
+  .gr-btn-primary {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white; border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 700; font-family: 'Sora', sans-serif;
+    cursor: pointer; letter-spacing: .3px;
+    box-shadow: 0 6px 20px rgba(102,126,234,.38);
+    transition: transform .2s, box-shadow .2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin-top: 4px;
+  }
+  .gr-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(102,126,234,.5); }
+  .gr-btn-primary:active { transform: translateY(1px); }
+
+  .gr-footer { margin-top: 24px; text-align: center; font-size: 13px; color: #9095a0; }
+  .gr-footer a { color: #667eea; text-decoration: none; font-weight: 700; }
+  .gr-footer a:hover { opacity: .75; }
+
+  /* ── RIGHT ── */
+  .gr-right {
+    background: linear-gradient(150deg, #7c6bf0 0%, #6050d4 45%, #9b59c0 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 64px 72px;
+    position: relative; overflow: hidden;
+  }
+  .gr-deco {
+    position: absolute; border-radius: 50%; pointer-events: none;
+    background: rgba(255,255,255,.07);
+  }
+  .gr-deco-1 { width: 500px; height: 500px; top: -120px; right: -100px; }
+  .gr-deco-2 { width: 300px; height: 300px; bottom: -100px; left: -80px; }
+  .gr-deco-3 { width: 120px; height: 120px; top: 46%; left: 6%; background: rgba(255,255,255,.05); }
+  .gr-dot { position: absolute; border-radius: 50%; background: rgba(255,255,255,.22); pointer-events: none; }
+  .gr-dot-1 { width: 13px; height: 13px; top: 28%; left: 12%; }
+  .gr-dot-2 { width: 9px;  height: 9px;  top: 58%; right: 10%; }
+  .gr-dot-3 { width: 17px; height: 17px; bottom: 20%; right: 6%; }
+
+  .gr-right-inner { position: relative; z-index: 2; width: 100%; max-width: 620px; }
+
+  .gr-rocket-wrap { display: flex; justify-content: center; margin-bottom: 40px; }
+  .gr-rocket-circle {
+    width: 140px; height: 140px; border-radius: 50%;
+    background: rgba(255,255,255,.14);
+    border: 2px solid rgba(255,255,255,.22);
+    backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 60px;
+    animation: grFloat 4s ease-in-out infinite;
+  }
+  @keyframes grFloat {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-14px); }
+  }
+
+  .gr-headline { text-align: center; margin-bottom: 44px; }
+  .gr-headline h2 {
+    font-size: 52px; font-weight: 900; color: white;
+    line-height: 1.15; letter-spacing: -1.5px;
+    text-shadow: 0 2px 20px rgba(0,0,0,.15);
+  }
+
+  .gr-cards { display: flex; flex-direction: column; gap: 16px; }
+  .gr-card {
+    background: rgba(255,255,255,.13);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 16px; padding: 20px 26px;
+    display: flex; align-items: center; gap: 20px;
+    backdrop-filter: blur(12px);
+    transition: background .25s, transform .25s;
+  }
+  .gr-card:hover { background: rgba(255,255,255,.21); transform: translateX(8px); }
+  .gr-card-icon {
+    width: 56px; height: 56px; border-radius: 14px;
+    background: rgba(255,255,255,.16);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; flex-shrink: 0;
+  }
+  .gr-card-title { font-size: 16px; font-weight: 700; color: white; margin-bottom: 4px; }
+  .gr-card-desc { font-size: 13px; color: rgba(255,255,255,.72); line-height: 1.4; }
+
+  @media (max-width: 900px) {
+    .gr-wrap { grid-template-columns: 1fr; }
+    .gr-right { display: none; }
+    .gr-left { padding: 48px 28px; }
+  }
+</style>
+
+<div class="gr-wrap">
+
+  <!-- ── LEFT: FORM ── -->
+  <div class="gr-left">
+    <div class="gr-left-inner">
+
+      <div class="gr-brand">
+        <div class="gr-logo-placeholder">
+          <img src="{{ asset('images/assets/ghrami.svg') }}" alt="Ghrami Logo"
+               onerror="this.parentElement.classList.add('gr-logo-fallback')">
+        </div>
+      </div>
+
+      <h1 class="gr-heading">✦ Créer un compte</h1>
+      <p class="gr-sub">Rejoignez la communauté Ghrami dès aujourd'hui</p>
+
+      <div id="errorContainer" class="gr-error" style="display: none;">
+        ⚠️ Veuillez corriger les erreurs suivantes :
+        <ul id="errorList"></ul>
+      </div>
+
+      <form id="registerForm">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('register') }}">
+
+        <div class="gr-row">
+          <div>
+            <label class="gr-label" for="username">Nom d'utilisateur</label>
+            <input class="gr-input" id="username" type="text" name="username"
+                   value="{{ values.username }}"
+                   placeholder="ex: ahmed_tn" />
+            <p class="gr-field-error" id="username-error" style="display: none;"></p>
+          </div>
+          <div>
+            <label class="gr-label" for="full_name">Nom complet</label>
+            <input class="gr-input" id="full_name" type="text" name="full_name"
+                   value="{{ values.full_name }}"
+                   placeholder="Prénom Nom" />
+            <p class="gr-field-error" id="full_name-error" style="display: none;"></p>
+          </div>
+        </div>
+
+        <div class="gr-field">
+          <label class="gr-label" for="email">Email</label>
+          <input class="gr-input" id="email" type="text" name="email"
+                 value="{{ values.email }}"
+                 placeholder="votre@email.com" />
+          <p class="gr-field-error" id="email-error" style="display: none;"></p>
+        </div>
+
+        <div class="gr-field">
+          <label class="gr-label" for="location">Localisation</label>
+          <input class="gr-input" id="location" type="text" name="location"
+                 value="{{ values.location }}"
+                 placeholder="Ville, Pays" />
+          <p class="gr-field-error" id="location-error" style="display: none;"></p>
+        </div>
+
+        <div class="gr-field">
+          <label class="gr-label" for="bio">À propos de vous</label>
+          <textarea class="gr-input" id="bio" name="bio" rows="3"
+                    placeholder="Parlez-nous de vos intérêts et compétences...">{{ values.bio }}</textarea>
+          <p class="gr-hint">Partagez vos centres d'intérêt, compétences et hobbies</p>
+          <p class="gr-field-error" id="bio-error" style="display: none;"></p>
+        </div>
+
+        <div class="gr-row">
+          <div>
+            <label class="gr-label" for="password">Mot de passe</label>
+            <input class="gr-input" id="password" type="password" name="password"
+                   placeholder="6 caractères min." />
+            <p class="gr-field-error" id="password-error" style="display: none;"></p>
+          </div>
+          <div>
+            <label class="gr-label" for="confirm_password">Confirmation</label>
+            <input class="gr-input" id="confirm_password" type="password" name="confirm_password"
+                   placeholder="Répétez le mot de passe" />
+            <p class="gr-field-error" id="confirm_password-error" style="display: none;"></p>
+          </div>
+        </div>
+
+        <button class="gr-btn-primary" type="submit" id="submitBtn">
+          <span id="submitText">Créer mon compte</span> <span>→</span>
+        </button>
+      </form>
+
+      <div class="gr-footer">
+        <p>Déjà un compte ? <a href="{{ path('app_login') }}">Se connecter</a></p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── RIGHT: HERO ── -->
+  <div class="gr-right">
+    <div class="gr-deco gr-deco-1"></div>
+    <div class="gr-deco gr-deco-2"></div>
+    <div class="gr-deco gr-deco-3"></div>
+    <div class="gr-dot gr-dot-1"></div>
+    <div class="gr-dot gr-dot-2"></div>
+    <div class="gr-dot gr-dot-3"></div>
+
+    <div class="gr-right-inner">
+      <div class="gr-rocket-wrap">
+        <div class="gr-rocket-circle">🌟</div>
+      </div>
+      <div class="gr-headline">
+        <h2>Créez.<br>Partagez.<br>Grandissez.</h2>
+      </div>
+      <div class="gr-cards">
+        <div class="gr-card">
+          <div class="gr-card-icon">👥</div>
+          <div>
+            <div class="gr-card-title">Communauté Vibrante</div>
+            <div class="gr-card-desc">Rejoignez 10,000+ tunisiens passionnés</div>
+          </div>
+        </div>
+        <div class="gr-card">
+          <div class="gr-card-icon">🎯</div>
+          <div>
+            <div class="gr-card-title">Hobbies &amp; Meetups</div>
+            <div class="gr-card-desc">Organisez 500+ événements locaux</div>
+          </div>
+        </div>
+        <div class="gr-card">
+          <div class="gr-card-icon">📚</div>
+          <div>
+            <div class="gr-card-title">Cours &amp; Marketplace</div>
+            <div class="gr-card-desc">Accédez à 100+ cours et partagez vos skills</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('registerForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const submitText = document.getElementById('submitText');
+  const errorContainer = document.getElementById('errorContainer');
+  const errorList = document.getElementById('errorList');
+
+  // Reset error states
+  function clearErrors() {
+    errorContainer.style.display = 'none';
+    errorList.innerHTML = '';
+    document.querySelectorAll('.gr-input').forEach(input => {
+      input.classList.remove('gr-input-error');
+    });
+    document.querySelectorAll('[id$="-error"]').forEach(el => {
+      el.style.display = 'none';
+      el.textContent = '';
+    });
+  }
+
+  // Display errors
+  function displayErrors(errors = [], fieldErrors = {}) {
+    clearErrors();
+    
+    // Display general errors
+    if (Array.isArray(errors) && errors.length > 0) {
+      errorContainer.style.display = 'block';
+      errorList.innerHTML = errors.map(err => `<li>${String(err)}</li>`).join('');
+    }
+
+    // Display field-specific errors
+    Object.keys(fieldErrors).forEach(fieldName => {
+      const fieldInput = document.getElementById(fieldName);
+      const fieldErrorEl = document.getElementById(`${fieldName}-error`);
+      const errorMessage = fieldErrors[fieldName];
+      
+      if (fieldInput) {
+        fieldInput.classList.add('gr-input-error');
+      }
+      
+      if (fieldErrorEl && errorMessage) {
+        fieldErrorEl.textContent = String(errorMessage);
+        fieldErrorEl.style.display = 'block';
+      }
+    });
+  }
+
+  // Add real-time validation on input
+  document.querySelectorAll('.gr-input').forEach(input => {
+    input.addEventListener('change', function() {
+      if (this.classList.contains('gr-input-error')) {
+        this.classList.remove('gr-input-error');
+        const fieldErrorEl = document.getElementById(`${this.id}-error`);
+        if (fieldErrorEl) {
+          fieldErrorEl.style.display = 'none';
+        }
+      }
+    });
+  });
+
+  // Form submission
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    clearErrors();
+
+    const formData = new FormData(form);
+    submitBtn.disabled = true;
+    submitText.textContent = 'Création en cours...';
+
+    try {
+      const response = await fetch('{{ path("app_register") }}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        // If response is not JSON, show generic error
+        if (!response.ok) {
+          displayErrors(['Une erreur est survenue lors de votre inscription.'], {});
+        }
+        return;
+      }
+
+      if (response.ok && data.ok === true) {
+        // Success - redirect immediately
+        window.location.href = '{{ path("app_login") }}';
+      } else if (!response.ok && data.errors && typeof data.errors === 'object') {
+        // Validation errors
+        displayErrors([], data.errors);
+      } else if (!response.ok && data.message) {
+        // Generic error
+        displayErrors([data.message], {});
+      } else {
+        // Unexpected response
+        displayErrors(['Une erreur est survenue. Veuillez réessayer.'], {});
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      displayErrors(['Erreur de connexion. Veuillez réessayer.'], {});
+    } finally {
+      submitBtn.disabled = false;
+      submitText.textContent = 'Créer mon compte';
+    }
+  });
+});
+</script>
+{% endblock %}

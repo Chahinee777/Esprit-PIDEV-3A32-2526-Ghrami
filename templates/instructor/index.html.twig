@@ -1,0 +1,547 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Instructor Dashboard | Ghrami{% endblock %}
+
+{% block body %}
+<div style="max-width: 1400px; margin: 0 auto; padding: 0 20px; padding-top: 20px; padding-bottom: 40px;">
+    {% if provider is null %}
+        <div style="background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin-bottom: 32px;">
+            <h3 style="margin: 0 0 8px 0; color: #7f1d1d; font-size: 16px;">⚠️ Provider Account Required</h3>
+            <p style="margin: 0; color: #991b1b; font-size: 14px;">You need to create an instructor profile to manage classes. Please contact support.</p>
+        </div>
+    {% else %}
+        {# ── Header ─────────────────────────────────────────────────────── #}
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+            <div>
+                <h1 style="font-size: 48px; font-weight: 800; color: #1c1e21; margin: 0;">📊 Instructor Dashboard</h1>
+                <p style="font-size: 16px; color: #65676b; margin: 8px 0 0 0;">{{ provider.companyName ?: app.user.username }}</p>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <a href="{{ path('app_marketplace_index') }}" style="background: white; border: 1px solid #e5e7eb; color: #1c1e21; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;">🎓 Marketplace</a>
+                <a href="{{ path('app_instructor_export_bookings') }}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px;">📥 Export CSV</a>
+            </div>
+        </div>
+
+        {# ── Flash Messages ──────────────────────────────────────────────── #}
+        {% for message in app.flashes('success') %}
+            <div style="background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; color: #166534; font-size: 14px; font-weight: 600;">
+                ✓ {{ message }}
+            </div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div style="background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; color: #991b1b; font-size: 14px; font-weight: 600;">
+                ✕ {{ message }}
+            </div>
+        {% endfor %}
+
+        {# ── Provider Info Card ──────────────────────────────────────────── #}
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 20px; margin-bottom: 32px; color: white;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                <div>
+                    <p style="margin: 0 0 4px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase; font-weight: 600;">Company</p>
+                    <p style="margin: 0; font-size: 18px; font-weight: 700;">{{ provider.companyName ?: 'N/A' }}</p>
+                </div>
+                <div>
+                    <p style="margin: 0 0 4px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase; font-weight: 600;">Rating</p>
+                    <p style="margin: 0; font-size: 18px; font-weight: 700;">⭐ {{ provider.rating|number_format(1) }}</p>
+                </div>
+                <div>
+                    <p style="margin: 0 0 4px 0; font-size: 12px; opacity: 0.9; text-transform: uppercase; font-weight: 600;">Status</p>
+                    <p style="margin: 0; font-size: 18px; font-weight: 700;">{{ provider.isVerified ? '✓ Verified' : 'Unverified' }}</p>
+                </div>
+            </div>
+        </div>
+
+        {# ── Stats Grid ──────────────────────────────────────────────────── #}
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 32px;">
+            <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid #667eea;">
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #8a8d91; text-transform: uppercase; font-weight: 600;">Total Classes</p>
+                <p style="margin: 0; font-size: 32px; font-weight: 700; color: #667eea;">{{ stats.classes }}</p>
+            </div>
+            <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid #22c55e;">
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #8a8d91; text-transform: uppercase; font-weight: 600;">Total Bookings</p>
+                <p style="margin: 0; font-size: 32px; font-weight: 700; color: #22c55e;">{{ stats.bookings }}</p>
+            </div>
+            <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid #fbbf24;">
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #8a8d91; text-transform: uppercase; font-weight: 600;">Completed</p>
+                <p style="margin: 0; font-size: 32px; font-weight: 700; color: #fbbf24;">{{ stats.completed }}</p>
+            </div>
+            <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid #06b6d4;">
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #8a8d91; text-transform: uppercase; font-weight: 600;">Revenue</p>
+                <p style="margin: 0; font-size: 32px; font-weight: 700; color: #06b6d4;">{{ stats.revenue|number_format(2, '.', ',') }} TND</p>
+            </div>
+        </div>
+
+        {# ── Revenue Chart ───────────────────────────────────────────────── #}
+        {% if revenueByCategory|length > 0 %}
+            <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 32px;">
+                <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 700; color: #1c1e21;">📊 Revenue by Category</h3>
+                <div style="position: relative; height: 300px;">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        {% endif %}
+
+        {# ── Create Class ────────────────────────────────────────────────── #}
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 32px;">
+            <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 700; color: #1c1e21;">➕ Create New Class</h3>
+            <form method="post" action="{{ path('app_instructor_class_create') }}" enctype="multipart/form-data" style="display: grid; gap: 12px;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('create_class') }}">
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Class Title <span style="color:#dc2626;">*</span></label>
+                        <input type="text" name="title" placeholder="Enter class title" required maxlength="200"
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Category</label>
+                        <input type="text" name="category" placeholder="e.g., Programming" maxlength="50"
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Description</label>
+                    <textarea name="description" placeholder="Class description" rows="2"
+                              style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Price (TND) <span style="color:#dc2626;">*</span></label>
+                        <input type="number" step="0.01" min="0.01" name="price" placeholder="0.00" required
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Duration (min) <span style="color:#dc2626;">*</span></label>
+                        <input type="number" min="1" name="duration" placeholder="60" required
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Max Participants <span style="color:#dc2626;">*</span></label>
+                        <input type="number" min="1" name="max_participants" placeholder="10" required
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                {# FIX: Video and thumbnail are now required #}
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">
+                            📹 Video File (MP4) <span style="color:#dc2626;">*</span>
+                        </label>
+                        <input type="file" name="video" accept="video/mp4,video/avi,video/quicktime,video/x-msvideo" required
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                        <p style="margin: 4px 0 0 0; font-size: 12px; color: #8a8d91;">Max 100 MB</p>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">
+                            🖼️ Thumbnail Image (JPG/PNG) <span style="color:#dc2626;">*</span>
+                        </label>
+                        <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp" required
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                        <p style="margin: 4px 0 0 0; font-size: 12px; color: #8a8d91;">Max 5 MB</p>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;">
+                    Create Class
+                </button>
+            </form>
+        </div>
+
+        {# ── My Classes ──────────────────────────────────────────────────── #}
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 32px;">
+            <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 700; color: #1c1e21;">📚 My Classes</h3>
+            {% if classes is empty %}
+                <p style="color: #8a8d91; margin: 0; text-align: center; padding: 20px;">No classes yet. Create your first class above!</p>
+            {% else %}
+                <div style="display: grid; gap: 12px;">
+                    {% for c in classes %}
+                        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+                                    <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #1c1e21;">{{ c.title }}</h4>
+                                    {% if c.category %}
+                                        <span style="background: #ede9fe; color: #5b21b6; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">{{ c.category }}</span>
+                                    {% endif %}
+                                </div>
+                                <p style="margin: 0 0 8px 0; font-size: 13px; color: #65676b;">
+                                    💰 {{ c.price }} TND &nbsp;•&nbsp; ⏱ {{ c.duration }} min &nbsp;•&nbsp; 👥 0/{{ c.max_participants }} enrolled
+                                </p>
+                                {% if c.video_path %}
+                                    <p style="margin: 0 0 4px 0; font-size: 12px; color: #059669;">✓ Video uploaded</p>
+                                {% endif %}
+                                {% if c.image_path %}
+                                    <p style="margin: 0 0 4px 0; font-size: 12px; color: #059669;">✓ Thumbnail uploaded</p>
+                                {% endif %}
+                                {% if c.booking_count > 0 %}
+                                    <p style="margin: 0; font-size: 13px; color: #8a8d91;">
+                                        📊 {{ c.booking_count }} booking{{ c.booking_count != 1 ? 's' : '' }}
+                                        {% if c.avg_rating %}
+                                            &nbsp;|&nbsp; ⭐ {{ c.avg_rating|number_format(1) }}
+                                        {% endif %}
+                                    </p>
+                                {% endif %}
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-direction: column; min-width: 150px;">
+                                <button type="button" onclick="viewStudents({{ c.class_id }}, '{{ c.title|e('js') }}')"
+                                        style="background: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer;">👥 Students</button>
+                                {# FIX 4: editClass() now uses embedded data — no broken AJAX to marketplace #}
+                                <button type="button" onclick="editClass({{ c.class_id }})"
+                                        style="background: #f3f4f6; border: 1px solid #e5e7eb; color: #1c1e21; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer;">✎ Edit</button>
+                                <form method="post" action="{{ path('app_instructor_class_delete') }}" style="margin: 0;" onsubmit="return confirm('Delete this class and all its bookings?');">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('delete_class') }}">
+                                    <input type="hidden" name="class_id" value="{{ c.class_id }}">
+                                    <button type="submit"
+                                            style="width: 100%; background: #fee2e2; border: 1px solid #fecaca; color: #7f1d1d; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer;">🗑 Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        {# ── Bookings Table ───────────────────────────────────────────────── #}
+        <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1c1e21;">📋 Recent Bookings</h3>
+                <select id="bookingStatusFilter" onchange="filterBookings()"
+                        style="padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 13px; font-family: inherit;">
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+
+            {% if bookings is empty %}
+                <p style="color: #8a8d91; margin: 0; text-align: center; padding: 20px;">No bookings yet.</p>
+            {% else %}
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e5e7eb;">
+                                <th style="text-align: left; padding: 12px; font-weight: 600; color: #65676b; font-size: 12px; text-transform: uppercase;">Class</th>
+                                <th style="text-align: left; padding: 12px; font-weight: 600; color: #65676b; font-size: 12px; text-transform: uppercase;">Student</th>
+                                <th style="text-align: left; padding: 12px; font-weight: 600; color: #65676b; font-size: 12px; text-transform: uppercase;">Status</th>
+                                <th style="text-align: left; padding: 12px; font-weight: 600; color: #65676b; font-size: 12px; text-transform: uppercase;">Payment</th>
+                                <th style="text-align: left; padding: 12px; font-weight: 600; color: #65676b; font-size: 12px; text-transform: uppercase;">Amount</th>
+                                <th style="text-align: left; padding: 12px; font-weight: 600; color: #65676b; font-size: 12px; text-transform: uppercase;">Date</th>
+                                <th style="text-align: left; padding: 12px; font-weight: 600; color: #65676b; font-size: 12px; text-transform: uppercase;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in bookings %}
+                                <tr style="border-bottom: 1px solid #e5e7eb;" class="booking-row" data-status="{{ b.status }}">
+                                    <td style="padding: 12px; font-size: 13px; font-weight: 600; color: #1c1e21;">{{ b.class_title }}</td>
+                                    <td style="padding: 12px; font-size: 13px; color: #65676b;">{{ b.full_name ?: b.username }}</td>
+                                    <td style="padding: 12px; font-size: 13px;">
+                                        <span style="display: inline-block;
+                                            background: {% if b.status == 'completed' %}#d1fae5{% elseif b.status == 'pending' %}#fef3c7{% elseif b.status == 'scheduled' %}#dbeafe{% else %}#fee2e2{% endif %};
+                                            color: {% if b.status == 'completed' %}#065f46{% elseif b.status == 'pending' %}#92400e{% elseif b.status == 'scheduled' %}#1e40af{% else %}#7f1d1d{% endif %};
+                                            padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 11px;">
+                                            {{ b.status|upper }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px; font-size: 13px;">
+                                        <span style="display: inline-block;
+                                            background: {% if b.payment_status == 'paid' %}#d1fae5{% elseif b.payment_status == 'pending' %}#fef3c7{% else %}#fee2e2{% endif %};
+                                            color: {% if b.payment_status == 'paid' %}#065f46{% elseif b.payment_status == 'pending' %}#92400e{% else %}#7f1d1d{% endif %};
+                                            padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 11px;">
+                                            {{ b.payment_status|upper }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px; font-size: 13px; font-weight: 700; color: #667eea;">{{ b.total_amount }} TND</td>
+                                    <td style="padding: 12px; font-size: 13px; color: #8a8d91;">{{ b.booking_date }}</td>
+                                    <td style="padding: 12px; font-size: 13px;">
+                                        <form method="post" action="{{ path('app_instructor_booking_update_status') }}"
+                                              style="display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 6px; align-items: center;">
+                                            <input type="hidden" name="_csrf_token" value="{{ csrf_token('update_booking_status') }}">
+                                            <input type="hidden" name="booking_id" value="{{ b.booking_id }}">
+                                            <select name="status" style="padding: 4px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 11px; font-family: inherit;">
+                                                <option value="pending"   {% if b.status == 'pending'   %}selected{% endif %}>Pending</option>
+                                                <option value="scheduled" {% if b.status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                                                <option value="completed" {% if b.status == 'completed' %}selected{% endif %}>Completed</option>
+                                                <option value="cancelled" {% if b.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                                            </select>
+                                            <select name="payment_status" style="padding: 4px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 11px; font-family: inherit;">
+                                                <option value="pending"  {% if b.payment_status == 'pending'  %}selected{% endif %}>Pending</option>
+                                                <option value="paid"     {% if b.payment_status == 'paid'     %}selected{% endif %}>Paid</option>
+                                                <option value="failed"   {% if b.payment_status == 'failed'   %}selected{% endif %}>Failed</option>
+                                                <option value="refunded" {% if b.payment_status == 'refunded' %}selected{% endif %}>Refunded</option>
+                                            </select>
+                                            <button type="submit"
+                                                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 10px; border: none; border-radius: 4px; font-weight: 600; font-size: 11px; cursor: pointer;">
+                                                Save
+                                            </button>
+                                            {% if b.status == 'completed' %}
+                                                <a href="{{ path('app_instructor_booking_certificate', {bookingId: b.booking_id}) }}"
+                                                   title="Download certificate"
+                                                   style="background: white; border: 1px solid #e5e7eb; color: #667eea; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 11px; text-align: center;">
+                                                    📄
+                                                </a>
+                                            {% endif %}
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+{# ── Edit Class Modal ──────────────────────────────────────────────────── #}
+<div id="editClassModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; max-width: 560px; width: 90%; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
+        <div style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10;">
+            <h2 style="margin: 0; font-size: 20px; color: #1c1e21;">✎ Edit Class</h2>
+            <button onclick="closeEditModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+        <form method="post" action="{{ path('app_instructor_class_update') }}" enctype="multipart/form-data" style="padding: 20px;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('update_class') }}">
+            <input type="hidden" name="class_id" id="editClassId">
+
+            <div style="display: grid; gap: 12px;">
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Class Title <span style="color:#dc2626;">*</span></label>
+                    <input type="text" name="title" id="editTitle" required
+                           style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Category</label>
+                    <input type="text" name="category" id="editCategory"
+                           style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Description</label>
+                    <textarea name="description" id="editDescription" rows="2"
+                              style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Price (TND) <span style="color:#dc2626;">*</span></label>
+                        <input type="number" step="0.01" min="0" name="price" id="editPrice" required
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Duration (min) <span style="color:#dc2626;">*</span></label>
+                        <input type="number" min="1" name="duration" id="editDuration" required
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">Max Participants <span style="color:#dc2626;">*</span></label>
+                        <input type="number" min="1" name="max_participants" id="editMaxParticipants" required
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">📹 Replace Video (MP4)</label>
+                        <input type="file" name="video" accept="video/mp4,video/avi,video/quicktime"
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                        <p id="editCurrentVideo" style="margin: 4px 0 0 0; font-size: 12px; color: #059669;"></p>
+                        <p style="margin: 2px 0 0 0; font-size: 11px; color: #8a8d91;">Leave blank to keep current video. Max 500 MB.</p>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">🖼️ Replace Thumbnail (JPG/PNG)</label>
+                        <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp"
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
+                        <p id="editCurrentThumb" style="margin: 4px 0 0 0; font-size: 12px; color: #059669;"></p>
+                        <p style="margin: 2px 0 0 0; font-size: 11px; color: #8a8d91;">Leave blank to keep current thumbnail. Max 5 MB.</p>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+                    <button type="button" onclick="closeEditModal()"
+                            style="padding: 10px 16px; border: 1px solid #e5e7eb; background: white; border-radius: 6px; font-weight: 600; cursor: pointer; color: #1c1e21;">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            style="padding: 10px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                        Update Class
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ── View Students Modal ───────────────────────────────────────────────── #}
+<div id="studentsModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1001; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;" onclick="event.stopPropagation()">
+        <div style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10;">
+            <h2 style="margin: 0; font-size: 20px; color: #1c1e21;">👥 Students in <span id="studentsClassName"></span></h2>
+            <button onclick="closeStudentsModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+        <div style="padding: 20px;">
+            <div id="studentsList" style="display: grid; gap: 12px;">
+                <p style="color: #8a8d91; margin: 0; text-align: center;">Loading students...</p>
+            </div>
+            <button onclick="closeStudentsModal()"
+                    style="width: 100%; margin-top: 16px; padding: 10px 16px; background: #f3f4f6; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; color: #1c1e21;">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    {#
+        FIX 4: Embed class data from Twig directly as a JS lookup table.
+        The original code tried to fetch() from app_marketplace_class_detail which
+        returns HTML, not JSON — so .then(r => r.json()) always threw and the edit
+        modal never opened.
+    #}
+    const classData = {
+        {% for c in classes %}
+        {{ c.class_id }}: {
+            id:              {{ c.class_id }},
+            title:           {{ c.title|json_encode|raw }},
+            category:        {{ (c.category ?? '')|json_encode|raw }},
+            description:     {{ (c.description ?? '')|json_encode|raw }},
+            price:           {{ c.price }},
+            duration:        {{ c.duration }},
+            maxParticipants: {{ c.max_participants }},
+            hasVideo:        {{ c.video_path ? 'true' : 'false' }},
+            hasThumb:        {{ c.image_path ? 'true' : 'false' }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    };
+
+    function editClass(classId) {
+        const data = classData[classId];
+        if (!data) {
+            alert('Class data not found. Please refresh the page.');
+            return;
+        }
+        document.getElementById('editClassId').value         = data.id;
+        document.getElementById('editTitle').value           = data.title;
+        document.getElementById('editCategory').value        = data.category;
+        document.getElementById('editDescription').value     = data.description;
+        document.getElementById('editPrice').value           = data.price;
+        document.getElementById('editDuration').value        = data.duration;
+        document.getElementById('editMaxParticipants').value = data.maxParticipants;
+
+        document.getElementById('editCurrentVideo').textContent = data.hasVideo ? '✓ Video already uploaded' : '';
+        document.getElementById('editCurrentThumb').textContent = data.hasThumb ? '✓ Thumbnail already uploaded' : '';
+
+        document.getElementById('editClassModal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+        document.getElementById('editClassModal').style.display = 'none';
+    }
+
+    function viewStudents(classId, className) {
+        document.getElementById('studentsClassName').textContent = className;
+        document.getElementById('studentsList').innerHTML =
+            '<p style="color: #8a8d91; margin: 0; text-align: center;">Loading students...</p>';
+        document.getElementById('studentsModal').style.display = 'flex';
+
+        fetch(`{{ path('app_instructor_class_students', {classId: 'CLASSID'}) }}`.replace('CLASSID', classId))
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(data => {
+                if (data.students && data.students.length > 0) {
+                    const html = data.students.map(s => `
+                        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; flex-shrink: 0;">👤</div>
+                                <div style="flex: 1; min-width: 0;">
+                                    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1c1e21;">${s.full_name || s.username}</p>
+                                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #8a8d91;">📧 ${s.email}</p>
+                                </div>
+                                <div style="text-align: right; flex-shrink: 0;">
+                                    <p style="margin: 0; font-size: 12px; font-weight: 600; color: #65676b;">${s.status}</p>
+                                    ${s.watch_progress != null ? `<p style="margin: 4px 0 0 0; font-size: 12px; color: #8a8d91;">Progress: ${s.watch_progress}%</p>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                    document.getElementById('studentsList').innerHTML = html;
+                } else {
+                    document.getElementById('studentsList').innerHTML =
+                        '<p style="color: #8a8d91; margin: 0; text-align: center; padding: 20px;">No students enrolled yet.</p>';
+                }
+            })
+            .catch(e => {
+                console.error('Error loading students:', e);
+                document.getElementById('studentsList').innerHTML =
+                    '<p style="color: #dc2626; margin: 0; text-align: center;">Failed to load students. Please try again.</p>';
+            });
+    }
+
+    function closeStudentsModal() {
+        document.getElementById('studentsModal').style.display = 'none';
+    }
+
+    function filterBookings() {
+        const filter = document.getElementById('bookingStatusFilter').value;
+        document.querySelectorAll('.booking-row').forEach(row => {
+            row.style.display = (filter === '' || row.dataset.status === filter) ? '' : 'none';
+        });
+    }
+
+    // Close modals when clicking the backdrop
+    document.getElementById('editClassModal').addEventListener('click', e => {
+        if (e.target.id === 'editClassModal') closeEditModal();
+    });
+    document.getElementById('studentsModal').addEventListener('click', e => {
+        if (e.target.id === 'studentsModal') closeStudentsModal();
+    });
+
+    // Revenue doughnut chart
+    {% if revenueByCategory|length > 0 %}
+    document.addEventListener('DOMContentLoaded', function () {
+        setTimeout(function () {
+            const ctx = document.getElementById('revenueChart')?.getContext('2d');
+            if (!ctx) return;
+
+            const revenueData = {{ revenueByCategory|json_encode|raw }};
+            const colors = ['#667eea','#764ba2','#f093fb','#4facfe','#00f2fe','#43e97b','#fa7e1e','#d946ef','#ec4899','#8b5cf6'];
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels:   revenueData.map(r => r.category),
+                    datasets: [{
+                        data:            revenueData.map(r => r.revenue),
+                        backgroundColor: colors.slice(0, revenueData.length),
+                        borderColor:     '#fff',
+                        borderWidth:     2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 15, font: { size: 14, weight: 'bold' }, usePointStyle: true }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ctx.label + ': ' + ctx.parsed.toFixed(2) + ' TND'
+                            }
+                        }
+                    }
+                }
+            });
+        }, 100);
+    });
+    {% endif %}
+</script>
+{% endblock %}

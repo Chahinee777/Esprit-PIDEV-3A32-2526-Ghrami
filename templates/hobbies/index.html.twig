@@ -1,0 +1,830 @@
+﻿{% extends 'base.html.twig' %}
+
+{% block title %}Mes Loisirs - Ghrami{% endblock %}
+
+{% block body %}
+<div class="hobbies-container" style="display: grid; grid-template-columns: 1fr; gap: 24px; padding: 20px; max-width: 1400px; margin: 0 auto;">
+    
+    <!-- Barre de navigation -->
+    <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 16px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <button onclick="goBack()" style="padding: 10px 16px; background: #e0e0e0; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">← Retour</button>
+            <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #1c1e21;">🎯 Mes Loisirs</h1>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="openCoachModal()" style="padding: 10px 16px; background: #9C27B0; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">🤖 Coach</button>
+            <a href="{{ path('app_hobbies_analytics') }}" class="btn-secondary" style="padding: 10px 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block;">📊 Statistiques</a>
+            <button onclick="refreshPage()" style="padding: 10px 16px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">🔄 Actualiser</button>
+        </div>
+    </div>
+    
+    <!-- Section d'en-tête -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+        <!-- Cartes de statistiques -->
+        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+            <div style="font-size: 32px; margin-bottom: 8px;">🎯</div>
+            <p style="margin: 0; font-size: 14px; opacity: 0.9;">Total des Loisirs</p>
+            <h3 style="margin: 4px 0 0 0; font-size: 28px; font-weight: bold;">{{ total_hobbies }}</h3>
+        </div>
+
+        <div class="stat-card" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);">
+            <div style="font-size: 32px; margin-bottom: 8px;">⏱️</div>
+            <p style="margin: 0; font-size: 14px; opacity: 0.9;">Total des Heures</p>
+            <h3 style="margin: 4px 0 0 0; font-size: 28px; font-weight: bold;">{{ total_hours }}</h3>
+        </div>
+
+        <div class="stat-card" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); color: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);">
+            <div style="font-size: 32px; margin-bottom: 8px;">🏆</div>
+            <p style="margin: 0; font-size: 14px; opacity: 0.9;">Jalons</p>
+            <h3 style="margin: 4px 0 0 0; font-size: 28px; font-weight: bold;">{{ achieved_milestones }} / {{ total_milestones }}</h3>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: center;">
+            <button onclick="openCreateHobbyModal()" class="btn-primary" style="width: 100%; padding: 16px; border-radius: 16px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; font-size: 16px; cursor: pointer; transition: transform 0.2s;">
+                ➕ Ajouter un Loisir
+            </button>
+        </div>
+    </div>
+
+    <!-- Section de filtres -->
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div style="flex: 1; min-width: 200px;">
+            <input type="text" id="searchInput" placeholder="Rechercher des loisirs..." style="width: 100%; padding: 12px 16px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px;" onkeyup="filterHobbies()">
+        </div>
+        <select id="categoryFilter" onchange="filterHobbies()" style="padding: 12px 16px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; min-width: 200px;">
+            <option value="all">Toutes les Catégories</option>
+            {% for category in categories %}
+            <option value="{{ category }}" {% if category == current_category %}selected{% endif %}>{{ category }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Grille des loisirs -->
+    <div id="hobbiesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px;">
+        {% if hobbies|length == 0 %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+            <div style="font-size: 80px; opacity: 0.5; margin-bottom: 16px;">🎯</div>
+            <h3 style="font-size: 24px; font-weight: bold; color: #1c1e21; margin: 0 0 8px 0;">Aucun loisir pour l'instant</h3>
+            <p style="color: #65676b; margin: 0 0 24px 0;">Commencez à suivre vos passions et observez votre progression !</p>
+            <button onclick="openCreateHobbyModal()" class="btn-primary" style="padding: 12px 32px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                ➕ Créer votre premier Loisir
+            </button>
+        </div>
+        {% else %}
+        {% for hobby in hobbies %}
+        <div class="hobby-card" data-hobby-id="{{ hobby.id }}" data-csrf-edit="{{ csrf_token('hobby_edit_' ~ hobby.id) }}" data-csrf-delete="{{ csrf_token('hobby_delete_' ~ hobby.id) }}" data-csrf-log="{{ csrf_token('log_progress_' ~ hobby.id) }}" data-csrf-milestone="{{ csrf_token('milestone_add_' ~ hobby.id) }}" style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s; cursor: pointer; display: flex; flex-direction: column; gap: 16px;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 24px rgba(102,126,234,0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'">
+            
+            <!-- En-tête -->
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="font-size: 48px;">
+                    {% set icon = {
+                        'Sports & Fitness': '⚽',
+                        'Arts & Crafts': '🎨',
+                        'Music': '🎵',
+                        'Cooking': '🍳',
+                        'Gaming': '🎮',
+                        'Reading': '📚',
+                        'Technology': '💻',
+                        'Photography': '📷',
+                        'Gardening': '🌱',
+                        'Writing': '✏️',
+                        'Learning Languages': '🗣️',
+                        'Dancing': '💃',
+                        'Traveling': '✈️'
+                    } %}
+                    {{ icon[hobby.category] ?? '🎯' }}
+                </div>
+                <div style="flex: 1;">
+                    <h4 style="margin: 0; font-size: 18px; font-weight: bold; color: #1c1e21;">{{ hobby.name }}</h4>
+                    <span style="display: inline-block; margin-top: 4px; padding: 4px 12px; background: #667eea; color: white; border-radius: 12px; font-size: 11px; font-weight: 600;">{{ hobby.category }}</span>
+                </div>
+            </div>
+
+            <!-- Description -->
+            {% if hobby.description %}
+            <p style="margin: 0; color: #65676b; font-size: 13px; line-height: 1.5; max-height: 70px; overflow: hidden;">{{ hobby.description }}</p>
+            {% endif %}
+
+            <!-- Informations de progression -->
+            {% set progress = hobby.progress.first() %}
+            {% set milestones = hobby.milestones %}
+            {% set achieved = milestones|filter(m => m.isAchieved)|length %}
+            <div style="display: flex; gap: 12px; background: #f0f2f5; padding: 12px; border-radius: 12px;">
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">Heures</div>
+                    <div style="font-size: 18px; font-weight: bold; color: #4CAF50;">{{ progress ? progress.hoursSpent|round(1) : 0 }}</div>
+                </div>
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">Objectifs</div>
+                    <div style="font-size: 18px; font-weight: bold; color: #FF9800;">{{ achieved }}/{{ milestones|length }}</div>
+                </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div style="display: flex; gap: 8px;">
+                <button onclick="openDetailsModal({{ hobby.id }})" class="btn-action" style="flex: 1; padding: 10px; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">📊 Détails</button>
+                <button onclick="openLogProgressModal({{ hobby.id }}, '{{ hobby.name }}')" class="btn-action" style="flex: 1; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">➕ Temps</button>
+                <button onclick="openEditHobbyModal({{ hobby.id }}, '{{ hobby.name }}', '{{ hobby.category }}', '{{ hobby.description }}')" style="padding: 10px 12px; background: #FF9800; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">✏️</button>
+                <button onclick="deleteHobby({{ hobby.id }})" style="padding: 10px 12px; background: #f44336; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">🗑️</button>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Créer/Modifier un Loisir -->
+<div id="createHobbyModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 450px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="hobbyModalTitle" style="margin: 0; font-size: 20px; font-weight: bold;">Créer un Nouveau Loisir</h2>
+            <button onclick="closeCreateHobbyModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <form id="hobbyForm" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+            <input type="hidden" name="_csrf_token" value="" id="hobbyCSRF">
+            <input type="hidden" name="hobby_id" id="hobbyId">
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Nom du Loisir *</label>
+                <input type="text" name="name" id="hobbyName" placeholder="ex. : Guitare, Course à pied" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Catégorie *</label>
+                <select name="category" id="hobbyCategory" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                    <option value="">Choisir une catégorie</option>
+                    {% for category in categories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Description (facultatif)</label>
+                <textarea name="description" id="hobbyDescription" placeholder="Ajouter une description..." style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 80px; box-sizing: border-box;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <button type="button" onclick="closeCreateHobbyModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Annuler</button>
+                <button type="submit" class="btn-primary" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">✨ Créer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Enregistrer la Progression -->
+<div id="logProgressModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 450px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20px; font-weight: bold;">Progression : <span id="hobbyNameDisplay"></span></h2>
+            <button onclick="closeLogProgressModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <form id="progressForm" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+            <input type="hidden" name="_csrf_token" value="" id="progressCSRF">
+            <input type="hidden" name="hobby_id" id="progressHobbyId">
+
+            <div id="currentHours" style="background: #f0f0ff; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #667eea;">📊 Total actuel : chargement...</div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">📅 Date de la séance</label>
+                <input type="date" name="session_date" id="sessionDate" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">⏱️ Heures passées *</label>
+                <input type="number" name="hours" id="hoursSpent" placeholder="ex. 1.5" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">📝 Notes (facultatif)</label>
+                <textarea name="notes" id="sessionNotes" placeholder="Qu'avez-vous pratiqué aujourd'hui ?" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 80px; box-sizing: border-box;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <button type="button" onclick="closeLogProgressModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Annuler</button>
+                <button type="submit" class="btn-primary" style="flex: 1; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">✅ Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Jalon -->
+<div id="milestoneModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1001; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 450px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="milestoneModalTitle" style="margin: 0; font-size: 20px; font-weight: bold;">Ajouter un Jalon</h2>
+            <button onclick="closeMilestoneModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <form id="milestoneForm" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+            <input type="hidden" name="_csrf_token" value="" id="milestoneCSRF">
+            <input type="hidden" name="hobby_id" id="milestoneHobbyId">
+            <input type="hidden" name="milestone_id" id="milestoneId">
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Titre du Jalon *</label>
+                <input type="text" name="title" id="milestoneTitle" placeholder="ex. : Apprendre 10 chansons" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Date cible (facultatif)</label>
+                <input type="date" name="target_date" id="milestoneDate" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <button type="button" onclick="closeMilestoneModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Annuler</button>
+                <button type="submit" class="btn-primary" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">✨ Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Détails -->
+<div id="detailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 900px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="detailsTitle" style="margin: 0; font-size: 20px; font-weight: bold;">Détails du Loisir</h2>
+            <button onclick="closeDetailsModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <div id="detailsContent" style="display: flex; flex-direction: column; gap: 24px;">
+            <p style="text-align: center; color: #65676b;">Chargement des détails...</p>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 24px; border-top: 1px solid #e4e6eb; padding-top: 16px;">
+            <button type="button" onclick="closeDetailsModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Fermer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Coach -->
+<div id="coachModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 700px; padding: 0; box-shadow: 0 10px 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; max-height: 85vh;">
+        
+        <!-- En-tête -->
+        <div style="background: linear-gradient(to right, #667eea, #764ba2); color: white; padding: 20px 24px; border-radius: 16px 16px 0 0; display: flex; gap: 14px; align-items: center; justify-content: space-between;">
+            <div style="display: flex; gap: 14px; align-items: center; flex: 1;">
+                <div style="font-size: 30px;">🤖</div>
+                <div>
+                    <h2 style="margin: 0; font-size: 18px; font-weight: bold;">AI Hobby Coach</h2>
+                    <p style="margin: 2px 0 0 0; font-size: 12px; opacity: 0.8;">Powered by Groq • Ask anything</p>
+                </div>
+            </div>
+            <button onclick="closeCoachModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: white; padding: 0; width: 40px; height: 40px;">✕</button>
+        </div>
+
+        <!-- Zone de discussion -->
+        <div id="coachChat" style="flex: 1; padding: 20px; overflow-y: auto; background: #f0f2f5; display: flex; flex-direction: column; gap: 14px; min-height: 300px;">
+            <div style="padding: 12px 18px; background: white; border-radius: 16px 16px 16px 4px; max-width: 600px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                <div style="font-size: 14px; color: #1c1e21;">👋 Hello! I'm your AI Hobby Coach. Ask me for tips, motivation, practice plans, or anything about your hobbies!</div>
+            </div>
+        </div>
+
+        <!-- Zone de saisie -->
+        <div style="padding: 14px 20px; border-top: 1px solid #e4e6eb; background: white; border-radius: 0 0 16px 16px; display: flex; gap: 12px;">
+            <input type="text" id="coachInput" placeholder="Ask me anything about your hobbies..." style="flex: 1; padding: 12px 16px; border: 1px solid #dde0e8; border-radius: 25px; background-color: white; font-size: 14; box-sizing: border-box;">
+            <button onclick="sendCoachMessage()" style="padding: 12px 22px; background: #667eea; color: white; border: none; border-radius: 25px; font-weight: 600; cursor: pointer; font-size: 14px;">Send 🚀</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const icons = {
+        'Sports & Fitness': '⚽',
+        'Arts & Crafts': '🎨',
+        'Music': '🎵',
+        'Cooking': '🍳',
+        'Gaming': '🎮',
+        'Reading': '📚',
+        'Technology': '💻',
+        'Photography': '📷',
+        'Gardening': '🌱',
+        'Writing': '✏️',
+        'Learning Languages': '🗣️',
+        'Dancing': '💃',
+        'Traveling': '✈️'
+    };
+
+    let currentHobbyId = null;
+    let currentMilestoneId = null;
+
+    // Date d'aujourd'hui par défaut
+    const today = new Date();
+    document.getElementById('sessionDate').valueAsDate = today;
+
+    function goBack() {
+        window.history.back();
+    }
+
+    function refreshPage() {
+        location.reload();
+    }
+
+    function openCreateHobbyModal() {
+        document.getElementById('hobbyForm').action = '{{ path("app_hobbies_create") }}';
+        document.getElementById('hobbyForm').method = 'POST';
+        document.getElementById('hobbyModalTitle').textContent = 'Créer un Nouveau Loisir';
+        document.getElementById('hobbyName').value = '';
+        document.getElementById('hobbyCategory').value = '';
+        document.getElementById('hobbyDescription').value = '';
+        document.getElementById('hobbyId').value = '';
+        document.getElementById('hobbyCSRF').value = '{{ csrf_token("hobby_create") }}';
+        document.getElementById('createHobbyModal').style.display = 'flex';
+    }
+
+    function closeCreateHobbyModal() {
+        document.getElementById('createHobbyModal').style.display = 'none';
+    }
+
+    function openEditHobbyModal(id, name, category, description) {
+        const hobbyCard = document.querySelector(`[data-hobby-id="${id}"]`);
+        const csrfToken = hobbyCard?.dataset.csrfEdit || '{{ csrf_token("hobby_edit_") }}';
+        
+        document.getElementById('hobbyForm').action = '{{ path("app_hobbies_edit", {"id": "ID"}) }}'.replace('ID', id);
+        document.getElementById('hobbyForm').method = 'POST';
+        document.getElementById('hobbyModalTitle').textContent = 'Modifier le Loisir';
+        document.getElementById('hobbyName').value = name;
+        document.getElementById('hobbyCategory').value = category;
+        document.getElementById('hobbyDescription').value = description;
+        document.getElementById('hobbyCSRF').value = csrfToken;
+        document.getElementById('hobbyId').value = id;
+        document.getElementById('createHobbyModal').style.display = 'flex';
+    }
+
+    function openLogProgressModal(id, name) {
+        const hobbyCard = document.querySelector(`[data-hobby-id="${id}"]`);
+        const csrfToken = hobbyCard?.dataset.csrfLog || '{{ csrf_token("log_progress_") }}';
+        
+        document.getElementById('hobbyNameDisplay').textContent = name;
+        document.getElementById('progressHobbyId').value = id;
+        document.getElementById('hoursSpent').value = '';
+        document.getElementById('sessionNotes').value = '';
+        // Set today's date as default
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('sessionDate').value = today;
+        // Set CSRF token dynamically for this hobby
+        document.getElementById('progressCSRF').value = csrfToken;
+        document.getElementById('logProgressModal').style.display = 'flex';
+
+        // Charger le total actuel
+        fetch(`{{ path('app_hobbies_details', {'id': 999}) }}`.replace('999', id))
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('currentHours').textContent = `📊 Total actuel : ${data.progress.total_hours.toFixed(1)} heures`;
+            })
+            .catch(e => console.error(e));
+    }
+
+    function closeLogProgressModal() {
+        document.getElementById('logProgressModal').style.display = 'none';
+    }
+
+    function openMilestoneModal(hobbyId, milestoneId = null, title = '', targetDate = '') {
+        const hobbyCard = document.querySelector(`[data-hobby-id="${hobbyId}"]`);
+        const csrfToken = hobbyCard?.dataset.csrfMilestone || '{{ csrf_token("milestone_add_") }}';
+        
+        currentHobbyId = hobbyId;
+        currentMilestoneId = milestoneId;
+        document.getElementById('milestoneHobbyId').value = hobbyId;
+        document.getElementById('milestoneId').value = milestoneId || '';
+        document.getElementById('milestoneTitle').value = title;
+        document.getElementById('milestoneDate').value = targetDate;
+        document.getElementById('milestoneCSRF').value = csrfToken;
+        document.getElementById('milestoneModalTitle').textContent = milestoneId ? '✏️ Modifier le Jalon' : '🏆 Ajouter un Jalon';
+        document.getElementById('milestoneModal').style.display = 'flex';
+    }
+
+    function closeMilestoneModal() {
+        document.getElementById('milestoneModal').style.display = 'none';
+    }
+
+    function openDetailsModal(id) {
+        document.getElementById('detailsModal').style.display = 'flex';
+        loadHobbyDetails(id);
+    }
+
+    function closeDetailsModal() {
+        document.getElementById('detailsModal').style.display = 'none';
+    }
+
+    async function loadHobbyDetails(hobbyId) {
+        try {
+            const response = await fetch(`{{ path('app_hobbies_details', {'id': 999}) }}`.replace('999', hobbyId));
+            const data = await response.json();
+            
+            // Store CSRF tokens globally for use in toggleMilestone and deleteMilestone
+            window.csrfTokens = window.csrfTokens || {};
+            window.csrfTokens[hobbyId] = data.csrf_tokens;
+            
+            const hobby = data.hobby;
+            const progress = data.progress.total_hours;
+            const milestones = data.milestones;
+            const logs = data.recent_logs;
+            const streak = data.streak;
+            const dayHours = data.day_hours;
+
+            let html = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <!-- Gauche : Statistiques et infos -->
+                    <div>
+                        <div style="background: #f0f2f5; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                            <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: bold;">${hobby.name}</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">Heures</div>
+                                    <div style="font-size: 24px; font-weight: bold; color: #4CAF50;">${progress.toFixed(1)}</div>
+                                </div>
+                                <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">🔥 Série</div>
+                                    <div style="font-size: 24px; font-weight: bold; color: #FF9800;">${streak}</div>
+                                </div>
+                                <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">Catégorie</div>
+                                    <div style="font-size: 14px; font-weight: bold; color: #667eea;">${hobby.category}</div>
+                                </div>
+                                <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">Objectifs</div>
+                                    <div style="font-size: 24px; font-weight: bold; color: #2196F3;">${milestones.filter(m => m.isAchieved).length}/${milestones.length}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 style="margin: 0 0 12px 0; font-weight: bold; color: #1c1e21;">📌 Séances récentes</h4>
+                            ${logs.length === 0 ? '<p style="color: #65676b; font-size: 13px; margin: 0;">Aucune séance pour l\'instant</p>' :
+                                logs.map(log => `
+                                    <div style="background: #f5f6ff; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; gap: 12px;">
+                                        <div style="font-size: 13px; font-weight: 600; color: #667eea; min-width: 110px;">${log.date || 'Unknown'}</div>
+                                        <div style="font-size: 13px; font-weight: bold; color: #4CAF50;">${(log.hours || 0).toFixed(1)} h</div>
+                                        <div style="font-size: 12px; color: #65676b; flex: 1;">${log.notes || ''}</div>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Droite : Calendrier et jalons -->
+                    <div>
+                        <div>
+                            <h4 style="margin: 0 0 12px 0; font-weight: bold; color: #1c1e21;">📅 Ce Mois-ci</h4>
+                            <div id="calendarWidget" style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e4e6eb;">
+                                ${buildCalendar(dayHours, milestones)}
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h4 style="margin: 0; font-weight: bold; color: #1c1e21;">🏆 Jalons</h4>
+                                <button onclick="openMilestoneModal(${hobby.id})" style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">➕ Ajouter</button>
+                            </div>
+                            ${milestones.length === 0 ? '<p style="color: #65676b; font-size: 13px; margin: 0;">Aucun jalon pour l\'instant</p>' :
+                                milestones.map(m => `
+                                    <div style="background: ${m.isAchieved ? '#e8f5e9' : m.isOverdue ? '#ffebee' : '#fff3e0'}; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; gap: 12px; align-items: center;">
+                                        <input type="checkbox" ${m.isAchieved ? 'checked' : ''} onchange="toggleMilestone(${m.id}, this, ${hobby.id})" style="cursor: pointer;">
+                                        <span style="flex: 1; ${m.isAchieved ? 'text-decoration: line-through; color: #4CAF50;' : m.isOverdue ? 'color: #d32f2f; font-weight: bold;' : 'color: #1c1e21;'} font-weight: 600;">${m.title}</span>
+                                        ${m.isOverdue ? '<span style="color: #d32f2f; font-weight: bold;">⚠️ EN RETARD</span>' : ''}
+                                        <button onclick="openMilestoneModal(${hobby.id}, ${m.id}, '${m.title}', '${m.targetDate}')" style="padding: 4px 8px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">✏️</button>
+                                        <button onclick="deleteMilestone(${m.id}, ${hobby.id})" style="padding: 4px 8px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">🗑️</button>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('detailsTitle').textContent = hobby.name;
+            document.getElementById('detailsContent').innerHTML = html;
+        } catch (e) {
+            console.error(e);
+            document.getElementById('detailsContent').innerHTML = '<p style="color: #f44336;">Erreur lors du chargement des détails</p>';
+        }
+    }
+
+    function buildCalendar(dayHours, milestones = []) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - firstDay.getDay());
+        
+        const monthStr = firstDay.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        
+        let html = `<div style="margin-bottom: 12px;"><strong>${monthStr}</strong></div>`;
+        html += '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; font-size: 11px;">';
+        
+        // En-têtes des jours
+        ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'].forEach(day => {
+            html += `<div style="text-align: center; font-weight: bold; color: #65676b; padding: 4px;">${day}</div>`;
+        });
+        
+        // Jours du calendrier
+        let current = new Date(startDate);
+        while (current.getMonth() === month || (current.getMonth() !== month && current.getDay() !== 0)) {
+            const dateStr = current.toISOString().split('T')[0];
+            const hasEntry = dayHours[dateStr];
+            const hasMilestone = milestones.find(m => m.targetDate === dateStr);
+            const isToday = current.toDateString() === now.toDateString();
+            const isCurrentMonth = current.getMonth() === month;
+            
+            if (!isCurrentMonth) {
+                html += '<div style="padding: 4px; opacity: 0.3;"></div>';
+            } else {
+                let bgColor = '#f7f8fc';
+                let textColor = '#999';
+                let content = `${current.getDate()}`;
+                
+                if (hasMilestone) {
+                    bgColor = hasMilestone.isAchieved ? '#d4edda' : '#fff3cd';
+                    textColor = hasMilestone.isAchieved ? '#155724' : '#856404';
+                    content = `${current.getDate()} 🎯`;
+                } else if (hasEntry) {
+                    bgColor = '#667eea';
+                    textColor = '#667eea';
+                } else if (isToday) {
+                    bgColor = '#e8eaff';
+                    textColor = '#667eea';
+                }
+                
+                let title = '';
+                if (hasEntry) title += `${dayHours[dateStr].toFixed(1)}h`;
+                if (hasMilestone) title += (title ? ' - ' : '') + `Jalon: ${hasMilestone.title}`;
+                if (!title) title = 'Aucune entrée';
+                
+                html += `<div style="padding: 6px; text-align: center; background: ${bgColor}; border-radius: 4px; font-weight: ${hasEntry || isToday || hasMilestone ? 'bold' : 'normal'}; color: ${textColor}; cursor: pointer;" title="${title}">${content}</div>`;
+            }
+            
+            current.setDate(current.getDate() + 1);
+        }
+        
+        html += '</div>';
+        return html;
+    }
+
+    function toggleMilestone(id, checkbox, hobbyId) {
+        const tokenData = window.csrfTokens?.[hobbyId]?.milestone_toggle?.find(t => t.id === id);
+        const token = tokenData?.token;
+        
+        if (!token) {
+            alert('Erreur : Token CSRF manquant');
+            return;
+        }
+        
+        fetch(`/hobbies/milestone/${id}/toggle`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `_csrf_token=${encodeURIComponent(token)}`
+        }).then(r => r.json()).then(data => {
+            if (data.ok) {
+                loadHobbyDetails(hobbyId);
+            } else {
+                alert('Erreur : ' + data.error);
+            }
+        }).catch(e => console.error(e));
+    }
+
+    function deleteMilestone(id, hobbyId) {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer ce jalon ?')) return;
+        
+        const tokenData = window.csrfTokens?.[hobbyId]?.milestone_toggle?.find(t => t.id === id);
+        const token = tokenData?.delete_token;
+        
+        if (!token) {
+            alert('Erreur : Token CSRF manquant');
+            return;
+        }
+        
+        fetch(`/hobbies/milestone/${id}/delete`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `_csrf_token=${encodeURIComponent(token)}`
+        }).then(r => r.json()).then(data => {
+            if (data.ok) {
+                loadHobbyDetails(hobbyId);
+            } else {
+                alert('Erreur : ' + data.error);
+            }
+        }).catch(e => console.error(e));
+    }
+
+    function deleteHobby(id) {
+        if (!confirm('Êtes-vous sûr ? Cela supprimera le loisir ainsi que toute la progression et les jalons associés.')) return;
+        
+        const hobbyCard = document.querySelector(`[data-hobby-id="${id}"]`);
+        const csrfToken = hobbyCard?.dataset.csrfDelete || '{{ csrf_token("hobby_delete_") }}';
+        const formData = new FormData();
+        formData.set('_csrf_token', csrfToken);
+        
+        fetch(`{{ path('app_hobbies_delete', {'id': 'ID'}) }}`.replace('ID', id), {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                window.location.href = '{{ path("app_hobbies_index") }}';
+            } else {
+                alert('Erreur : ' + (data.error || 'Impossible de supprimer le loisir'));
+            }
+        })
+        .catch(e => {
+            alert('Erreur : ' + e.message);
+        });
+    }
+
+    function filterHobbies() {
+        const search = document.getElementById('searchInput').value;
+        const category = document.getElementById('categoryFilter').value;
+        const url = new URL(window.location);
+        url.searchParams.set('search', search);
+        url.searchParams.set('category', category);
+        window.location.href = url.toString();
+    }
+
+    function formatServerErrors(data) {
+        if (!data || !data.errors || typeof data.errors !== 'object') {
+            return data?.error || 'Unknown error';
+        }
+
+        return Object.values(data.errors).join('\n');
+    }
+
+    // Gestion des soumissions de formulaires
+    document.getElementById('hobbyForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        const action = form.action;
+        
+        try {
+            const response = await fetch(action, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.ok) {
+                alert(data.message || 'Succès!');
+                window.location.href = '{{ path("app_hobbies_index") }}';
+            } else {
+                alert('Erreur : ' + formatServerErrors(data));
+            }
+        } catch (error) {
+            console.error('Erreur :', error);
+            alert('Erreur : ' + error.message);
+        }
+    });
+
+    document.getElementById('progressForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const hobbyId = document.getElementById('progressHobbyId').value;
+        const formData = new FormData(e.target);
+        
+        try {
+            const response = await fetch(`{{ path('app_hobbies_log_progress', {'id': 999}) }}`.replace('999', hobbyId), {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.ok) {
+                alert('Succès : ' + (data.message || 'Progression enregistrée'));
+                closeLogProgressModal();
+                window.location.reload();
+            } else {
+                alert('Erreur : ' + formatServerErrors(data));
+            }
+        } catch (error) {
+            alert('Erreur : ' + error.message);
+        }
+    });
+
+    document.getElementById('milestoneForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const hobbyId = document.getElementById('milestoneHobbyId').value;
+        const milestoneId = document.getElementById('milestoneId').value;
+        const formData = new FormData(e.target);
+        
+        let endpoint, method;
+        if (milestoneId) {
+            endpoint = `/hobbies/milestone/${milestoneId}/edit`;
+            method = 'POST';
+        } else {
+            endpoint = `{{ path('app_hobbies_milestone_add', {'id': 999}) }}`.replace('999', hobbyId);
+            method = 'POST';
+        }
+        
+        try {
+            const response = await fetch(endpoint, {
+                method: method,
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.ok) {
+                closeMilestoneModal();
+                loadHobbyDetails(hobbyId);
+            } else {
+                alert('Erreur : ' + formatServerErrors(data));
+            }
+        } catch (error) {
+            alert('Erreur : ' + error.message);
+        }
+    });
+
+    // Fermer les modals en cliquant en dehors
+    document.getElementById('createHobbyModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'createHobbyModal') closeCreateHobbyModal();
+    });
+
+    document.getElementById('logProgressModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'logProgressModal') closeLogProgressModal();
+    });
+
+    document.getElementById('detailsModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'detailsModal') closeDetailsModal();
+    });
+
+    // Fonctions du Modal Coach
+    function openCoachModal() {
+        document.getElementById('coachModal').style.display = 'flex';
+        document.getElementById('coachInput').focus();
+        document.getElementById('coachInput').onkeypress = (e) => {
+            if (e.key === 'Enter') sendCoachMessage();
+        };
+    }
+
+    function closeCoachModal() {
+        document.getElementById('coachModal').style.display = 'none';
+    }
+
+    function addCoachMessage(text, isUser) {
+        const chatContainer = document.getElementById('coachChat');
+        const messageDiv = document.createElement('div');
+        
+        if (isUser) {
+            messageDiv.style.cssText = 'display: flex; justify-content: flex-end; align-items: flex-start; padding: 0 0 14px 0;';
+            messageDiv.innerHTML = `
+                <div style="padding: 12px 18px; background: #667eea; color: white; border-radius: 16px 16px 4px 16px; max-width: 600px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="font-size: 14px;">${text}</div>
+                </div>
+            `;
+        } else {
+            messageDiv.style.cssText = 'display: flex; gap: 10px; align-items: flex-start; padding: 0 0 14px 0;';
+            messageDiv.innerHTML = `
+                <div style="font-size: 20px; flex-shrink: 0;">🤖</div>
+                <div style="padding: 12px 18px; background: white; color: #1c1e21; border-radius: 16px 16px 16px 4px; max-width: 600px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                    <div style="font-size: 14px; line-height: 1.5;">${text}</div>
+                </div>
+            `;
+        }
+        
+        chatContainer.appendChild(messageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function sendCoachMessage() {
+        const input = document.getElementById('coachInput');
+        const text = input.value.trim();
+        
+        addCoachMessage(text, true);
+        input.value = '';
+        
+        const typingDiv = document.createElement('div');
+        typingDiv.style.cssText = 'display: flex; gap: 10px; align-items: center;';
+        typingDiv.innerHTML = '<div style="font-size: 20px;">🤖</div><div style="font-size: 14px; color: #9b59b6; font-style: italic;">typing…</div>';
+        document.getElementById('coachChat').appendChild(typingDiv);
+        document.getElementById('coachChat').scrollTop = document.getElementById('coachChat').scrollHeight;
+        
+        fetch('{{ path("app_hobbies_coach_chat") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({message: text})
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('coachChat').removeChild(typingDiv);
+            if (data.ok) {
+                addCoachMessage(data.response, false);
+            } else {
+                addCoachMessage('❌ ' + (data.error || 'Error'), false);
+            }
+            document.getElementById('coachInput').focus();
+        })
+        .catch(e => {
+            document.getElementById('coachChat').removeChild(typingDiv);
+            addCoachMessage('❌ ' + e.message, false);
+        });
+    }
+
+    document.getElementById('coachModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'coachModal') closeCoachModal();
+    });
+</script>
+
+{% endblock %}
