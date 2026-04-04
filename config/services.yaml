@@ -7,6 +7,8 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    groq_api_key: '%env(GROQ_API_KEY)%'
+    groq_text_model: '%env(GROQ_TEXT_MODEL)%'
 
 services:
     # default configuration for services in *this* file
@@ -18,6 +20,19 @@ services:
     # this creates a service per class whose id is the fully-qualified class name
     App\:
         resource: '../src/'
+
+    App\Service\PasswordResetTokenService:
+        arguments:
+            $appSecret: '%kernel.secret%'
+
+    App\Service\StripePaymentService:
+        arguments:
+            $secretKey: '%env(STRIPE_SECRET_KEY)%'
+            $publishableKey: '%env(STRIPE_PUBLISHABLE_KEY)%'
+
+    App\Service\ChatServerSimple:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

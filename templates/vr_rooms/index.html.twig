@@ -1,0 +1,927 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}VR Rooms | Ghrami{% endblock %}
+
+{% block body %}
+<style>
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+  }
+
+  .vr-rooms-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    animation: slideIn 0.5s ease;
+  }
+
+  .vr-rooms-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  @media (max-width: 900px) {
+    .vr-rooms-container {
+      grid-template-columns: 1fr;
+    }
+    .vr-rooms-sidebar {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  }
+
+  .vr-rooms-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .vr-rooms-search {
+    position: relative;
+  }
+
+  .vr-rooms-search input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: white;
+  }
+
+  .vr-rooms-search input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .vr-rooms-search input::placeholder {
+    color: #b0b6c0;
+  }
+
+  .vr-rooms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  .vr-room-card {
+    padding: 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 2px solid #e5e7eb;
+    background: white;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .vr-room-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    z-index: -1;
+  }
+
+  .vr-room-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .vr-room-card:hover::before {
+    width: 100%;
+  }
+
+  .vr-room-card.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+    color: white;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  }
+
+  .vr-room-card.active .vr-room-card-name {
+    color: white;
+  }
+
+  .vr-room-card.active .vr-room-card-desc {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .vr-room-card.loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .vr-room-card-emoji {
+    font-size: 20px;
+    margin-right: 10px;
+    display: inline-block;
+  }
+
+  .vr-room-card-content {
+    display: inline-block;
+    flex: 1;
+  }
+
+  .vr-room-card-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: #1c1e21;
+    display: block;
+  }
+
+  .vr-room-card.active .vr-room-card-name {
+    color: #667eea;
+  }
+
+  .vr-room-card-desc {
+    font-size: 11px;
+    color: #65676b;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .vr-room-card-online {
+    font-size: 10px;
+    color: #2e7d32;
+    font-weight: bold;
+    float: right;
+    margin-top: 2px;
+  }
+
+  .vr-room-card-online::before {
+    content: '●';
+    margin-right: 4px;
+  }
+
+  .vr-rooms-hero {
+    display: none;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    overflow: hidden;
+    color: white;
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.25);
+    animation: scaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .vr-rooms-hero.active {
+    display: block;
+  }
+
+  .vr-rooms-hero-header {
+    padding: 40px 24px;
+    text-align: center;
+    background: inherit;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .vr-rooms-hero-header::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .vr-rooms-hero-emoji {
+    font-size: 56px;
+    margin-bottom: 12px;
+    display: inline-block;
+    animation: scaleIn 0.4s ease 0.1s both;
+  }
+
+  .vr-rooms-hero-name {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    animation: slideIn 0.4s ease 0.15s both;
+  }
+
+  .vr-rooms-hero-content {
+    padding: 24px;
+    background: white;
+    color: #1c1e21;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .vr-rooms-hero-info {
+    flex: 1;
+  }
+
+  .vr-rooms-hero-desc {
+    font-size: 14px;
+    color: #65676b;
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+
+  .vr-rooms-hero-url {
+    font-size: 12px;
+    color: #667eea;
+    word-break: break-all;
+    font-family: 'Monaco', 'Courier New', monospace;
+    background: #f5f7ff;
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+
+  .vr-rooms-hero-online {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #e6f4ea;
+    padding: 8px 14px;
+    border-radius: 24px;
+    font-size: 13px;
+    color: #2e7d32;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .vr-rooms-hero-online::before {
+    content: '●';
+    animation: pulse 2s infinite;
+  }
+
+  .vr-rooms-hero-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .vr-rooms-hero-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+  }
+
+  .vr-rooms-hero-button:active {
+    transform: translateY(0);
+  }
+
+  .vr-rooms-hero-button.loading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  .vr-rooms-main {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .vr-rooms-warning {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 12px 15px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .vr-rooms-warning-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .vr-rooms-warning-text {
+    flex: 1;
+  }
+
+  .vr-rooms-warning-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: #333;
+    margin-bottom: 3px;
+  }
+
+  .vr-rooms-warning-desc {
+    font-size: 12px;
+    color: #666;
+  }
+
+  .vr-rooms-welcome {
+    background: linear-gradient(135deg, #f8f9ff 0%, #fafbff 100%);
+    border-radius: 16px;
+    padding: 60px 40px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    flex: 1;
+    justify-content: center;
+    border: 2px solid #e7eef7;
+    animation: slideIn 0.5s ease;
+    min-height: 400px;
+  }
+
+  .vr-rooms-welcome.hidden {
+    display: none;
+  }
+
+  .vr-rooms-welcome-emoji {
+    font-size: 96px;
+    animation: scaleIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .vr-rooms-welcome-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1c1e21;
+    margin: 0;
+    animation: slideIn 0.5s ease 0.1s both;
+  }
+
+  .vr-rooms-welcome-text {
+    font-size: 15px;
+    color: #65676b;
+    line-height: 1.6;
+    animation: slideIn 0.5s ease 0.2s both;
+  }
+
+  .vr-rooms-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 24px;
+    width: 100%;
+  }
+
+  .vr-rooms-stat {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+    animation: slideIn 0.5s ease;
+  }
+
+  .vr-rooms-stat:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+
+  .vr-rooms-stat:nth-child(3) {
+    animation-delay: 0.2s;
+  }
+
+  .vr-rooms-stat:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+  }
+
+  .vr-rooms-stat-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+  }
+
+  .vr-rooms-stat-label {
+    font-weight: 600;
+    font-size: 13px;
+    color: #1c1e21;
+  }
+
+  .vr-rooms-status-bar {
+    background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+    border-top: 2px solid #e7eef7;
+    padding: 14px 20px;
+    font-size: 12px;
+    color: #65676b;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+    border-radius: 10px;
+  }
+
+  .vr-rooms-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #667eea;
+    flex-shrink: 0;
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  .vr-rooms-create {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    margin-top: 15px;
+    border: 2px solid #e4e6eb;
+    transition: all 0.3s ease;
+  }
+
+  .vr-rooms-create:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+  }
+
+  .vr-rooms-create-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1c1e21;
+    margin-bottom: 10px;
+  }
+
+  .vr-rooms-create-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+  }
+
+  .vr-rooms-create-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .vr-rooms-url-section {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    margin-top: 15px;
+    border: 2px solid #e4e6eb;
+    transition: all 0.3s ease;
+  }
+
+  .vr-rooms-url-section:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+  }
+
+  .vr-rooms-url-section-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1c1e21;
+    margin-bottom: 10px;
+  }
+
+  .vr-rooms-url-bar {
+    flex: 1;
+    padding: 10px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 12px;
+    transition: all 0.3s ease;
+  }
+
+  .vr-rooms-url-bar:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .vr-rooms-live-counter {
+    background: linear-gradient(135deg, #f0f4ff 0%, #f5f9ff 100%);
+    border-radius: 12px;
+    padding: 18px;
+    margin-top: 15px;
+    text-align: center;
+    border: 2px solid #e7eef7;
+  }
+
+  .vr-rooms-live-counter-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+  }
+
+  .vr-rooms-live-counter-label {
+    font-size: 12px;
+    color: #65676b;
+    font-weight: 500;
+  }
+
+  .vr-rooms-live-counter-number {
+    font-size: 32px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-top: 6px;
+  }
+</style>
+
+<div class="card">
+  <h2 style="margin-top: 0;">🎮 VR Rooms</h2>
+  <p class="kicker">Immersive spaces powered by FrameVR. Select any room to enter instantly.</p>
+
+  <div class="vr-rooms-container">
+    <!-- LEFT SIDEBAR -->
+    <div class="vr-rooms-sidebar">
+      <!-- Search -->
+      <div class="vr-rooms-search">
+        <input 
+          type="text" 
+          id="roomSearch" 
+          placeholder="🔍 Search rooms..."
+          onkeyup="searchRooms(this.value)"
+        >
+      </div>
+
+      <!-- Room list -->
+      <div class="vr-rooms-list" id="roomList">
+        {% for key, room in rooms %}
+          <div 
+            class="vr-room-card" 
+            onclick="selectRoom('{{ key }}', this)"
+            data-room-key="{{ key }}"
+          >
+            <span class="vr-room-card-emoji">{{ room.emoji }}</span>
+            <span class="vr-room-card-content">
+              <span class="vr-room-card-name">{{ room.name }}</span>
+              <span class="vr-room-card-desc">{{ room.description }}</span>
+            </span>
+            <span class="vr-room-card-online">{{ room.online }}</span>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Hero card (shown when room selected) -->
+      <div class="vr-rooms-hero" id="heroCard">
+        <div class="vr-rooms-hero-header">
+          <div class="vr-rooms-hero-emoji" id="heroEmoji">🌐</div>
+          <div class="vr-rooms-hero-name" id="heroName">Select a room</div>
+        </div>
+        <div class="vr-rooms-hero-content">
+          <div class="vr-rooms-hero-info">
+            <div class="vr-rooms-hero-desc" id="heroDesc"></div>
+            <div class="vr-rooms-hero-url" id="heroUrl"></div>
+          </div>
+          <div class="vr-rooms-hero-online" id="heroOnline">0 online</div>
+          <button class="vr-rooms-hero-button" onclick="openSelectedRoom()">🚀 Rejoindre</button>
+        </div>
+      </div>
+
+      <!-- Create custom room -->
+      <div class="vr-rooms-create">
+        <div class="vr-rooms-create-title">✨ Créer une salle personnalisée</div>
+        <input 
+          type="text" 
+          id="customRoomInput" 
+          class="vr-rooms-create-input"
+          placeholder="Ex: mon-salon, team-meeting..."
+          onkeypress="handleCreateKeypress(event)"
+        >
+        <button class="vr-rooms-btn" onclick="createCustomRoom()" style="width: 100%;">+ Créer salle</button>
+      </div>
+
+      <!-- URL bar for manual entry -->
+      <div class="vr-rooms-url-section">
+        <div class="vr-rooms-url-section-title">🌐 Accès direct par URL</div>
+        <div class="vr-rooms-controls">
+          <input 
+            type="text" 
+            class="vr-rooms-url-bar"
+            id="urlInput" 
+            placeholder="framevr.io/room-name ou https://..."
+          >
+          <button class="vr-rooms-btn" onclick="openCustomUrl()">Ouvrir</button>
+        </div>
+      </div>
+
+      <!-- Live counter -->
+      <div class="vr-rooms-live-counter">
+        <div class="vr-rooms-live-counter-icon">👥</div>
+        <div class="vr-rooms-live-counter-label">En ligne maintenant</div>
+        <div class="vr-rooms-live-counter-number" id="liveCounter">{{ onlineCount }}</div>
+        <div style="font-size: 11px; color: #999; margin-top: 4px;">✨ Mise à jour en temps réel</div>
+      </div>
+    </div>
+
+    <!-- RIGHT MAIN CONTENT -->
+    <div class="vr-rooms-main">
+      <!-- Welcome screen -->
+      <div class="vr-rooms-welcome" id="welcomeScreen">
+        <div class="vr-rooms-welcome-emoji">🥽</div>
+        <h3 class="vr-rooms-welcome-title">Ready to explore VR spaces?</h3>
+        <p class="vr-rooms-welcome-text">Select any room from the list to enter instantly<br/>into an immersive FrameVR experience</p>
+        <div class="vr-rooms-stats">
+          <div class="vr-rooms-stat">
+            <div class="vr-rooms-stat-icon">🎯</div>
+            <div class="vr-rooms-stat-label">{{ rooms|length }} Rooms</div>
+          </div>
+          <div class="vr-rooms-stat">
+            <div class="vr-rooms-stat-icon">🌐</div>
+            <div class="vr-rooms-stat-label">Live Spaces</div>
+          </div>
+          <div class="vr-rooms-stat">
+            <div class="vr-rooms-stat-icon">🚀</div>
+            <div class="vr-rooms-stat-label">Free & Open</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="vr-rooms-status-bar">
+    <div class="vr-rooms-status-dot" id="statusDot"></div>
+    <span id="statusText">Choose a room to begin exploring</span>
+    <div style="flex: 1;"></div>
+    <span>⚡ Powered by FRAME VR · <a href="https://framevr.io/" target="_blank" style="color: #667eea; text-decoration: none;">framevr.io</a></span>
+  </div>
+</div>
+
+<script>
+  // Global state
+  let activeRoom = null;
+  const allRooms = {{ rooms|json_encode(constant('JSON_UNESCAPED_SLASHES')) }};
+  const frameBase = 'https://framevr.io/';
+  let liveCountUpdateInterval = null;
+
+  function selectRoom(roomKey, element) {
+    // Update active state
+    document.querySelectorAll('.vr-room-card').forEach(card => {
+      card.classList.remove('active', 'loading');
+    });
+    element.classList.add('active');
+
+    // Get room data
+    const room = allRooms[roomKey];
+    if (!room) {
+      console.error('Room not found:', roomKey);
+      setStatus('⚠️ Room not found', '#ef4444');
+      return;
+    }
+
+    activeRoom = room;
+    console.log('Selected room:', room);
+
+    // Populate hero card with animation
+    document.getElementById('heroEmoji').textContent = room.emoji;
+    document.getElementById('heroName').textContent = room.name;
+    document.getElementById('heroDesc').textContent = room.description;
+    document.getElementById('heroUrl').textContent = room.url;
+    document.getElementById('heroOnline').textContent = '● ' + room.online + ' online';
+    
+    // Show hero card with animation
+    const heroCard = document.getElementById('heroCard');
+    heroCard.classList.add('active');
+    
+    // Hide welcome screen
+    document.getElementById('welcomeScreen').classList.add('hidden');
+    
+    // Update status
+    setStatus('🚀 Launching ' + room.name + '...', '#667eea');
+    
+    // Add loading state to button
+    const button = document.querySelector('.vr-rooms-hero-button');
+    if (button) {
+      button.classList.add('loading');
+      button.style.pointerEvents = 'none';
+      button.style.opacity = '0.7';
+    }
+    
+    // Auto-open after brief delay to show the selection
+    setTimeout(() => {
+      console.log('Auto-opening room:', room.name, 'URL:', room.url);
+      openInBrowser(room.url);
+      
+      // Remove loading state
+      if (button) {
+        button.classList.remove('loading');
+        button.style.pointerEvents = 'auto';
+        button.style.opacity = '1';
+      }
+    }, 400);
+  }
+
+  function searchRooms(query) {
+    query = query.toLowerCase().trim();
+    const roomCards = document.querySelectorAll('.vr-room-card');
+    let visibleCount = 0;
+    
+    roomCards.forEach(card => {
+      const roomKey = card.dataset.roomKey;
+      const room = allRooms[roomKey];
+      
+      const match = 
+        room.name.toLowerCase().includes(query) ||
+        room.description.toLowerCase().includes(query) ||
+        room.frameRoomId.toLowerCase().includes(query);
+      
+      if (query === '' || match) {
+        card.style.display = '';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+    
+    if (visibleCount === 0 && query !== '') {
+      setStatus('⚠️ No rooms match your search', '#f59e0b');
+    }
+  }
+
+  function openSelectedRoom() {
+    if (!activeRoom) {
+      setStatus('⚠️ No room selected', '#ef4444');
+      return;
+    }
+    
+    openInBrowser(activeRoom.url);
+  }
+
+  function openInBrowser(url) {
+    console.log('Opening URL:', url);
+    
+    if (!url) {
+      setStatus('⚠️ Invalid room URL', '#ef4444');
+      return;
+    }
+    
+    // Ensure full URL
+    let finalUrl = url;
+    if (!finalUrl.startsWith('http')) {
+      finalUrl = frameBase + url;
+    }
+    
+    console.log('Final URL:', finalUrl);
+    
+    try {
+      const newWindow = window.open(finalUrl, '_blank', 'noopener,noreferrer');
+      if (newWindow === null) {
+        setStatus('⚠️ Popup blocked - please allow popups for this site', '#f59e0b');
+      } else {
+        setStatus('✅ FrameVR opening in new tab...', '#22c55e');
+      }
+    } catch (e) {
+      console.error('Error opening window:', e);
+      setStatus('⚠️ Error opening room', '#ef4444');
+    }
+  }
+
+  function setStatus(msg, color) {
+    document.getElementById('statusText').textContent = msg;
+    document.getElementById('statusDot').style.background = color;
+  }
+
+  function createCustomRoom() {
+    const input = document.getElementById('customRoomInput');
+    let roomName = input.value.trim();
+    
+    if (!roomName) {
+      setStatus('⚠️ Enter a room name', '#f59e0b');
+      return;
+    }
+
+    // Sanitize name
+    roomName = roomName
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    if (!roomName) {
+      setStatus('⚠️ Invalid room name', '#f59e0b');
+      return;
+    }
+
+    if (!roomName.startsWith('ghrami-')) {
+      roomName = 'ghrami-' + roomName;
+    }
+
+    const customRoom = {
+      emoji: '🌐',
+      name: input.value.trim(),
+      description: 'Custom room',
+      frameRoomId: roomName,
+      basePeople: 1,
+      url: frameBase + roomName,
+      online: 1
+    };
+
+    activeRoom = customRoom;
+    
+    // Update hero card
+    document.getElementById('heroEmoji').textContent = customRoom.emoji;
+    document.getElementById('heroName').textContent = customRoom.name;
+    document.getElementById('heroDesc').textContent = customRoom.description;
+    document.getElementById('heroUrl').textContent = customRoom.url;
+    document.getElementById('heroOnline').textContent = '● 1 online';
+    
+    const heroCard = document.getElementById('heroCard');
+    heroCard.classList.add('active');
+    document.getElementById('welcomeScreen').classList.add('hidden');
+    
+    input.value = '';
+    setStatus('✨ Creating room: ' + customRoom.name + '...', '#667eea');
+    
+    // Open the custom room after delay
+    setTimeout(() => {
+      console.log('Opening custom room:', customRoom.url);
+      openInBrowser(customRoom.url);
+      setStatus('✅ Custom room created: ' + customRoom.name, '#22c55e');
+    }, 500);
+  }
+
+  function handleCreateKeypress(event) {
+    if (event.key === 'Enter') {
+      createCustomRoom();
+    }
+  }
+
+  function openCustomUrl() {
+    const url = document.getElementById('urlInput').value.trim();
+    if (!url) {
+      setStatus('⚠️ Entrez une URL', '#f59e0b');
+      return;
+    }
+    openInBrowser(url);
+  }
+
+  // Update live counter every 5 seconds
+  function updateLiveCounter() {
+    const total = Object.values(allRooms).reduce((sum, room) => {
+      return sum + room.online;
+    }, 0);
+    document.getElementById('liveCounter').textContent = total;
+  }
+
+  // Start live counter updates
+  updateLiveCounter();
+  liveCountUpdateInterval = setInterval(updateLiveCounter, 5000);
+
+  // Handle Enter key in search
+  document.getElementById('roomSearch').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const firstVisible = document.querySelector('.vr-room-card[style=""] , .vr-room-card:not([style*="display: none"])');
+      if (firstVisible) {
+        firstVisible.click();
+      }
+    }
+  });
+</script>
+{% endblock %}

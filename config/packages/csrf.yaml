@@ -1,11 +1,5 @@
-# Enable stateless CSRF protection for forms and logins/logouts
+# Disable CSRF protection for API routes - they handle it via tokens
+# Enable for web forms via twig csrf_token() function
 framework:
-    form:
-        csrf_protection:
-            token_id: submit
-
     csrf_protection:
-        stateless_token_ids:
-            - submit
-            - authenticate
-            - logout
+        enabled: true
