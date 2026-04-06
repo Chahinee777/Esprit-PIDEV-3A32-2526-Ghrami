@@ -124,4 +124,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->password;
     }
+
+    public function getLocation(): string
+    {
+        return $this->location;
+    }
+
+    public function setLocation(?string $location): self
+    {
+        $this->location = (string) ($location ?? '');
+
+        return $this;
+    }
 }

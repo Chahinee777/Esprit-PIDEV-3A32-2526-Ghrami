@@ -24,11 +24,13 @@ final class AdminController extends AbstractController
         $stats = [
             'users' => (int) $conn->fetchOne('SELECT COUNT(*) FROM users'),
             'active_users' => (int) $conn->fetchOne('SELECT COUNT(*) FROM users WHERE is_online = 1'),
+            'friendships' => (int) $conn->fetchOne('SELECT COUNT(*) FROM friendships'),
             'classes' => (int) $conn->fetchOne('SELECT COUNT(*) FROM classes'),
             'bookings' => (int) $conn->fetchOne('SELECT COUNT(*) FROM bookings'),
             'revenue' => (float) $conn->fetchOne("SELECT COALESCE(SUM(total_amount), 0) FROM bookings WHERE payment_status = 'paid'"),
             'posts' => (int) $conn->fetchOne('SELECT COUNT(*) FROM posts'),
             'hobbies' => (int) $conn->fetchOne('SELECT COUNT(*) FROM hobbies'),
+            'meetings' => (int) $conn->fetchOne('SELECT COUNT(*) FROM meetings'),
             'badges' => (int) $conn->fetchOne('SELECT COUNT(*) FROM badges'),
         ];
 
@@ -84,14 +86,86 @@ final class AdminController extends AbstractController
              LIMIT 200"
         );
 
+        // Distinct badge names already in DB — drives the Award modal dropdown
+        $badgeNames = $conn->fetchFirstColumn(
+            'SELECT DISTINCT name FROM badges ORDER BY name ASC'
+        );
+
+        // Badge statistics for management
+        $badgeStats = $conn->fetchAllAssociative(
+            "SELECT name, COUNT(*) AS total_awarded, MAX(earned_date) AS last_awarded
+             FROM badges
+             GROUP BY name
+             ORDER BY total_awarded DESC"
+        );
+
+        // Social media: posts with author info and like/comment counts
+        $posts = $conn->fetchAllAssociative(
+            "SELECT p.post_id, p.content, p.image_url, p.created_at,
+                    u.user_id, u.username,
+                    (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comment_count,
+                    (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) AS like_count
+             FROM posts p
+             JOIN users u ON u.user_id = p.user_id
+             ORDER BY p.post_id DESC
+             LIMIT 300"
+        );
+
+        // Social media: comments with post and author info
+        $comments = $conn->fetchAllAssociative(
+            "SELECT c.comment_id, c.content, c.created_at,
+                    u.user_id, u.username,
+                    p.post_id, SUBSTRING(p.content, 1, 80) AS post_excerpt,
+                    pu.username AS post_author
+             FROM comments c
+             JOIN users u ON u.user_id = c.user_id
+             JOIN posts p ON p.post_id = c.post_id
+             JOIN users pu ON pu.user_id = p.user_id
+             ORDER BY c.comment_id DESC
+             LIMIT 300"
+        );
+
+        $stats['comments'] = (int) $conn->fetchOne('SELECT COUNT(*) FROM comments');
+
+        $hobbies = $conn->fetchAllAssociative(
+            "SELECT h.hobby_id, h.name, h.category, h.description,
+                u.user_id, u.username,
+                COALESCE((SELECT SUM(p.hours_spent) FROM progress p WHERE p.hobby_id = h.hobby_id), 0) AS total_hours
+             FROM hobbies h
+             JOIN users u ON u.user_id = h.user_id
+             ORDER BY h.hobby_id DESC
+             LIMIT 300"
+        );
+
+        $meetings = $conn->fetchAllAssociative(
+            "SELECT m.meeting_id, m.meeting_type, m.location, m.scheduled_at, m.duration, m.status,
+                o.user_id AS organizer_id, o.username AS organizer_username,
+                i.username AS initiator_username,
+                r.username AS receiver_username,
+                (SELECT COUNT(*) FROM meeting_participants mp WHERE mp.meeting_id = m.meeting_id) AS participant_count
+             FROM meetings m
+             JOIN users o ON o.user_id = m.organizer_id
+             LEFT JOIN connections c ON c.connection_id = m.connection_id
+             LEFT JOIN users i ON i.user_id = c.initiator_id
+             LEFT JOIN users r ON r.user_id = c.receiver_id
+             ORDER BY m.scheduled_at DESC
+             LIMIT 300"
+        );
+
         return $this->render('admin/index.html.twig', [
-            'stats' => $stats,
-            'users' => $users,
-            'providers' => $providers,
-            'classes' => $classes,
-            'bookings' => $bookings,
+            'stats'       => $stats,
+            'users'       => $users,
+            'providers'   => $providers,
+            'classes'     => $classes,
+            'bookings'    => $bookings,
             'friendships' => $friendships,
-            'badges' => $badges,
+            'badges'      => $badges,
+            'badgeNames'  => $badgeNames,
+            'badgeStats'  => $badgeStats,
+            'posts'       => $posts,
+            'comments'    => $comments,
+            'hobbies'     => $hobbies,
+            'meetings'    => $meetings,
         ]);
     }
 
@@ -387,18 +461,209 @@ final class AdminController extends AbstractController
             return $this->redirectToRoute('app_admin_dashboard');
         }
 
-        $userId = (int) $request->request->get('user_id', 0);
-        $badgeName = $request->request->get('badge_name', '');
-        $description = $request->request->get('description', '');
+        $userId      = (int) $request->request->get('user_id', 0);
+        $badgeName   = trim((string) $request->request->get('badge_name', ''));
+        $description = trim((string) $request->request->get('description', ''));
 
         if ($userId > 0 && !empty($badgeName)) {
             $em->getConnection()->insert('badges', [
-                'user_id' => $userId,
-                'name' => $badgeName,
+                'user_id'     => $userId,
+                'name'        => $badgeName,
                 'description' => $description,
                 'earned_date' => date('Y-m-d H:i:s'),
             ]);
             $this->addFlash('success', 'Badge awarded successfully.');
+        }
+
+        return $this->redirectToRoute('app_admin_dashboard');
+    }
+
+    /* ── Edit Badge (name / description on an existing user badge) ───────────── */
+
+    #[Route('/badge/edit', name: 'app_admin_badge_edit', methods: ['POST'])]
+    public function editBadge(Request $request, EntityManagerInterface $em): Response
+    {
+        if (!$this->isCsrfTokenValid('admin_badge_edit', (string) $request->request->get('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('app_admin_dashboard');
+        }
+
+        $badgeId     = (int) $request->request->get('badge_id', 0);
+        $name        = trim((string) $request->request->get('name', ''));
+        $description = trim((string) $request->request->get('description', ''));
+
+        if ($badgeId > 0 && !empty($name)) {
+            $em->getConnection()->update('badges', [
+                'name'        => $name,
+                'description' => $description ?: null,
+            ], ['badge_id' => $badgeId]);
+            $this->addFlash('success', 'Badge updated.');
+        }
+
+        return $this->redirectToRoute('app_admin_dashboard');
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+       SOCIAL MEDIA MODERATION
+    ════════════════════════════════════════════════════════════════════════ */
+
+    /** Delete a post (cascades to its comments and likes via FK). */
+    #[Route('/post/delete', name: 'app_admin_post_delete', methods: ['POST'])]
+    public function deletePost(Request $request, EntityManagerInterface $em): Response
+    {
+        if (!$this->isCsrfTokenValid('admin_post_delete', (string) $request->request->get('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('app_admin_dashboard');
+        }
+
+        $postId = (int) $request->request->get('post_id', 0);
+        if ($postId > 0) {
+            $conn = $em->getConnection();
+            // Remove likes and comments first (safety net if FK cascade is off)
+            $conn->delete('post_likes', ['post_id' => $postId]);
+            $conn->delete('comments',   ['post_id' => $postId]);
+            $conn->delete('posts',      ['post_id' => $postId]);
+            $this->addFlash('success', 'Post deleted.');
+        }
+
+        return $this->redirectToRoute('app_admin_dashboard');
+    }
+
+    /** Edit a post's content (admin correction / redaction). */
+    #[Route('/post/edit', name: 'app_admin_post_edit', methods: ['POST'])]
+    public function editPost(Request $request, EntityManagerInterface $em): Response
+    {
+        if (!$this->isCsrfTokenValid('admin_post_edit', (string) $request->request->get('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('app_admin_dashboard');
+        }
+
+        $postId  = (int) $request->request->get('post_id', 0);
+        $content = trim((string) $request->request->get('content', ''));
+
+        if ($postId > 0 && !empty($content)) {
+            $em->getConnection()->update('posts', ['content' => $content], ['post_id' => $postId]);
+            $this->addFlash('success', 'Post updated.');
+        }
+
+        return $this->redirectToRoute('app_admin_dashboard');
+    }
+
+    /** Delete a single comment. */
+    #[Route('/comment/delete', name: 'app_admin_comment_delete', methods: ['POST'])]
+    public function deleteComment(Request $request, EntityManagerInterface $em): Response
+    {
+        if (!$this->isCsrfTokenValid('admin_comment_delete', (string) $request->request->get('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('app_admin_dashboard');
+        }
+
+        $commentId = (int) $request->request->get('comment_id', 0);
+        if ($commentId > 0) {
+            $em->getConnection()->delete('comments', ['comment_id' => $commentId]);
+            $this->addFlash('success', 'Comment deleted.');
+        }
+
+        return $this->redirectToRoute('app_admin_dashboard');
+    }
+
+    /** Edit a comment's content. */
+    #[Route('/comment/edit', name: 'app_admin_comment_edit', methods: ['POST'])]
+    public function editComment(Request $request, EntityManagerInterface $em): Response
+    {
+        if (!$this->isCsrfTokenValid('admin_comment_edit', (string) $request->request->get('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('app_admin_dashboard');
+        }
+
+        $commentId = (int) $request->request->get('comment_id', 0);
+        $content   = trim((string) $request->request->get('content', ''));
+
+        if ($commentId > 0 && !empty($content)) {
+            $em->getConnection()->update('comments', ['content' => $content], ['comment_id' => $commentId]);
+            $this->addFlash('success', 'Comment updated.');
+        }
+
+        return $this->redirectToRoute('app_admin_dashboard');
+    }
+
+    /** Export posts to CSV. */
+    #[Route('/post/export', name: 'app_admin_post_export', methods: ['GET'])]
+    public function exportPosts(EntityManagerInterface $em): Response
+    {
+        $rows = $em->getConnection()->fetchAllAssociative(
+            "SELECT p.post_id, u.username AS author, p.content, p.image_url,
+                    (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comments,
+                    (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) AS likes,
+                    p.created_at
+             FROM posts p JOIN users u ON u.user_id = p.user_id
+             ORDER BY p.post_id DESC"
+        );
+        return $this->csvResponse('admin_posts.csv',
+            ['post_id', 'author', 'content', 'image_url', 'comments', 'likes', 'created_at'],
+            $rows
+        );
+    }
+
+    /**
+     * Revoke all instances of a badge by name (removes it from every user who holds it).
+     * Useful when a badge type is retired or was awarded in error en-masse.
+     */
+    #[Route('/badge/revoke-by-name', name: 'app_admin_badge_revoke_by_name', methods: ['POST'])]
+    public function revokeBadgeByName(Request $request, EntityManagerInterface $em): Response
+    {
+        if (!$this->isCsrfTokenValid('admin_badge_revoke_name', (string) $request->request->get('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('app_admin_dashboard');
+        }
+
+        $badgeName = trim((string) $request->request->get('badge_name', ''));
+        if (!empty($badgeName)) {
+            $affected = $em->getConnection()->executeStatement(
+                'DELETE FROM badges WHERE name = :name',
+                ['name' => $badgeName]
+            );
+            $this->addFlash('success', sprintf('Revoked «%s» from %d user(s).', $badgeName, $affected));
+        }
+
+        return $this->redirectToRoute('app_admin_dashboard');
+    }
+
+    #[Route('/hobby/delete', name: 'app_admin_hobby_delete', methods: ['POST'])]
+    public function deleteHobby(Request $request, EntityManagerInterface $em): Response
+    {
+        if (!$this->isCsrfTokenValid('admin_hobby_delete', (string) $request->request->get('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('app_admin_dashboard');
+        }
+
+        $hobbyId = (int) $request->request->get('hobby_id', 0);
+        if ($hobbyId > 0) {
+            $conn = $em->getConnection();
+            $conn->delete('progress_log', ['hobby_id' => $hobbyId]);
+            $conn->delete('progress', ['hobby_id' => $hobbyId]);
+            $conn->delete('milestones', ['hobby_id' => $hobbyId]);
+            $conn->delete('hobbies', ['hobby_id' => $hobbyId]);
+            $this->addFlash('success', 'Hobby deleted.');
+        }
+
+        return $this->redirectToRoute('app_admin_dashboard');
+    }
+
+    #[Route('/meeting/delete', name: 'app_admin_meeting_delete', methods: ['POST'])]
+    public function deleteMeeting(Request $request, EntityManagerInterface $em): Response
+    {
+        if (!$this->isCsrfTokenValid('admin_meeting_delete', (string) $request->request->get('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('app_admin_dashboard');
+        }
+
+        $meetingId = trim((string) $request->request->get('meeting_id', ''));
+        if ($meetingId !== '') {
+            $conn = $em->getConnection();
+            $conn->delete('meeting_participants', ['meeting_id' => $meetingId]);
+            $conn->delete('meetings', ['meeting_id' => $meetingId]);
+            $this->addFlash('success', 'Meeting deleted.');
         }
 
         return $this->redirectToRoute('app_admin_dashboard');

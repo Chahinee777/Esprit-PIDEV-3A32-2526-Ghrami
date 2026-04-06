@@ -71,13 +71,18 @@ final class DiscoveryApiController extends AbstractController
             return $this->json(['ok' => false, 'error' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
 
-        $hobbies = $conn->fetchFirstColumn(
-            'SELECT hobby_name FROM hobbies WHERE user_id = :uid ORDER BY hobby_name ASC LIMIT 20',
-            ['uid' => $userId]
-        );
+        try {
+            $hobbies = $conn->fetchFirstColumn(
+                'SELECT name FROM hobbies WHERE user_id = :uid ORDER BY name ASC LIMIT 20',
+                ['uid' => $userId]
+            );
+        } catch (\Throwable) {
+            // Keep profile payload available even if hobbies query fails.
+            $hobbies = [];
+        }
 
         $badges = $conn->fetchAllAssociative(
-            'SELECT badge_name, description FROM badges WHERE user_id = :uid ORDER BY badge_name ASC LIMIT 20',
+            'SELECT name, description FROM badges WHERE user_id = :uid ORDER BY name ASC LIMIT 20',
             ['uid' => $userId]
         );
 
@@ -92,7 +97,7 @@ final class DiscoveryApiController extends AbstractController
                 'profile_picture' => $profile['profile_picture'],
             ],
             'hobbies' => $hobbies,
-            'badges' => $badges,
+            'badges' => array_map(fn($badge) => ['badge_name' => $badge['name'], 'description' => $badge['description']], $badges),
         ]);
     }
 }

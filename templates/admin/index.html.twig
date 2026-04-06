@@ -217,7 +217,14 @@
     padding: 14px 16px; font-size: 11px; font-weight: 700;
     color: #5a3fb8; text-align: left; text-transform: uppercase;
     letter-spacing: .6px; border-bottom: 2px solid #eaecf2;
+    cursor: pointer; user-select: none; white-space: nowrap;
+    transition: background .15s;
   }
+  .ad-table th:hover { background: rgba(102,126,234,.06); }
+  .ad-table th.sort-asc::after  { content: ' ▲'; font-size: 9px; opacity:.7; }
+  .ad-table th.sort-desc::after { content: ' ▼'; font-size: 9px; opacity:.7; }
+  .ad-table th.no-sort { cursor: default; }
+  .ad-table th.no-sort:hover { background: none; }
   .ad-table td {
     padding: 12px 16px; font-size: 13px; color: #3d4049;
     border-bottom: 1px solid #eef0f6; vertical-align: middle;
@@ -497,11 +504,20 @@
         <button class="ad-tab-btn" onclick="switchTab('classes', this)" data-tip="Manage all classes">
           <span class="tab-icon">🎓</span> Classes
         </button>
+        <button class="ad-tab-btn" onclick="switchTab('hobbies', this)" data-tip="Manage tracked hobbies">
+          <span class="tab-icon">🌱</span> Hobbies
+        </button>
+        <button class="ad-tab-btn" onclick="switchTab('meetings', this)" data-tip="Manage meetings">
+          <span class="tab-icon">🤝</span> Meetings
+        </button>
         <button class="ad-tab-btn" onclick="switchTab('friendships', this)" data-tip="View and manage friendships">
           <span class="tab-icon">🤝</span> Friendships
         </button>
         <button class="ad-tab-btn" onclick="switchTab('badges', this)" data-tip="Manage and award badges">
           <span class="tab-icon">🏆</span> Badges
+        </button>
+        <button class="ad-tab-btn" onclick="switchTab('social', this)" data-tip="Moderate posts and comments">
+          <span class="tab-icon">📣</span> Social Media
         </button>
         <button class="ad-tab-btn" onclick="switchTab('analytics', this)" data-tip="Charts and analytics">
           <span class="tab-icon">📊</span> Analytics
@@ -517,21 +533,20 @@
           </div>
           <div class="ad-section-actions">
             <input class="ad-search" id="userSearch" type="text" placeholder="🔍 Search users...">
-            <button class="ad-btn ad-btn-purple" onclick="exportAnalyticsPDF()" data-tip="Download full analytics PDF">📄 Export PDF</button>
           </div>
         </div>
         <div class="ad-table-wrap">
           <table class="ad-table" id="usersTable">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Avatar</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Location</th>
-                <th>Auth</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th onclick="sortTable('usersTable',0,this)">ID</th>
+                <th class="no-sort">Avatar</th>
+                <th onclick="sortTable('usersTable',2,this)">Username</th>
+                <th onclick="sortTable('usersTable',3,this)">Email</th>
+                <th onclick="sortTable('usersTable',4,this)">Location</th>
+                <th onclick="sortTable('usersTable',5,this)">Auth</th>
+                <th onclick="sortTable('usersTable',6,this)">Status</th>
+                <th class="no-sort">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -612,14 +627,14 @@
           <table class="ad-table" id="providersTable">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Company / Studio</th>
-                <th>Expertise</th>
-                <th>Rating</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th onclick="sortTable('providersTable',0,this)">ID</th>
+                <th onclick="sortTable('providersTable',1,this)">Username</th>
+                <th onclick="sortTable('providersTable',2,this)">Email</th>
+                <th onclick="sortTable('providersTable',3,this)">Company / Studio</th>
+                <th onclick="sortTable('providersTable',4,this)">Expertise</th>
+                <th onclick="sortTable('providersTable',5,this)">Rating</th>
+                <th onclick="sortTable('providersTable',6,this)">Status</th>
+                <th class="no-sort">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -682,8 +697,12 @@
           <table class="ad-table" id="classesTable">
             <thead>
               <tr>
-                <th>Title</th><th>Provider</th><th>Category</th>
-                <th>Price</th><th>Bookings</th><th>Actions</th>
+                <th onclick="sortTable('classesTable',0,this)">Title</th>
+                <th onclick="sortTable('classesTable',1,this)">Provider</th>
+                <th onclick="sortTable('classesTable',2,this)">Category</th>
+                <th onclick="sortTable('classesTable',3,this)">Price</th>
+                <th onclick="sortTable('classesTable',4,this)">Bookings</th>
+                <th class="no-sort">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -714,6 +733,118 @@
         </div>
       </div>
 
+      {# ════════════════════════ HOBBIES TAB ════════════════════════ #}
+      <div id="tab-hobbies" class="ad-tab-pane">
+        <div class="ad-section-header">
+          <div>
+            <div class="ad-section-title">Hobbies</div>
+            <div class="ad-section-sub">Manage user hobbies and logged hours</div>
+          </div>
+          <div class="ad-section-actions">
+            <input class="ad-search" id="hobbySearch" type="text" placeholder="🔍 Search hobbies...">
+          </div>
+        </div>
+        <div class="ad-table-wrap">
+          <table class="ad-table" id="hobbiesTable">
+            <thead>
+              <tr>
+                <th onclick="sortTable('hobbiesTable',0,this)">ID</th>
+                <th onclick="sortTable('hobbiesTable',1,this)">User</th>
+                <th onclick="sortTable('hobbiesTable',2,this)">Hobby</th>
+                <th onclick="sortTable('hobbiesTable',3,this)">Category</th>
+                <th onclick="sortTable('hobbiesTable',4,this)">Hours</th>
+                <th class="no-sort">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for h in hobbies %}
+                <tr class="hobby-row"
+                    data-user="{{ h.username|lower }}"
+                    data-name="{{ h.name|lower }}"
+                    data-category="{{ (h.category ?? '')|lower }}">
+                  <td style="color:#adb0bb;font-size:12px;">{{ h.hobby_id }}</td>
+                  <td><strong>{{ h.username }}</strong></td>
+                  <td>{{ h.name }}</td>
+                  <td><span class="ad-badge ad-badge-local">{{ h.category ?? 'Other' }}</span></td>
+                  <td><strong>{{ h.total_hours|default(0)|round(1) }}h</strong></td>
+                  <td>
+                    <form method="post" action="{{ path('app_admin_hobby_delete') }}"
+                          style="display:inline;"
+                          onsubmit="return confirm('Delete hobby {{ h.name }} for {{ h.username }}?');">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_hobby_delete') }}">
+                      <input type="hidden" name="hobby_id" value="{{ h.hobby_id }}">
+                      <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Delete this hobby permanently">🗑️ Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" style="text-align:center;padding:40px;color:#adb0bb;">No hobbies found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {# ════════════════════════ MEETINGS TAB ════════════════════════ #}
+      <div id="tab-meetings" class="ad-tab-pane">
+        <div class="ad-section-header">
+          <div>
+            <div class="ad-section-title">Meetings</div>
+            <div class="ad-section-sub">Manage scheduled virtual and physical meetings</div>
+          </div>
+          <div class="ad-section-actions">
+            <input class="ad-search" id="meetingSearch" type="text" placeholder="🔍 Search meetings...">
+          </div>
+        </div>
+        <div class="ad-table-wrap">
+          <table class="ad-table" id="meetingsTable">
+            <thead>
+              <tr>
+                <th onclick="sortTable('meetingsTable',0,this)">ID</th>
+                <th onclick="sortTable('meetingsTable',1,this)">Organizer</th>
+                <th onclick="sortTable('meetingsTable',2,this)">Type</th>
+                <th onclick="sortTable('meetingsTable',3,this)">Status</th>
+                <th onclick="sortTable('meetingsTable',4,this)">Scheduled</th>
+                <th onclick="sortTable('meetingsTable',5,this)">Participants</th>
+                <th class="no-sort">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in meetings %}
+                <tr class="meeting-row"
+                    data-organizer="{{ m.organizer_username|lower }}"
+                    data-type="{{ m.meeting_type|lower }}"
+                    data-status="{{ (m.status ?? 'scheduled')|lower }}"
+                    data-location="{{ (m.location ?? '')|lower }}">
+                  <td style="color:#adb0bb;font-size:12px;">{{ m.meeting_id }}</td>
+                  <td><strong>{{ m.organizer_username }}</strong></td>
+                  <td><span class="ad-badge ad-badge-local">{{ m.meeting_type|capitalize }}</span></td>
+                  <td>
+                    {% set ms = (m.status ?? 'scheduled')|lower %}
+                    <span class="ad-badge {% if ms == 'completed' %}ad-badge-accepted{% elseif ms == 'cancelled' %}ad-badge-rejected{% else %}ad-badge-pending{% endif %}">
+                      {{ ms|capitalize }}
+                    </span>
+                  </td>
+                  <td style="color:#65676b;font-size:12px;">{{ m.scheduled_at ?? '—' }}</td>
+                  <td>{{ m.participant_count|default(0) }}</td>
+                  <td>
+                    <form method="post" action="{{ path('app_admin_meeting_delete') }}"
+                          style="display:inline;"
+                          onsubmit="return confirm('Delete meeting {{ m.meeting_id }}?');">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_meeting_delete') }}">
+                      <input type="hidden" name="meeting_id" value="{{ m.meeting_id }}">
+                      <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Delete this meeting permanently">🗑️ Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="7" style="text-align:center;padding:40px;color:#adb0bb;">No meetings found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {# ════════════════════════ FRIENDSHIPS TAB ════════════════════════ #}
       <div id="tab-friendships" class="ad-tab-pane">
         <div class="ad-section-header">
@@ -735,12 +866,12 @@
           <table class="ad-table" id="friendshipsTable">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>User 1</th>
-                <th>User 2</th>
-                <th>Status</th>
-                <th>Created At</th>
-                <th>Actions</th>
+                <th onclick="sortTable('friendshipsTable',0,this)">ID</th>
+                <th onclick="sortTable('friendshipsTable',1,this)">User 1</th>
+                <th onclick="sortTable('friendshipsTable',2,this)">User 2</th>
+                <th onclick="sortTable('friendshipsTable',3,this)">Status</th>
+                <th onclick="sortTable('friendshipsTable',4,this)">Created At</th>
+                <th class="no-sort">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -794,7 +925,7 @@
         <div class="ad-section-header">
           <div>
             <div class="ad-section-title">Badge Management</div>
-            <div class="ad-section-sub">View distribution and award badges to users</div>
+            <div class="ad-section-sub">Create, edit and remove user badges</div>
           </div>
           <div class="ad-section-actions">
             <input class="ad-search" id="badgeSearch" type="text" placeholder="🔍 Search badges...">
@@ -808,16 +939,52 @@
           <div style="position:relative;height:220px;"><canvas id="chartBadgeTab"></canvas></div>
         </div>
 
+        {# Badge award statistics by name #}
+        {% if badgeStats is defined and badgeStats is not empty %}
+        <div style="background:#f8f9fe;border-radius:16px;border:1px solid #eaecf2;padding:22px;margin-bottom:28px;">
+          <h4 style="font-size:14px;font-weight:700;color:#1c1e21;margin-bottom:16px;">🏅 Badge Catalog — Award Counts</h4>
+          <div class="ad-table-wrap" style="box-shadow:none;border:none;">
+            <table class="ad-table" id="badgeCatalogTable">
+              <thead>
+                <tr>
+                  <th onclick="sortTable('badgeCatalogTable',0,this)">Badge Name</th>
+                  <th onclick="sortTable('badgeCatalogTable',1,this)" style="text-align:center;">Times Awarded</th>
+                  <th onclick="sortTable('badgeCatalogTable',2,this)">Last Awarded</th>
+                  <th class="no-sort">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for bs in badgeStats %}
+                  <tr>
+                    <td><span class="ad-badge ad-badge-local">🏆 {{ bs.name }}</span></td>
+                    <td style="text-align:center;font-weight:700;color:#5a3fb8;">{{ bs.total_awarded }}</td>
+                    <td style="color:#65676b;font-size:12px;">{{ bs.last_awarded }}</td>
+                    <td>
+                      <form method="post" action="{{ path('app_admin_badge_revoke_by_name') }}" style="display:inline;"
+                            onsubmit="return confirm('Revoke ALL «{{ bs.name }}» badges from every user? This cannot be undone.');">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_badge_revoke_name') }}">
+                        <input type="hidden" name="badge_name" value="{{ bs.name }}">
+                        <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Remove this badge from all users">🗑️ Revoke All</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endif %}
+
         <div class="ad-table-wrap">
           <table class="ad-table" id="badgesTable">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>User</th>
-                <th>Badge Name</th>
-                <th>Description</th>
-                <th>Awarded At</th>
-                <th>Actions</th>
+                <th onclick="sortTable('badgesTable',0,this)">ID</th>
+                <th onclick="sortTable('badgesTable',1,this)">User</th>
+                <th onclick="sortTable('badgesTable',2,this)">Badge Name</th>
+                <th onclick="sortTable('badgesTable',3,this)">Description</th>
+                <th onclick="sortTable('badgesTable',4,this)">Awarded At</th>
+                <th class="no-sort">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -841,9 +1008,14 @@
                               onclick="viewBadge({{ b.badge_id }}, '{{ b.badge_name }}', '{{ b.description ?? '' }}', '{{ b.username ?? b.user_id }}')">
                         👁️ View
                       </button>
+                      <button class="ad-btn ad-btn-orange ad-btn-sm"
+                              data-tip="Edit this badge"
+                              onclick="openEditBadgeModal({{ b.badge_id }}, '{{ b.badge_name|e('js') }}', '{{ (b.description ?? '')|e('js') }}')">
+                        ✏️ Edit
+                      </button>
                       <form method="post" action="{{ path('app_admin_badge_delete') }}"
                             style="display:inline;"
-                            onsubmit="return confirm('Remove this badge?');">
+                            onsubmit="return confirm('Remove this badge from {{ b.username ?? b.user_id }}?');">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_badge_delete') }}">
                         <input type="hidden" name="badge_id" value="{{ b.badge_id }}">
                         <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Remove badge from user">🗑️ Remove</button>
@@ -853,6 +1025,134 @@
                 </tr>
               {% else %}
                 <tr><td colspan="6" style="text-align:center;padding:40px;color:#adb0bb;">No badges found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {# ════════════════════════ SOCIAL MEDIA TAB ════════════════════════ #}
+      <div id="tab-social" class="ad-tab-pane">
+
+        {# ── Posts sub-section ── #}
+        <div class="ad-section-header">
+          <div>
+            <div class="ad-section-title">📝 Posts Moderation</div>
+            <div class="ad-section-sub">Review, edit and remove user posts</div>
+          </div>
+          <div class="ad-section-actions">
+            <input class="ad-search" id="postSearch" type="text" placeholder="🔍 Search posts...">
+            <a href="{{ path('app_admin_post_export') }}" class="ad-btn ad-btn-green" data-tip="Export all posts to CSV">⬇️ Export CSV</a>
+          </div>
+        </div>
+
+        <div class="ad-table-wrap" style="margin-bottom:40px;">
+          <table class="ad-table" id="postsTable">
+            <thead>
+              <tr>
+                <th onclick="sortTable('postsTable',0,this)">ID</th>
+                <th onclick="sortTable('postsTable',1,this)">Author</th>
+                <th onclick="sortTable('postsTable',2,this)">Content</th>
+                <th onclick="sortTable('postsTable',3,this)">💬</th>
+                <th onclick="sortTable('postsTable',4,this)">❤️</th>
+                <th onclick="sortTable('postsTable',5,this)">Created</th>
+                <th class="no-sort">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in posts %}
+                <tr class="post-row" data-content="{{ p.content|lower }}" data-author="{{ p.username|lower }}">
+                  <td style="color:#adb0bb;font-size:12px;">{{ p.post_id }}</td>
+                  <td><strong>{{ p.username }}</strong></td>
+                  <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#444;">
+                    {% if p.image_url %}<span title="Has image">🖼️ </span>{% endif %}
+                    {{ p.content|slice(0,100) }}{% if p.content|length > 100 %}…{% endif %}
+                  </td>
+                  <td style="text-align:center;">
+                    <span class="ad-badge ad-badge-local">{{ p.comment_count }}</span>
+                  </td>
+                  <td style="text-align:center;">
+                    <span class="ad-badge ad-badge-accepted">{{ p.like_count }}</span>
+                  </td>
+                  <td style="color:#65676b;font-size:12px;">{{ p.created_at }}</td>
+                  <td>
+                    <div class="ad-action-group">
+                      <button class="ad-btn ad-btn-blue ad-btn-sm" data-tip="View full post"
+                              onclick="viewPost({{ p.post_id }}, {{ p.content|json_encode }}, '{{ p.username }}', '{{ p.created_at }}', {{ p.comment_count }}, {{ p.like_count }}, '{{ p.image_url ?? '' }}')">
+                        👁️ View
+                      </button>
+                      <button class="ad-btn ad-btn-orange ad-btn-sm" data-tip="Edit post content"
+                              onclick="openEditPostModal({{ p.post_id }}, {{ p.content|json_encode }})">
+                        ✏️ Edit
+                      </button>
+                      <form method="post" action="{{ path('app_admin_post_delete') }}" style="display:inline;"
+                            onsubmit="return confirm('Delete this post by {{ p.username }}? This also removes its comments and likes.');">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_post_delete') }}">
+                        <input type="hidden" name="post_id" value="{{ p.post_id }}">
+                        <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Delete post permanently">🗑️ Delete</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="7" style="text-align:center;padding:40px;color:#adb0bb;">No posts found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {# ── Comments sub-section ── #}
+        <div class="ad-section-header">
+          <div>
+            <div class="ad-section-title">💬 Comments Moderation</div>
+            <div class="ad-section-sub">Review, edit and remove user comments</div>
+          </div>
+          <div class="ad-section-actions">
+            <input class="ad-search" id="commentSearch" type="text" placeholder="🔍 Search comments...">
+          </div>
+        </div>
+
+        <div class="ad-table-wrap">
+          <table class="ad-table" id="commentsTable">
+            <thead>
+              <tr>
+                <th onclick="sortTable('commentsTable',0,this)">ID</th>
+                <th onclick="sortTable('commentsTable',1,this)">Author</th>
+                <th onclick="sortTable('commentsTable',2,this)">Comment</th>
+                <th onclick="sortTable('commentsTable',3,this)">On Post by</th>
+                <th onclick="sortTable('commentsTable',4,this)">Created</th>
+                <th class="no-sort">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in comments %}
+                <tr class="comment-row" data-content="{{ c.content|lower }}" data-author="{{ c.username|lower }}">
+                  <td style="color:#adb0bb;font-size:12px;">{{ c.comment_id }}</td>
+                  <td><strong>{{ c.username }}</strong></td>
+                  <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#444;">
+                    {{ c.content|slice(0,100) }}{% if c.content|length > 100 %}…{% endif %}
+                  </td>
+                  <td style="color:#65676b;font-size:12px;">
+                    <span title="{{ c.post_excerpt }}">#{{ c.post_id }} — {{ c.post_author }}</span>
+                  </td>
+                  <td style="color:#65676b;font-size:12px;">{{ c.created_at }}</td>
+                  <td>
+                    <div class="ad-action-group">
+                      <button class="ad-btn ad-btn-orange ad-btn-sm" data-tip="Edit comment"
+                              onclick="openEditCommentModal({{ c.comment_id }}, {{ c.content|json_encode }})">
+                        ✏️ Edit
+                      </button>
+                      <form method="post" action="{{ path('app_admin_comment_delete') }}" style="display:inline;"
+                            onsubmit="return confirm('Delete this comment by {{ c.username }}?');">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_comment_delete') }}">
+                        <input type="hidden" name="comment_id" value="{{ c.comment_id }}">
+                        <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Delete comment">🗑️ Delete</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" style="text-align:center;padding:40px;color:#adb0bb;">No comments found.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -1105,28 +1405,123 @@
       </div>
       <div class="ad-form-group">
         <label>Badge Name</label>
-        <select name="badge_name" class="ad-form-select" required>
-          <option value="">— Select a badge —</option>
-          <option value="Social Butterfly">🦋 Social Butterfly</option>
-          <option value="Class Hero">🎓 Class Hero</option>
-          <option value="Hobby Master">🌱 Hobby Master</option>
-          <option value="Connector">🔗 Connector</option>
-          <option value="Early Adopter">⚡ Early Adopter</option>
-          <option value="Top Rated">⭐ Top Rated</option>
-          <option value="Community Leader">👑 Community Leader</option>
-        </select>
+        {% if badgeNames is not empty %}
+          <select name="badge_name" id="awardBadgeNameSelect" class="ad-form-select" onchange="syncBadgeNameInput(this)" required>
+            <option value="">— Pick existing or type below —</option>
+            {% for bn in badgeNames %}
+              <option value="{{ bn }}">{{ bn }}</option>
+            {% endfor %}
+            <option value="__custom__">✏️ Custom…</option>
+          </select>
+          <input type="text" id="awardBadgeNameCustom" class="ad-form-input" placeholder="Or type a new badge name…"
+                 style="margin-top:8px;display:none;" maxlength="100">
+        {% else %}
+          <input type="text" name="badge_name" class="ad-form-input" required placeholder="Badge name…" maxlength="100">
+        {% endif %}
       </div>
       <div class="ad-form-group">
-        <label>Description <span style="font-weight:400;color:#adb0bb;">(optional)</span></label>
+        <label>Note <span style="font-weight:400;color:#adb0bb;">(optional)</span></label>
         <input type="text" name="description" class="ad-form-input" placeholder="Reason for awarding…">
       </div>
       <div class="ad-form-actions">
         <button type="button" class="ad-btn ad-btn-red" onclick="closeModal('awardBadgeModal')">✕ Cancel</button>
-        <button type="submit" class="ad-btn ad-btn-purple">🏆 Award</button>
+        <button type="submit" class="ad-btn ad-btn-purple" onclick="return prepareAwardSubmit(this.form)">🏆 Award</button>
       </div>
     </form>
   </div>
 </div>
+
+{# ── Edit Badge ── #}
+<div id="editBadgeModal" class="ad-modal-overlay">
+  <div class="ad-modal">
+    <button class="ad-modal-close" onclick="closeModal('editBadgeModal')">✕</button>
+    <div class="ad-modal-title">✏️ Edit Badge</div>
+    <form method="post" action="{{ path('app_admin_badge_edit') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_badge_edit') }}">
+      <input type="hidden" name="badge_id" id="editBadgeId">
+      <div class="ad-form-group">
+        <label>Badge Name</label>
+        <input type="text" name="name" id="editBadgeName" class="ad-form-input" required maxlength="100" placeholder="Badge name">
+      </div>
+      <div class="ad-form-group">
+        <label>Description <span style="font-weight:400;color:#adb0bb;">(optional)</span></label>
+        <input type="text" name="description" id="editBadgeDesc" class="ad-form-input" placeholder="Short description…">
+      </div>
+      <div class="ad-form-actions">
+        <button type="button" class="ad-btn ad-btn-red" onclick="closeModal('editBadgeModal')">✕ Cancel</button>
+        <button type="submit" class="ad-btn ad-btn-green">💾 Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ══════════════════ SOCIAL MEDIA MODALS ══════════════════ #}
+
+{# ── View Post ── #}
+<div id="viewPostModal" class="ad-modal-overlay">
+  <div class="ad-modal ad-modal-lg">
+    <button class="ad-modal-close" onclick="closeModal('viewPostModal')">✕</button>
+    <div class="ad-modal-title">📝 Post Details</div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Post ID</span><span class="ad-detail-value" id="vPostId">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Author</span><span class="ad-detail-value" id="vPostAuthor">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Created</span><span class="ad-detail-value" id="vPostDate">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Likes</span><span class="ad-detail-value" id="vPostLikes">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Comments</span><span class="ad-detail-value" id="vPostComments">-</span></div>
+    <div class="ad-detail-row" id="vPostImageRow" style="display:none;">
+      <span class="ad-detail-label">Image</span>
+      <span class="ad-detail-value"><a id="vPostImageLink" href="#" target="_blank">🔗 View image</a></span>
+    </div>
+    <div style="margin-top:16px;">
+      <div style="font-size:12px;font-weight:700;color:#9095a0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Content</div>
+      <div id="vPostContent" style="background:#f8f9fe;border-radius:12px;padding:16px;font-size:14px;line-height:1.6;color:#1c1e21;white-space:pre-wrap;word-break:break-word;max-height:300px;overflow-y:auto;border:1px solid #eaecf2;"></div>
+    </div>
+  </div>
+</div>
+
+{# ── Edit Post ── #}
+<div id="editPostModal" class="ad-modal-overlay">
+  <div class="ad-modal ad-modal-lg">
+    <button class="ad-modal-close" onclick="closeModal('editPostModal')">✕</button>
+    <div class="ad-modal-title">✏️ Edit Post</div>
+    <form method="post" action="{{ path('app_admin_post_edit') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_post_edit') }}">
+      <input type="hidden" name="post_id" id="editPostId">
+      <div class="ad-form-group">
+        <label>Content</label>
+        <textarea name="content" id="editPostContent" class="ad-form-input"
+                  rows="6" required maxlength="2000"
+                  style="resize:vertical;font-family:inherit;line-height:1.5;"></textarea>
+      </div>
+      <div class="ad-form-actions">
+        <button type="button" class="ad-btn ad-btn-red" onclick="closeModal('editPostModal')">✕ Cancel</button>
+        <button type="submit" class="ad-btn ad-btn-green">💾 Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Edit Comment ── #}
+<div id="editCommentModal" class="ad-modal-overlay">
+  <div class="ad-modal">
+    <button class="ad-modal-close" onclick="closeModal('editCommentModal')">✕</button>
+    <div class="ad-modal-title">✏️ Edit Comment</div>
+    <form method="post" action="{{ path('app_admin_comment_edit') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_comment_edit') }}">
+      <input type="hidden" name="comment_id" id="editCommentId">
+      <div class="ad-form-group">
+        <label>Content</label>
+        <textarea name="content" id="editCommentContent" class="ad-form-input"
+                  rows="4" required maxlength="1000"
+                  style="resize:vertical;font-family:inherit;line-height:1.5;"></textarea>
+      </div>
+      <div class="ad-form-actions">
+        <button type="button" class="ad-btn ad-btn-red" onclick="closeModal('editCommentModal')">✕ Cancel</button>
+        <button type="submit" class="ad-btn ad-btn-green">💾 Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 
 <script>
 /* ════════════════════════════════════════
@@ -1161,8 +1556,12 @@ function bindSearch(inputId, rowClass, dataAttrs) {
 bindSearch('userSearch',       '.user-row',       ['username','email','location']);
 bindSearch('providerSearch',   '.provider-row',   ['username','company','expertise']);
 bindSearch('classSearch',      '.class-row',      ['title','provider']);
+bindSearch('hobbySearch',      '.hobby-row',      ['user','name','category']);
+bindSearch('meetingSearch',    '.meeting-row',    ['organizer','type','status','location']);
 bindSearch('friendshipSearch', '.friendship-row', ['user1','user2','status']);
 bindSearch('badgeSearch',      '.badge-row',      ['name','user']);
+bindSearch('postSearch',       '.post-row',       ['content','author']);
+bindSearch('commentSearch',    '.comment-row',    ['content','author']);
 
 function filterFriendships() {
   const val = document.getElementById('friendshipFilter').value.toLowerCase();
@@ -1222,6 +1621,69 @@ function openAwardBadgeModal() {
   document.getElementById('awardBadgeModal').classList.add('show');
 }
 
+function openEditBadgeModal(id, name, desc) {
+  document.getElementById('editBadgeId').value   = id;
+  document.getElementById('editBadgeName').value = name;
+  document.getElementById('editBadgeDesc').value = desc;
+  document.getElementById('editBadgeModal').classList.add('show');
+}
+
+/* Award modal: sync custom text input when user picks "Custom..." */
+function syncBadgeNameInput(sel) {
+  const custom = document.getElementById('awardBadgeNameCustom');
+  if (!custom) return;
+  if (sel.value === '__custom__') {
+    custom.style.display = 'block';
+    custom.required = true;
+    sel.name = '';
+    custom.name = 'badge_name';
+  } else {
+    custom.style.display = 'none';
+    custom.required = false;
+    custom.name = '';
+    sel.name = 'badge_name';
+  }
+}
+
+function prepareAwardSubmit(form) {
+  const sel = document.getElementById('awardBadgeNameSelect');
+  if (sel && sel.value === '__custom__') {
+    const txt = document.getElementById('awardBadgeNameCustom');
+    if (!txt || !txt.value.trim()) { alert('Please enter a badge name.'); return false; }
+  }
+  return true;
+}
+
+/* ════════════════════════════════════════
+   TABLE SORTING
+════════════════════════════════════════ */
+const _sortState = {};
+
+function sortTable(tableId, colIdx, thEl) {
+  const table  = document.getElementById(tableId);
+  const tbody  = table.querySelector('tbody');
+  const rows   = Array.from(tbody.querySelectorAll('tr'));
+  const key    = tableId + ':' + colIdx;
+  const asc    = _sortState[key] !== true;
+  _sortState[key] = asc;
+
+  // Update header indicators
+  table.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc','sort-desc'));
+  thEl.classList.add(asc ? 'sort-asc' : 'sort-desc');
+
+  rows.sort((a, b) => {
+    const ca = a.cells[colIdx]?.textContent.trim() ?? '';
+    const cb = b.cells[colIdx]?.textContent.trim() ?? '';
+    // Numeric sort if both look like numbers
+    const na = parseFloat(ca.replace(/[^0-9.\-]/g, ''));
+    const nb = parseFloat(cb.replace(/[^0-9.\-]/g, ''));
+    if (!isNaN(na) && !isNaN(nb)) return asc ? na - nb : nb - na;
+    return asc ? ca.localeCompare(cb) : cb.localeCompare(ca);
+  });
+
+  rows.forEach(r => tbody.appendChild(r));
+}
+
 /* ════════════════════════════════════════
    BAN / DELETE USER
 ════════════════════════════════════════ */
@@ -1255,105 +1717,148 @@ function exportAnalyticsPDF() {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const now = new Date();
   const dateStr = now.toLocaleString('en-GB');
+
+  // Brand colours (RGB)
   const purple  = [90, 63, 184];
+  const purpleL = [116, 96, 194];
   const dark    = [28, 30, 33];
   const gray    = [100, 101, 107];
+  const white   = [255, 255, 255];
 
-  // ── Title page header ──
+  /* ── Cover strip ── */
   doc.setFillColor(...purple);
-  doc.rect(0, 0, 210, 34, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20); doc.setFont('helvetica', 'bold');
-  doc.text('GHRAMI PLATFORM — ANALYTICS REPORT', 105, 16, { align: 'center' });
-  doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-  doc.text('Generated: ' + dateStr, 105, 26, { align: 'center' });
+  doc.rect(0, 0, 210, 42, 'F');
+
+  // Accent bar
+  doc.setFillColor(...purpleL);
+  doc.rect(0, 38, 210, 4, 'F');
+
+  doc.setTextColor(...white);
+  doc.setFontSize(18); doc.setFont('helvetica', 'bold');
+  doc.text('GHRAMI PLATFORM', 105, 16, { align: 'center' });
+  doc.setFontSize(11); doc.setFont('helvetica', 'normal');
+  doc.text('Analytics Report', 105, 24, { align: 'center' });
+  doc.setFontSize(9);
+  doc.text('Generated: ' + dateStr, 105, 33, { align: 'center' });
 
   doc.setTextColor(...dark);
-  let y = 46;
+  let y = 54;
 
+  /* ── Section helper ── */
   function addSection(title, head, rows, color) {
-    if (y > 250) { doc.addPage(); y = 20; }
-    doc.setFontSize(13); doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...color);
-    doc.text(title, 14, y); y += 8;
+    // Page-break guard (leave 60 mm for a section minimum)
+    if (y > 240) { doc.addPage(); y = 20; }
+
+    // Section title pill
+    doc.setFillColor(...color);
+    doc.roundedRect(14, y - 5, 182, 9, 2, 2, 'F');
+    doc.setTextColor(...white);
+    doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+    doc.text(title, 18, y + 1.5);
+    doc.setTextColor(...dark);
+    y += 10;
+
     doc.autoTable({
       startY: y,
       head: [head],
       body: rows,
       theme: 'striped',
-      headStyles: { fillColor: color, textColor: [255,255,255], fontStyle: 'bold', fontSize: 10 },
-      bodyStyles: { fontSize: 10, textColor: [50,50,50] },
-      alternateRowStyles: { fillColor: [248,249,254] },
+      headStyles: {
+        fillColor: color,
+        textColor: white,
+        fontStyle: 'bold',
+        fontSize: 9,
+        cellPadding: { top: 4, bottom: 4, left: 5, right: 5 },
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [50, 50, 50],
+        cellPadding: { top: 3, bottom: 3, left: 5, right: 5 },
+      },
+      alternateRowStyles: { fillColor: [248, 249, 254] },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 90 },
+        1: { cellWidth: 'auto' },
+      },
       margin: { left: 14, right: 14 },
+      tableLineColor: [234, 236, 242],
+      tableLineWidth: 0.3,
     });
-    y = doc.lastAutoTable.finalY + 12;
+    y = doc.lastAutoTable.finalY + 10;
   }
 
-  addSection('👥 Users', ['Metric', 'Value'], [
+  /* ── Sections — plain ASCII only (Helvetica has no emoji glyphs) ── */
+  addSection('USERS', ['Metric', 'Value'], [
     ['Total Users',     '{{ stats.users }}'],
     ['Online Now',      '{{ stats.active_users }}'],
     ['Banned',          '{{ stats.banned_users ?? 0 }}'],
     ['Google Sign-In',  '{{ stats.google_users ?? 0 }}'],
     ['Local Accounts',  '{{ stats.local_users ?? 0 }}'],
-  ], [90,63,184]);
+  ], [90, 63, 184]);
 
-  addSection('💬 Social Feed', ['Metric', 'Value'], [
+  addSection('SOCIAL FEED', ['Metric', 'Value'], [
     ['Total Posts',        '{{ stats.posts }}'],
     ['Comments',           '{{ stats.comments ?? 0 }}'],
     ['Likes',              '{{ stats.likes ?? 0 }}'],
     ['Stories',            '{{ stats.stories ?? 0 }}'],
     ['Active Friendships', '{{ stats.accepted_friendships ?? 0 }}'],
-  ], [194,24,91]);
+  ], [194, 24, 91]);
 
-  addSection('🎓 Classes & Revenue', ['Metric', 'Value'], [
+  addSection('CLASSES & REVENUE', ['Metric', 'Value'], [
     ['Total Classes',  '{{ stats.classes }}'],
     ['Total Bookings', '{{ stats.bookings }}'],
     ['Completed',      '{{ stats.completed_bookings ?? 0 }}'],
     ['Pending',        '{{ stats.pending_bookings ?? 0 }}'],
     ['Cancelled',      '{{ stats.cancelled_bookings ?? 0 }}'],
     ['Total Revenue',  '{{ stats.total_revenue ?? "0.00" }} TND'],
-  ], [230,101,0]);
+  ], [230, 101, 0]);
 
-  addSection('🌱 Hobbies', ['Metric', 'Value'], [
-    ['Total Hobbies',    '{{ stats.hobbies ?? 18 }}'],
-    ['Total Hours',      '{{ stats.hobby_hours ?? "0.0" }} hrs'],
-    ['Milestones',       '{{ stats.milestones ?? 0 }}'],
-    ['Achieved',         '{{ stats.achieved_milestones ?? 0 }}'],
-  ], [46,125,50]);
+  addSection('HOBBIES', ['Metric', 'Value'], [
+    ['Total Hobbies',  '{{ stats.hobbies }}'],
+    ['Total Hours',    '{{ stats.hobby_hours ?? "0.0" }} hrs'],
+    ['Milestones',     '{{ stats.milestones ?? 0 }}'],
+    ['Achieved',       '{{ stats.achieved_milestones ?? 0 }}'],
+  ], [46, 125, 50]);
 
-  addSection('🤝 Meetings', ['Metric', 'Value'], [
-    ['Total Meetings', '{{ stats.meetings ?? 22 }}'],
+  addSection('MEETINGS', ['Metric', 'Value'], [
+    ['Total Meetings', '{{ stats.meetings ?? 0 }}'],
     ['Scheduled',      '{{ stats.scheduled_meetings ?? 0 }}'],
     ['Completed',      '{{ stats.completed_meetings ?? 0 }}'],
     ['Cancelled',      '{{ stats.cancelled_meetings ?? 0 }}'],
-  ], [0,105,122]);
+  ], [0, 105, 122]);
 
-  addSection('🏆 Badges', ['Metric', 'Value'], [
-    ['Total Badges',    '{{ stats.badges ?? 13 }}'],
-    ['Unique Types',    '{{ stats.unique_badge_types ?? 0 }}'],
-    ['Social Butterfly','{{ stats.badge_social ?? 45 }}'],
-    ['Class Hero',      '{{ stats.badge_class ?? 38 }}'],
-    ['Hobby Master',    '{{ stats.badge_hobby ?? 32 }}'],
-  ], [123,31,162]);
+  addSection('BADGES', ['Metric', 'Value'], [
+    ['Total Badges',      '{{ stats.badges }}'],
+    ['Unique Types',      '{{ stats.unique_badge_types ?? 0 }}'],
+    ['Social Butterfly',  '{{ stats.badge_social ?? 0 }}'],
+    ['Class Hero',        '{{ stats.badge_class ?? 0 }}'],
+    ['Hobby Master',      '{{ stats.badge_hobby ?? 0 }}'],
+  ], [123, 31, 162]);
 
-  addSection('🤝 Friendships', ['Metric', 'Value'], [
+  addSection('FRIENDSHIPS', ['Metric', 'Value'], [
     ['Total',    '{{ stats.friendships ?? 0 }}'],
     ['Accepted', '{{ stats.accepted_friendships ?? 0 }}'],
     ['Pending',  '{{ stats.pending_friendships ?? 0 }}'],
     ['Rejected', '{{ stats.rejected_friendships ?? 0 }}'],
-  ], [183,28,28]);
+  ], [183, 28, 28]);
 
-  // Footer on last page
+  /* ── Footer on every page ── */
   const pCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pCount; i++) {
     doc.setPage(i);
-    doc.setFontSize(9); doc.setTextColor(...gray);
-    doc.text('© 2026 Ghrami by OPGG  •  Page ' + i + ' of ' + pCount, 105, 290, { align: 'center' });
+    // Bottom rule
+    doc.setDrawColor(...purpleL);
+    doc.setLineWidth(0.4);
+    doc.line(14, 284, 196, 284);
+    doc.setFontSize(8); doc.setTextColor(...gray);
+    doc.text('(c) 2026 Ghrami by OPGG', 14, 289);
+    doc.text('Page ' + i + ' / ' + pCount, 196, 289, { align: 'right' });
   }
 
-  doc.save('Ghrami_Analytics_' + now.getFullYear()
-    + String(now.getMonth()+1).padStart(2,'0')
-    + String(now.getDate()).padStart(2,'0') + '.pdf');
+  const stamp = now.getFullYear()
+    + String(now.getMonth() + 1).padStart(2, '0')
+    + String(now.getDate()).padStart(2, '0');
+  doc.save('Ghrami_Analytics_' + stamp + '.pdf');
 }
 
 /* ════════════════════════════════════════
@@ -1466,6 +1971,40 @@ function initBadgeTabChart() {
       plugins: { legend: { display:false } },
       scales: { x: { beginAtZero:true, grid: { color:'#f0f2f5' } }, y: { grid: { display:false } } } }
   });
+}
+
+/* ════════════════════════════════════════
+   SOCIAL MEDIA MODERATION
+════════════════════════════════════════ */
+
+function viewPost(id, content, author, date, comments, likes, imageUrl) {
+  document.getElementById('vPostId').textContent       = id;
+  document.getElementById('vPostAuthor').textContent   = author;
+  document.getElementById('vPostDate').textContent     = date;
+  document.getElementById('vPostLikes').textContent    = likes;
+  document.getElementById('vPostComments').textContent = comments;
+  document.getElementById('vPostContent').textContent  = content;
+  const imgRow  = document.getElementById('vPostImageRow');
+  const imgLink = document.getElementById('vPostImageLink');
+  if (imageUrl) {
+    imgRow.style.display = '';
+    imgLink.href = imageUrl;
+  } else {
+    imgRow.style.display = 'none';
+  }
+  document.getElementById('viewPostModal').classList.add('show');
+}
+
+function openEditPostModal(id, content) {
+  document.getElementById('editPostId').value      = id;
+  document.getElementById('editPostContent').value = content;
+  document.getElementById('editPostModal').classList.add('show');
+}
+
+function openEditCommentModal(id, content) {
+  document.getElementById('editCommentId').value      = id;
+  document.getElementById('editCommentContent').value = content;
+  document.getElementById('editCommentModal').classList.add('show');
 }
 </script>
 {% endblock %}

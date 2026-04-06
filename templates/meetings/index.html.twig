@@ -438,9 +438,10 @@
     gap: 24px;
 }
 .discovery-card {
-    background: white; border-radius: 20px; overflow: hidden;
+    background: white; border-radius: 20px; overflow: visible;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
 }
 .discovery-card:hover {
     transform: scale(1.02);
@@ -457,6 +458,7 @@
     position: absolute; bottom: -40px; left: 50%;
     transform: translateX(-50%); overflow: hidden;
     display: flex; align-items: center; justify-content: center; font-size: 32px;
+    z-index: 10;
 }
 .card-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .card-body { padding: 50px 16px 16px; text-align: center; }
@@ -785,10 +787,11 @@ async function loadMatches() {
             const scoreColor = match.percentage >= 60 ? '#15803d' : match.percentage >= 40 ? '#4f46e5' : '#d97706';
             const safeName = (match.full_name || '').replace(/'/g, "\\'");
             const safePic  = (match.profile_picture || '').replace(/'/g, "\\'");
+            const imageUrl = match.profile_picture && !match.profile_picture.startsWith('http') ? `/images/profile_pictures/${match.profile_picture}` : match.profile_picture;
             return `
             <div class="discovery-card">
                 <div class="card-gradient-bg"></div>
-                <div class="card-avatar">${match.profile_picture ? `<img src="${match.profile_picture}" alt="">` : '👤'}</div>
+                <div class="card-avatar">${imageUrl ? `<img src="${imageUrl}" alt="">` : '👤'}</div>
                 <div class="card-body">
                     <h3 class="card-name">${escapeHtml(match.full_name || match.username)}</h3>
                     ${match.location ? `<p class="card-location">📍 ${escapeHtml(match.location)}</p>` : `<p class="card-location">@${escapeHtml(match.username)}</p>`}
@@ -850,10 +853,11 @@ async function openProfileModal(userId) {
             ? data.badges.map(b => `<div style="display:flex;align-items:center;gap:10px;padding:8px;background:#fefce8;border-radius:8px;margin-top:6px;"><span>🏆</span><div><div style="font-size:13px;font-weight:600;">${escapeHtml(b.badge_name)}</div><div style="font-size:11px;color:#64748b;">${escapeHtml(b.description || '')}</div></div></div>`).join('')
             : '';
 
+        const profileImageUrl = u.profile_picture && !u.profile_picture.startsWith('http') ? `/images/profile_pictures/${u.profile_picture}` : u.profile_picture;
         document.getElementById('profileModalBody').innerHTML = `
             <div style="display:flex;align-items:center;gap:16px;background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:20px;">
                 <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">
-                    ${u.profile_picture ? `<img src="${u.profile_picture}" style="width:100%;height:100%;object-fit:cover;">` : '👤'}
+                    ${profileImageUrl ? `<img src="${profileImageUrl}" style="width:100%;height:100%;object-fit:cover;">` : '👤'}
                 </div>
                 <div>
                     <div style="font-size:18px;font-weight:700;color:#1e293b;">${escapeHtml(u.full_name || u.username)}</div>

@@ -33,6 +33,7 @@ final class ProfileController extends AbstractController
         }
 
         $errors = [];
+        $profileLocation = $user->location ?? '';
 
         if ($request->isMethod('POST')) {
             if (!$this->isCsrfTokenValid('profile', (string) $request->request->get('_csrf_token'))) {
@@ -45,6 +46,7 @@ final class ProfileController extends AbstractController
             $location = trim((string) $request->request->get('location', ''));
             $bio = trim((string) $request->request->get('bio', ''));
             $newPassword = (string) $request->request->get('new_password', '');
+            $profileLocation = $location;
 
             if ($username === '' || mb_strlen($username) < 3) {
                 $errors[] = 'Username must be at least 3 characters.';
@@ -83,7 +85,7 @@ final class ProfileController extends AbstractController
                 $user->username = $username;
                 $user->email = mb_strtolower($email);
                 $user->fullName = $fullName !== '' ? $fullName : null;
-                $user->location = $location !== '' ? $location : null;
+                $user->location = $location;
                 $user->bio = $bio !== '' ? $bio : null;
 
                 if ($newPassword !== '') {
@@ -178,6 +180,7 @@ final class ProfileController extends AbstractController
 
         return $this->render('profile/index.html.twig', [
             'profile' => $user,
+            'profileLocation' => $profileLocation,
             'errors' => $errors,
             'badges' => $badgeService->getUserBadges((int) $user->id),
             'stats' => $stats,

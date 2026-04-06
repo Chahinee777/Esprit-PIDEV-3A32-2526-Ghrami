@@ -208,15 +208,18 @@ final class HobbiesController extends AbstractController
             $hours = (float) $hoursInput;
             $notes = trim((string) $request->request->get('notes', ''));
             $sessionDateInput = trim((string) $request->request->get('session_date', ''));
-            $sessionDate = $sessionDateInput === '' ? new \DateTimeImmutable('today') : \DateTimeImmutable::createFromFormat('Y-m-d', $sessionDateInput);
+            $sessionDateImmutable = $sessionDateInput === '' ? new \DateTimeImmutable('today') : \DateTimeImmutable::createFromFormat('Y-m-d', $sessionDateInput);
 
-            if ($sessionDateInput !== '' && !$sessionDate) {
+            if ($sessionDateInput !== '' && !$sessionDateImmutable) {
                 return new JsonResponse([
                     'ok' => false,
                     'error' => 'Validation failed.',
                     'errors' => ['session_date' => 'Please provide a valid session date.'],
                 ], 400);
             }
+
+            // Convert DateTimeImmutable to DateTime for Doctrine compatibility
+            $sessionDate = new \DateTime($sessionDateImmutable->format('Y-m-d'));
 
             $log = new ProgressLog();
             $log->hobby = $hobby;
