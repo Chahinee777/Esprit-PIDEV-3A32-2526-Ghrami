@@ -1,0 +1,599 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Connections - Ghrami{% endblock %}
+
+{% block stylesheets %}
+<style>
+    .connections-container {
+        max-width: 1000px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .connections-header {
+        margin-bottom: 2rem;
+    }
+
+    .connections-header h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.8rem;
+        color: #262525;
+    }
+
+    .connections-tabs {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #f0f0f0;
+        flex-wrap: wrap;
+    }
+
+    .tab-btn {
+        padding: 0.75rem 1.5rem;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: #666;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .tab-btn.active {
+        color: #667eea;
+        border-bottom-color: #667eea;
+    }
+
+    .tab-btn:hover {
+        color: #667eea;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .connection-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .connection-card {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .connection-card:hover {
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+        border-color: #667eea;
+        transform: translateY(-4px);
+    }
+
+    .connection-card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.2rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .connection-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+
+    .connection-profile {
+        flex: 1;
+    }
+
+    .connection-name {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #262525;
+    }
+
+    .connection-username {
+        margin: 0;
+        font-size: 0.85rem;
+        color: #999;
+    }
+
+    .connection-card-body {
+        padding: 1rem 1.2rem;
+        flex: 1;
+    }
+
+    .connection-type {
+        display: inline-block;
+        padding: 0.3rem 0.6rem;
+        background: #ede9fe;
+        color: #667eea;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-bottom: 0.8rem;
+    }
+
+    .connection-skills {
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .skill-label {
+        color: #666;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+    }
+
+    .skill-value {
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+
+    .connection-status {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        background: #f0f0f0;
+        color: #666;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-top: 0.5rem;
+    }
+
+    .connection-status.accepted {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .connection-status.pending {
+        background: #fff3e0;
+        color: #e65100;
+    }
+
+    .connection-card-footer {
+        padding: 1rem 1.2rem;
+        border-top: 1px solid #f0f0f0;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-small {
+        flex: 1;
+        min-width: 80px;
+        padding: 0.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.3s;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+
+    .btn-small:hover {
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        transform: translateY(-2px);
+    }
+
+    .btn-small.secondary {
+        background: #f0f0f0;
+        color: #333;
+        border: 1px solid #ddd;
+    }
+
+    .btn-small.secondary:hover {
+        background: #e0e0e0;
+    }
+
+    .btn-small.danger {
+        background: #d32f2f;
+    }
+
+    .btn-small.danger:hover {
+        background: #b71c1c;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #999;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .search-box {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .search-box input {
+        flex: 1;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 0.95rem;
+    }
+
+    .search-box button {
+        padding: 0.75rem 1.5rem;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .new-connection-form {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.2rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.4rem;
+        font-weight: 600;
+        color: #262525;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="connections-container">
+    <div class="connections-header">
+        <h1>🤝 Connections</h1>
+        <p>Build meaningful professional relationships through mentorship and collaboration.</p>
+    </div>
+
+    <div class="connections-tabs">
+        <button class="tab-btn active" onclick="switchTab('accepted')">✓ Accepted ({{ accepted|length }})</button>
+        <button class="tab-btn" onclick="switchTab('pending')">⏳ Pending ({{ pendingIncoming|length + pendingOutgoing|length }})</button>
+        <button class="tab-btn" onclick="switchTab('new')">➕ New Connection</button>
+    </div>
+
+    <!-- Accepted Connections Tab -->
+    <div id="accepted" class="tab-content active">
+        {% if accepted is empty %}
+            <div class="empty-state">
+                <div class="empty-state-icon">🌍</div>
+                <p>No accepted connections yet. Send a request to get started!</p>
+            </div>
+        {% else %}
+            <div class="connection-grid">
+                {% for conn in accepted %}
+                    <div class="connection-card">
+                        <div class="connection-card-header">
+                            <div class="connection-avatar">{{ conn.username|first|upper }}</div>
+                            <div class="connection-profile">
+                                <h3 class="connection-name">{{ conn.full_name }}</h3>
+                                <p class="connection-username">@{{ conn.username }}</p>
+                            </div>
+                        </div>
+                        <div class="connection-card-body">
+                            <span class="connection-type">{{ conn.connection_type }}</span>
+                            {% if conn.my_skill %}
+                                <div class="connection-skills">
+                                    <div class="skill-label">My Skill:</div>
+                                    <div class="skill-value">{{ conn.my_skill }}</div>
+                                </div>
+                            {% endif %}
+                            {% if conn.their_skill %}
+                                <div class="connection-skills">
+                                    <div class="skill-label">Their Skill:</div>
+                                    <div class="skill-value">{{ conn.their_skill }}</div>
+                                </div>
+                            {% endif %}
+                            <span class="connection-status accepted">Accepted</span>
+                        </div>
+                        <div class="connection-card-footer">
+                            <a href="{{ path('app_matching_index', {chatWith: conn.other_user_id}) }}" class="btn-small">💬 Message</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pending Connections Tab -->
+    <div id="pending" class="tab-content">
+        <h3 style="margin:0 0 .8rem 0;">Incoming Requests</h3>
+        {% if pendingIncoming is empty %}
+            <div class="empty-state" style="padding:1.4rem 1rem;">
+                <p>No incoming requests.</p>
+            </div>
+        {% else %}
+            <div class="connection-grid" style="margin-bottom: 2.2rem;">
+                {% for req in pendingIncoming %}
+                    <div class="connection-card">
+                        <div class="connection-card-header">
+                            <div class="connection-avatar">{{ req.username|first|upper }}</div>
+                            <div class="connection-profile">
+                                <h3 class="connection-name">{{ req.full_name }}</h3>
+                                <p class="connection-username">@{{ req.username }}</p>
+                            </div>
+                        </div>
+                        <div class="connection-card-body">
+                            <span class="connection-type">{{ req.connection_type }}</span>
+                            {% if req.initiator_skill %}
+                                <div class="connection-skills">
+                                    <div class="skill-label">Their Skill:</div>
+                                    <div class="skill-value">{{ req.initiator_skill }}</div>
+                                </div>
+                            {% endif %}
+                            {% if req.receiver_skill %}
+                                <div class="connection-skills">
+                                    <div class="skill-label">Requested From You:</div>
+                                    <div class="skill-value">{{ req.receiver_skill }}</div>
+                                </div>
+                            {% endif %}
+                            <span class="connection-status pending">Pending</span>
+                        </div>
+                        <div class="connection-card-footer">
+                            <button class="btn-small" onclick="acceptRequest('{{ req.connection_id }}')">✅ Accept</button>
+                            <button class="btn-small secondary" onclick="rejectRequest('{{ req.connection_id }}')">✖ Reject</button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <h3 style="margin:0 0 .8rem 0;">Sent Requests</h3>
+        <div class="search-box">
+            <input type="text" id="searchSent" placeholder="Search your sent requests..." />
+        </div>
+        {% if pendingOutgoing is empty %}
+            <div class="empty-state">
+                <div class="empty-state-icon">🔔</div>
+                <p>No pending connection requests from you.</p>
+            </div>
+        {% else %}
+            <div class="connection-grid">
+                {% for req in pendingOutgoing %}
+                    <div class="connection-card">
+                        <div class="connection-card-header">
+                            <div class="connection-avatar">{{ req.username|first|upper }}</div>
+                            <div class="connection-profile">
+                                <h3 class="connection-name">{{ req.full_name }}</h3>
+                                <p class="connection-username">@{{ req.username }}</p>
+                            </div>
+                        </div>
+                        <div class="connection-card-body">
+                            <span class="connection-type">{{ req.connection_type }}</span>
+                            {% if req.initiator_skill %}
+                                <div class="connection-skills">
+                                    <div class="skill-label">Your Skill:</div>
+                                    <div class="skill-value">{{ req.initiator_skill }}</div>
+                                </div>
+                            {% endif %}
+                            {% if req.receiver_skill %}
+                                <div class="connection-skills">
+                                    <div class="skill-label">Their Skill:</div>
+                                    <div class="skill-value">{{ req.receiver_skill }}</div>
+                                </div>
+                            {% endif %}
+                            <span class="connection-status pending">Pending</span>
+                        </div>
+                        <div class="connection-card-footer">
+                            <button class="btn-small secondary" onclick="cancelRequest('{{ req.connection_id }}')">❌ Cancel</button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- New Connection Tab -->
+    <div id="new" class="tab-content">
+        <div class="new-connection-form">
+            <h3>Send Connection Request</h3>
+            <form id="newConnectionForm">
+                <div class="form-group">
+                    <label for="receiverId">User</label>
+                    <input type="text" id="userSearch" placeholder="Search for a user..." autocomplete="off" />
+                    <ul id="userSearchResults" style="list-style: none; padding: 0; margin-top: 0.5rem;"></ul>
+                    <input type="hidden" id="receiverId" name="receiver_id" />
+                </div>
+
+                <div class="form-group">
+                    <label for="connectionType">Connection Type</label>
+                    <select id="connectionType" name="type" required>
+                        <option value="">-- Select --</option>
+                        <option value="Mentor">🎓 Mentor (Learning)</option>
+                        <option value="Mentee">👨‍🎓 Mentee (Teaching)</option>
+                        <option value="Collaborator">🤝 Collaborator</option>
+                        <option value="Advisor">💡 Advisor</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="initiatorSkill">Your Expertise</label>
+                    <input type="text" id="initiatorSkill" name="initiator_skill" placeholder="e.g., Web Development, Python, etc." />
+                </div>
+
+                <div class="form-group">
+                    <label for="receiverSkill">What they can teach/help with</label>
+                    <input type="text" id="receiverSkill" name="receiver_skill" placeholder="e.g., Data Science, UI Design, etc." />
+                </div>
+
+                <button type="submit" class="btn-small" style="width: 100%;">Send Request</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const CONNECTION_TYPES = {
+    'Mentor': '🎓 Mentor',
+    'Mentee': '👨‍🎓 Mentee',
+    'Collaborator': '🤝 Collaborator',
+    'Advisor': '💡 Advisor'
+};
+
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+    event.target.classList.add('active');
+}
+
+let userSearchTimeout;
+document.getElementById('userSearch')?.addEventListener('input', (e) => {
+    clearTimeout(userSearchTimeout);
+    const query = e.target.value.trim();
+    
+    if (query.length < 2) {
+        document.getElementById('userSearchResults').innerHTML = '';
+        return;
+    }
+
+    userSearchTimeout = setTimeout(() => {
+        fetch(`/api/users/search?q=${encodeURIComponent(query)}`)
+            .then(r => r.json())
+            .then(data => {
+                const ul = document.getElementById('userSearchResults');
+                ul.innerHTML = '';
+                (data.users || []).slice(0, 10).forEach(user => {
+                    const li = document.createElement('li');
+                    li.style.cssText = 'padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 0.25rem; cursor: pointer;';
+                    li.textContent = `${user.full_name} (@${user.username})`;
+                    li.onclick = () => {
+                        document.getElementById('receiverId').value = user.user_id;
+                        document.getElementById('userSearch').value = `${user.full_name} (@${user.username})`;
+                        ul.innerHTML = '';
+                    };
+                    ul.appendChild(li);
+                });
+            });
+    }, 300);
+});
+
+document.getElementById('newConnectionForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const receiverId = document.getElementById('receiverId').value;
+    if (!receiverId) {
+        alert('Please select a user');
+        return;
+    }
+
+    const formData = new FormData(e.target);
+    formData.set('receiver_id', receiverId);
+
+    try {
+        const response = await fetch('/connections/api/create', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (data.ok) {
+            alert('Connection request sent! 🎉');
+            e.target.reset();
+            document.getElementById('userSearchResults').innerHTML = '';
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to send request'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to send request');
+    }
+});
+
+async function cancelRequest(connectionId) {
+    if (!confirm('Cancel this connection request?')) return;
+    
+    try {
+        const response = await fetch(`/connections/api/cancel/${connectionId}`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+        if (data.ok) {
+            location.reload();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function acceptRequest(connectionId) {
+    try {
+        const response = await fetch(`/connections/api/accept/${connectionId}`, { method: 'POST' });
+        const data = await response.json();
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert(data.error || 'Unable to accept request');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function rejectRequest(connectionId) {
+    try {
+        const response = await fetch(`/connections/api/reject/${connectionId}`, { method: 'POST' });
+        const data = await response.json();
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert(data.error || 'Unable to reject request');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+</script>
+{% endblock %}
