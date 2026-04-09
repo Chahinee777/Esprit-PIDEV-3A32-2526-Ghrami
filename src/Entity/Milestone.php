@@ -19,19 +19,27 @@ class Milestone
     #[ORM\JoinColumn(name: 'hobby_id', referencedColumnName: 'hobby_id', nullable: false, onDelete: 'CASCADE')]
     public ?Hobby $hobby = null;
 
-    #[ORM\Column(length: 100)]
+    #[ORM\Column(length: 150)]
     #[Assert\NotBlank(message: 'Milestone title is required.')]
     #[Assert\Length(
         min: 2,
-        max: 100,
+        max: 150,
         minMessage: 'Milestone title must be at least {{ limit }} characters.',
         maxMessage: 'Milestone title cannot exceed {{ limit }} characters.'
     )]
     public string $title = '';
 
-    #[ORM\Column(name: 'target_date', type: Types::DATE_MUTABLE, nullable: true)]
-    public ?\DateTimeInterface $targetDate = null;
+    #[ORM\Column(name: 'target_date', type: Types::DATE_IMMUTABLE, nullable: true)]
+    public ?\DateTimeImmutable $targetDate = null;
 
     #[ORM\Column(name: 'is_achieved', type: Types::BOOLEAN, options: ['default' => false])]
     public bool $isAchieved = false;
+
+    #[ORM\PrePersist]
+    public function ensureImmutableDate(): void
+    {
+        if ($this->targetDate && !$this->targetDate instanceof \DateTimeImmutable) {
+            $this->targetDate = \DateTimeImmutable::createFromMutable($this->targetDate);
+        }
+    }
 }

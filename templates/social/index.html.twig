@@ -163,7 +163,13 @@
                 <div class="create-post-avatar" style="{% if app.user.profilePicture %}background-image: url('{% if app.user.profilePicture starts with 'http' %}{{ app.user.profilePicture }}{% else %}{{ asset('images/profile_pictures/' ~ app.user.profilePicture) }}{% endif %}'); background-size: cover; background-position: center;{% else %}background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;{% endif %}">
                     {% if not app.user.profilePicture %}{{ app.user.fullName[0:1] | upper }}{% endif %}
                 </div>
-                <input type="text" id="social-post-input" class="create-post-input" placeholder="Quoi de neuf ? Partagez votre passion... 🤖 L'IA peut vous aider !">
+                <div style="flex: 1;">
+                    <input type="text" id="social-post-input" class="create-post-input" placeholder="Quoi de neuf ? Partagez votre passion... 🤖 L'IA peut vous aider !">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 12px;">
+                        <span id="postInputStatus" style="color: #65676b;"></span>
+                        <span id="postCharCount" style="color: #65676b;">0 / 5000</span>
+                    </div>
+                </div>
             </div>
             
             <div class="create-post-actions">
@@ -299,11 +305,17 @@
             {% endif %}
             
             <!-- Add Comment Form -->
-            <form method="post" action="{{ path('app_social_comment') }}" style="padding: 12px 16px; border-top: 1px solid #e4e6eb; display: flex; gap: 8px; align-items: center;">
+            <form method="post" action="{{ path('app_social_comment') }}" style="padding: 12px 16px; border-top: 1px solid #e4e6eb; display: flex; flex-direction: column; gap: 8px;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_comment') }}">
                 <input type="hidden" name="post_id" value="{{ p.post_id }}">
-                <textarea name="content" rows="1" placeholder="Ecriver Commentaire..." style="flex: 1; padding: 2px 6px; background-color: #f0f2f5; border: none; border-radius: 16px; resize: none; font-size: 12px; height: 24px; line-height: 18px; max-height: 24px;"></textarea>
-                <button type="submit" class="btn btn-sm btn-primary">Poster</button>
+                <div style="display: flex; gap: 8px; align-items: flex-start;">
+                    <textarea name="content" rows="1" placeholder="Écrivez un commentaire..." style="flex: 1; padding: 8px 12px; background-color: #f0f2f5; border: 1px solid #e4e6eb; border-radius: 16px; resize: none; font-size: 13px; min-height: 32px; line-height: 18px; max-height: 100px; font-family: inherit;" class="comment-textarea"></textarea>
+                    <button type="submit" class="btn btn-sm btn-primary" style="padding: 8px 14px; height: fit-content; align-self: flex-end;">Poster</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                    <span class="comment-status" style="color: #65676b;"></span>
+                    <span class="comment-char-count" style="color: #65676b;">0 / 500</span>
+                </div>
             </form>
         </div>
         {% else %}
@@ -778,34 +790,225 @@
         }
     }
 
+    // Edit Post Modal
     function openEditPost(postId, currentContent) {
-        const next = prompt('Modifier votre post :', currentContent || '');
-        if (next === null) return;
+        const modal = document.getElementById('editPostModal') || createEditPostModal();
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const counter = modal.querySelector('#editPostCharCounter');
+        const submitBtn = modal.querySelector('button[type="submit"]');
+        
+        textarea.value = currentContent || '';
+        textarea.focus();
+        updateEditPostCounter();
+        
+        modal.dataset.postId = postId;
+        modal.style.display = 'flex';
+        
+        // Focus on textarea
+        textarea.setSelectionRange(0, textarea.value.length);
+    }
 
-        const trimmed = next.trim();
-        if (!trimmed) {
-            alert('Le post ne peut pas etre vide.');
+    function createEditPostModal() {
+        const modal = document.createElement('div');
+        modal.id = 'editPostModal';
+        modal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 999; align-items: center; justify-content: center;';
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e4e6eb;">
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 700;">✏️ Modifier votre post</h3>
+                    <button type="button" onclick="closeEditPostModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+                </div>
+                <div style="padding: 20px;">
+                    <textarea name="content" placeholder="Modifiez votre post..." style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 120px; box-sizing: border-box;" id="editPostContent"></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                        <span id="editPostCharCounter" style="font-size: 12px; color: #65676b;">0 / 5000</span>
+                    </div>
+                    <div id="editPostError" style="color: #e74c3c; font-size: 13px; margin-top: 8px; display: none;"></div>
+                </div>
+                <div style="padding: 14px 20px; border-top: 1px solid #e4e6eb; display: flex; gap: 12px;">
+                    <button type="button" onclick="closeEditPostModal()" style="flex: 1; padding: 12px 24px; background: #f0f2f5; color: #1c1e21; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Annuler</button>
+                    <button type="submit" onclick="submitEditPost()" style="flex: 1; padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">Enregistrer</button>
+                </div>
+            </div>
+        `;
+        
+        modal.querySelector('textarea[name="content"]').addEventListener('input', updateEditPostCounter);
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'editPostModal') closeEditPostModal();
+        });
+        
+        document.body.appendChild(modal);
+        return modal;
+    }
+
+    function updateEditPostCounter() {
+        const modal = document.getElementById('editPostModal');
+        if (!modal) return;
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const counter = modal.querySelector('#editPostCharCounter');
+        const MAX_CHARS = 5000;
+        const len = textarea.value.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        
+        if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            textarea.style.borderColor = '#e74c3c';
+        } else if (len === 0) {
+            counter.style.color = '#e74c3c';
+            textarea.style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            textarea.style.borderColor = '#e4e6eb';
+        }
+    }
+
+    function submitEditPost() {
+        const modal = document.getElementById('editPostModal');
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const errorDiv = modal.querySelector('#editPostError');
+        const content = textarea.value.trim();
+        const MAX_CHARS = 5000;
+        
+        // Validation
+        if (!content) {
+            errorDiv.textContent = '❌ Le post ne peut pas être vide.';
+            errorDiv.style.display = 'block';
+            textarea.style.borderColor = '#e74c3c';
             return;
         }
-
-        document.getElementById('social-edit-post-id').value = postId;
-        document.getElementById('social-edit-post-content').value = trimmed;
+        
+        if (content.length > MAX_CHARS) {
+            errorDiv.textContent = '❌ Le post dépasse ' + MAX_CHARS + ' caractères.';
+            errorDiv.style.display = 'block';
+            textarea.style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        // Submit
+        document.getElementById('social-edit-post-id').value = modal.dataset.postId;
+        document.getElementById('social-edit-post-content').value = content;
         document.getElementById('social-edit-post-form').submit();
     }
 
-    function openEditComment(commentId, currentContent) {
-        const next = prompt('Modifier votre commentaire :', currentContent || '');
-        if (next === null) return;
+    function closeEditPostModal() {
+        const modal = document.getElementById('editPostModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.querySelector('#editPostError').style.display = 'none';
+        }
+    }
 
-        const trimmed = next.trim();
-        if (!trimmed) {
-            alert('Le commentaire ne peut pas etre vide.');
+    // Edit Comment Modal
+    function openEditComment(commentId, currentContent) {
+        const modal = document.getElementById('editCommentModal') || createEditCommentModal();
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const counter = modal.querySelector('#editCommentCharCounter');
+        
+        textarea.value = currentContent || '';
+        textarea.focus();
+        updateEditCommentCounter();
+        
+        modal.dataset.commentId = commentId;
+        modal.style.display = 'flex';
+        
+        // Focus and select all
+        textarea.setSelectionRange(0, textarea.value.length);
+    }
+
+    function createEditCommentModal() {
+        const modal = document.createElement('div');
+        modal.id = 'editCommentModal';
+        modal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 999; align-items: center; justify-content: center;';
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e4e6eb;">
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 700;">✏️ Modifier votre commentaire</h3>
+                    <button type="button" onclick="closeEditCommentModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+                </div>
+                <div style="padding: 20px;">
+                    <textarea name="content" placeholder="Modifiez votre commentaire..." style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 80px; box-sizing: border-box;" id="editCommentContent"></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                        <span id="editCommentCharCounter" style="font-size: 12px; color: #65676b;">0 / 500</span>
+                    </div>
+                    <div id="editCommentError" style="color: #e74c3c; font-size: 13px; margin-top: 8px; display: none;"></div>
+                </div>
+                <div style="padding: 14px 20px; border-top: 1px solid #e4e6eb; display: flex; gap: 12px;">
+                    <button type="button" onclick="closeEditCommentModal()" style="flex: 1; padding: 12px 24px; background: #f0f2f5; color: #1c1e21; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Annuler</button>
+                    <button type="submit" onclick="submitEditComment()" style="flex: 1; padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">Enregistrer</button>
+                </div>
+            </div>
+        `;
+        
+        modal.querySelector('textarea[name="content"]').addEventListener('input', updateEditCommentCounter);
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'editCommentModal') closeEditCommentModal();
+        });
+        
+        document.body.appendChild(modal);
+        return modal;
+    }
+
+    function updateEditCommentCounter() {
+        const modal = document.getElementById('editCommentModal');
+        if (!modal) return;
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const counter = modal.querySelector('#editCommentCharCounter');
+        const MAX_CHARS = 500;
+        const len = textarea.value.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        
+        if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            textarea.style.borderColor = '#e74c3c';
+        } else if (len === 0) {
+            counter.style.color = '#e74c3c';
+            textarea.style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            textarea.style.borderColor = '#e4e6eb';
+        }
+    }
+
+    function submitEditComment() {
+        const modal = document.getElementById('editCommentModal');
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const errorDiv = modal.querySelector('#editCommentError');
+        const content = textarea.value.trim();
+        const MAX_CHARS = 500;
+        
+        // Validation
+        if (!content) {
+            errorDiv.textContent = '❌ Le commentaire ne peut pas être vide.';
+            errorDiv.style.display = 'block';
+            textarea.style.borderColor = '#e74c3c';
             return;
         }
-
-        document.getElementById('social-edit-comment-id').value = commentId;
-        document.getElementById('social-edit-comment-content').value = trimmed;
+        
+        if (content.length > MAX_CHARS) {
+            errorDiv.textContent = '❌ Le commentaire dépasse ' + MAX_CHARS + ' caractères.';
+            errorDiv.style.display = 'block';
+            textarea.style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        // Submit
+        document.getElementById('social-edit-comment-id').value = modal.dataset.commentId;
+        document.getElementById('social-edit-comment-content').value = content;
         document.getElementById('social-edit-comment-form').submit();
+    }
+
+    function closeEditCommentModal() {
+        const modal = document.getElementById('editCommentModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.querySelector('#editCommentError').style.display = 'none';
+        }
     }
 
     (function () {
@@ -818,6 +1021,32 @@
         const postInput = document.getElementById('social-post-input');
         const imageFileInput = document.getElementById('social-image-file');
         const postForm = document.getElementById('social-post-form');
+        const MAX_POST_CHARS = 5000;
+        const MAX_COMMENT_CHARS = 500;
+
+        // Update post input counter
+        postInput?.addEventListener('input', () => {
+            const len = postInput.value.trim().length;
+            const counter = document.getElementById('postCharCount');
+            const status = document.getElementById('postInputStatus');
+            
+            counter.textContent = len + ' / ' + MAX_POST_CHARS;
+            
+            if (len === 0) {
+                counter.style.color = '#e4e6eb';
+                status.textContent = '';
+            } else if (len > MAX_POST_CHARS) {
+                counter.style.color = '#e74c3c';
+                counter.style.fontWeight = 'bold';
+                status.textContent = '❌ Trop long';
+                status.style.color = '#e74c3c';
+            } else {
+                counter.style.color = '#65676b';
+                counter.style.fontWeight = 'normal';
+                status.textContent = '✅ Prêt';
+                status.style.color = '#27ae60';
+            }
+        });
 
         // Photo button - trigger file picker
         photoBtn?.addEventListener('click', (e) => {
@@ -828,7 +1057,11 @@
         // Handle file selection from file picker
         imageFileInput?.addEventListener('change', () => {
             if (imageFileInput.files?.length > 0) {
-                alert('📷 Image sélectionnée: ' + imageFileInput.files[0].name);
+                const fileName = imageFileInput.files[0].name;
+                const size = (imageFileInput.files[0].size / 1024 / 1024).toFixed(2);
+                const status = document.getElementById('postInputStatus');
+                status.textContent = '📷 Image: ' + fileName + ' (' + size + 'MB)';
+                status.style.color = '#667eea';
             }
         });
 
@@ -837,8 +1070,21 @@
             e.preventDefault();
             
             const postContent = postInput?.value?.trim();
+            const postLength = postContent?.length || 0;
+            const status = document.getElementById('postInputStatus');
+            const errorMsg = document.createElement('div');
+            
+            // Validation
             if (!postContent) {
-                alert('Écrivez quelque chose avant de publier');
+                status.textContent = '❌ Écrivez quelque chose avant de publier';
+                status.style.color = '#e74c3c';
+                postInput?.focus();
+                return;
+            }
+            
+            if (postLength > MAX_POST_CHARS) {
+                status.textContent = '❌ Le post dépasse ' + MAX_POST_CHARS + ' caractères';
+                status.style.color = '#e74c3c';
                 return;
             }
 
@@ -846,6 +1092,10 @@
             if (content) {
                 content.value = postContent;
             }
+
+            // Disable button and show loading state
+            publishBtn.disabled = true;
+            publishBtn.textContent = '⏳ Publication...';
 
             // Submit the form
             postForm?.submit();
@@ -859,6 +1109,7 @@
             }
 
             completeBtn.disabled = true;
+            completeBtn.textContent = '⏳ Génération...';
             try {
                 const response = await fetch('{{ path('app_social_ai_complete') }}', {
                     method: 'POST',
@@ -875,11 +1126,19 @@
                 if (data.ok && data.fullText) {
                     postInput.value = data.fullText;
                     if (content) content.value = data.fullText;
+                    postInput.dispatchEvent(new Event('input'));
+                    const status = document.getElementById('postInputStatus');
+                    status.textContent = '✨ Complété par IA';
+                    status.style.color = '#667eea';
+                } else {
+                    alert('❌ Erreur: ' + (data.error || 'Impossible de compléter'));
                 }
             } catch (e) {
                 console.error('AI completion failed:', e);
+                alert('❌ Erreur réseau');
             } finally {
                 completeBtn.disabled = false;
+                completeBtn.textContent = '🤖 Compléter';
             }
         });
 
@@ -891,6 +1150,7 @@
             }
 
             imageBtn.disabled = true;
+            imageBtn.textContent = '⏳ Génération...';
             try {
                 const response = await fetch('{{ path('app_social_ai_image') }}', {
                     method: 'POST',
@@ -906,27 +1166,70 @@
                 const data = await response.json();
                 if (data.ok && data.url) {
                     imageUrlInput.value = data.url;
-                    alert('Image générée et attachée à votre post');
+                    const status = document.getElementById('postInputStatus');
+                    status.textContent = '🎨 Image générée';
+                    status.style.color = '#667eea';
+                } else {
+                    alert('❌ Erreur: ' + (data.error || 'Impossible de générer l\'image'));
                 }
             } catch (e) {
                 console.error('AI image generation failed:', e);
+                alert('❌ Erreur réseau');
             } finally {
                 imageBtn.disabled = false;
+                imageBtn.textContent = '🎨 Générer Image';
             }
         });
 
-        // Validation des commentaires
-        document.querySelectorAll('form[action*="{{ path('app_social_comment') }}"]').forEach(form => {
-            form.addEventListener('submit', (e) => {
-                const textarea = form.querySelector('textarea[name="content"]');
+        // Real-time comment validation
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('comment-textarea')) {
+                const form = e.target.closest('form');
+                if (!form) return;
+                
+                const charCount = form.querySelector('.comment-char-count');
+                const status = form.querySelector('.comment-status');
+                const len = e.target.value.trim().length;
+                
+                charCount.textContent = len + ' / ' + MAX_COMMENT_CHARS;
+                
+                if (len === 0) {
+                    charCount.style.color = '#e4e6eb';
+                    status.textContent = '';
+                } else if (len > MAX_COMMENT_CHARS) {
+                    charCount.style.color = '#e74c3c';
+                    charCount.style.fontWeight = 'bold';
+                    status.textContent = '❌ Trop long';
+                    status.style.color = '#e74c3c';
+                } else {
+                    charCount.style.color = '#65676b';
+                    charCount.style.fontWeight = 'normal';
+                    status.textContent = '✅ Prêt';
+                    status.style.color = '#27ae60';
+                }
+            }
+        });
+
+        // Comment form validation on submit
+        document.addEventListener('submit', (e) => {
+            if (e.target.action && e.target.action.includes('{{ path('app_social_comment') }}')) {
+                const textarea = e.target.querySelector('textarea[name="content"]');
                 const content = textarea?.value?.trim();
+                
                 if (!content) {
                     e.preventDefault();
-                    alert('Le commentaire ne peut pas être vide.');
+                    textarea.style.borderColor = '#e74c3c';
+                    textarea.style.backgroundColor = '#ffe6e6';
                     textarea.focus();
                     return false;
                 }
-            });
+                
+                if (content.length > MAX_COMMENT_CHARS) {
+                    e.preventDefault();
+                    alert('❌ Le commentaire dépasse ' + MAX_COMMENT_CHARS + ' caractères.');
+                    return false;
+                }
+            }
         });
     })();
 </script>
