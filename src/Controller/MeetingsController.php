@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Meeting;
 use App\Entity\User;
+use App\Service\GoogleAuthService;
 use App\Service\GoogleMeetService;
 use App\Service\MeetingsService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -11,8 +12,10 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Doctrine\ORM\EntityManagerInterface;
 
 #[Route('/meetings')]
 final class MeetingsController extends AbstractController
@@ -43,6 +46,7 @@ final class MeetingsController extends AbstractController
         Request $request,
         MeetingsService $meetingsService,
         GoogleMeetService $googleMeetService,
+        GoogleAuthService $googleAuthService,
         SessionInterface $session,
         ValidatorInterface $validator
     ): Response {
@@ -101,6 +105,28 @@ final class MeetingsController extends AbstractController
                         'Ghrami Meeting',
                         'Scheduled from Ghrami platform'
                     );
+                }
+
+                // If access token expired, refresh and retry once.
+                if ($meetLink === null) {
+                    $refreshToken = (string) $session->get('google_refresh_token', '');
+                    if ($refreshToken !== '') {
+                        $refreshed = $googleAuthService->refreshAccessTokenWithRefreshToken($refreshToken);
+                        if (is_array($refreshed) && !empty($refreshed['access_token'])) {
+                            $session->set('google_access_token', $refreshed['access_token']);
+                            if (!empty($refreshed['refresh_token'])) {
+                                $session->set('google_refresh_token', $refreshed['refresh_token']);
+                            }
+
+                            $meetLink = $googleMeetService->createMeetLinkWithUserToken(
+                                (string) $refreshed['access_token'],
+                                $scheduledAt,
+                                $duration,
+                                'Ghrami Meeting',
+                                'Scheduled from Ghrami platform'
+                            );
+                        }
+                    }
                 }
 
                 // Fall back to service account if user credentials unavailable
@@ -239,6 +265,248 @@ final class MeetingsController extends AbstractController
             'meeting' => $meetingId,
             'filter' => (string) $request->request->get('filter', 'upcoming'),
         ]);
+    }
+
+    #[Route('/api/users', name: 'app_meetings_api_users', methods: ['GET'])]
+    public function apiGetUsers(EntityManagerInterface $em): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User || $user->id === null) {
+            return new JsonResponse(['error' => 'Unauthorized'], 401);
+        }
+
+        $users = $em->createQuery(
+            'SELECT u.id, u.username, u.fullName, u.profilePicture FROM App\Entity\User u WHERE u.id != :userId ORDER BY u.fullName ASC'
+        )->setParameter('userId', $user->id)->getResult();
+
+        return new JsonResponse(['ok' => true, 'users' => array_map(fn($u) => [
+            'id' => (int)$u['id'],
+            'username' => $u['username'] ?? '',
+            'fullName' => $u['fullName'] ?? $u['username'],
+            'profilePicture' => $u['profilePicture'] ?? null,
+        ], $users)]);
+    }
+
+    #[Route('/api/google-meet-link', name: 'app_meetings_api_google_meet', methods: ['POST'])]
+    public function apiGenerateGoogleMeetLink(
+        Request $request,
+        GoogleMeetService $googleMeetService,
+        GoogleAuthService $googleAuthService,
+        SessionInterface $session
+    ): JsonResponse {
+        try {
+            $datetime = $request->request->get('datetime');
+            $duration = (int)$request->request->get('duration', 60);
+
+            if (!$datetime) {
+                return new JsonResponse(['ok' => false, 'error' => 'Date and time required'], 400);
+            }
+
+            $meetLink = null;
+            $errors = [];
+            $hadUserToken = false;
+
+            // Try user's personal Google credentials first
+            $userAccessToken = $session->get('google_access_token');
+            if ($userAccessToken !== null && $userAccessToken !== '') {
+                $hadUserToken = true;
+                $meetLink = $googleMeetService->createMeetLinkWithUserToken(
+                    (string) $userAccessToken,
+                    $datetime,
+                    $duration,
+                    'Ghrami Meeting',
+                    'Scheduled from Ghrami platform'
+                );
+                if ($meetLink === null && $googleMeetService->getLastError() !== null) {
+                    $errors[] = 'User Google token: ' . $googleMeetService->getLastError();
+                }
+            }
+
+            // Retry once with refreshed token when available.
+            if ($meetLink === null) {
+                $refreshToken = (string) $session->get('google_refresh_token', '');
+                if ($refreshToken !== '') {
+                    $refreshed = $googleAuthService->refreshAccessTokenWithRefreshToken($refreshToken);
+                    if (is_array($refreshed) && !empty($refreshed['access_token'])) {
+                        $session->set('google_access_token', $refreshed['access_token']);
+                        if (!empty($refreshed['refresh_token'])) {
+                            $session->set('google_refresh_token', $refreshed['refresh_token']);
+                        }
+
+                        $hadUserToken = true;
+                        $meetLink = $googleMeetService->createMeetLinkWithUserToken(
+                            (string) $refreshed['access_token'],
+                            $datetime,
+                            $duration,
+                            'Ghrami Meeting',
+                            'Scheduled from Ghrami platform'
+                        );
+                        if ($meetLink === null && $googleMeetService->getLastError() !== null) {
+                            $errors[] = 'Refreshed user token: ' . $googleMeetService->getLastError();
+                        }
+                    }
+                }
+            }
+
+            // Fall back to service account
+            if ($meetLink === null) {
+                $meetLink = $googleMeetService->createMeetLink(
+                    $datetime,
+                    $duration,
+                    'Ghrami Meeting',
+                    'Scheduled from Ghrami platform'
+                );
+                if ($meetLink === null && $googleMeetService->getLastError() !== null) {
+                    $errors[] = 'Service account: ' . $googleMeetService->getLastError();
+                }
+            }
+
+            if (!$meetLink) {
+                return new JsonResponse([
+                    'ok' => false,
+                    'error' => 'Real Google Meet generation failed.',
+                    'details' => $errors,
+                    'needs_auth' => !$hadUserToken,
+                ], 400);
+            }
+
+            return new JsonResponse(['ok' => true, 'link' => $meetLink, 'fallback' => false]);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'ok' => false,
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    #[Route('/api/create', name: 'app_meetings_api_create', methods: ['POST'])]
+    public function apiCreate(
+        Request $request,
+        MeetingsService $meetingsService,
+        GoogleMeetService $googleMeetService,
+        GoogleAuthService $googleAuthService,
+        SessionInterface $session,
+        ValidatorInterface $validator
+    ): JsonResponse {
+        try {
+            $user = $this->getUser();
+            if (!$user instanceof User || $user->id === null) {
+                return new JsonResponse(['ok' => false, 'error' => 'Not authenticated'], 401);
+            }
+
+            $data = json_decode($request->getContent(), true);
+            
+            $connectionId = trim((string) ($data['connection_id'] ?? ''));
+            $meetingType = (string) ($data['meeting_type'] ?? 'virtual');
+            $location = trim((string) ($data['location'] ?? ''));
+            $scheduledAt = trim((string) ($data['scheduled_at'] ?? ''));
+            $duration = (int) ($data['duration'] ?? 60);
+
+            if ($connectionId === '') {
+                return new JsonResponse(['ok' => false, 'error' => 'Connection is required.'], 400);
+            }
+
+            $scheduledAtDate = date_create_immutable($scheduledAt);
+            if (!$scheduledAtDate) {
+                return new JsonResponse(['ok' => false, 'error' => 'Please provide a valid meeting date and time.'], 400);
+            }
+
+            $meetingValidation = new Meeting();
+            $meetingValidation->meetingType = $meetingType;
+            $meetingValidation->location = $location !== '' ? $location : null;
+            $meetingValidation->scheduledAt = $scheduledAtDate;
+            $meetingValidation->duration = $duration;
+            $meetingValidation->status = 'scheduled';
+
+            $violations = $validator->validate($meetingValidation);
+            if (count($violations) > 0) {
+                return new JsonResponse(['ok' => false, 'error' => $this->firstValidationMessage($violations)], 400);
+            }
+
+            if ($meetingType === 'physical' && $location === '') {
+                return new JsonResponse(['ok' => false, 'error' => 'Location is required for in-person meetings.'], 400);
+            }
+
+            $autoMeetLink = null;
+            if ($meetingType === 'virtual' && $location === '') {
+                // Try user's personal Google credentials first
+                $userAccessToken = $session->get('google_access_token');
+                if ($userAccessToken !== null && $userAccessToken !== '') {
+                    $autoMeetLink = $googleMeetService->createMeetLinkWithUserToken(
+                        (string) $userAccessToken,
+                        $scheduledAt,
+                        $duration,
+                        'Ghrami Meeting',
+                        'Scheduled from Ghrami platform'
+                    );
+                }
+
+                // Retry once with refreshed token when available.
+                if ($autoMeetLink === null) {
+                    $refreshToken = (string) $session->get('google_refresh_token', '');
+                    if ($refreshToken !== '') {
+                        $refreshed = $googleAuthService->refreshAccessTokenWithRefreshToken($refreshToken);
+                        if (is_array($refreshed) && !empty($refreshed['access_token'])) {
+                            $session->set('google_access_token', $refreshed['access_token']);
+                            if (!empty($refreshed['refresh_token'])) {
+                                $session->set('google_refresh_token', $refreshed['refresh_token']);
+                            }
+
+                            $autoMeetLink = $googleMeetService->createMeetLinkWithUserToken(
+                                (string) $refreshed['access_token'],
+                                $scheduledAt,
+                                $duration,
+                                'Ghrami Meeting',
+                                'Scheduled from Ghrami platform'
+                            );
+                        }
+                    }
+                }
+
+                // Fall back to service account if user credentials unavailable
+                if ($autoMeetLink === null) {
+                    $autoMeetLink = $googleMeetService->createMeetLink(
+                        $scheduledAt,
+                        $duration,
+                        'Ghrami Meeting',
+                        'Scheduled from Ghrami platform'
+                    );
+                }
+
+                if ($autoMeetLink !== null) {
+                    $location = $autoMeetLink;
+                } else {
+                    return new JsonResponse([
+                        'ok' => false,
+                        'error' => 'Could not generate a real Google Meet link. Connect Google Calendar and try again.',
+                        'details' => [$googleMeetService->getLastError()],
+                    ], 400);
+                }
+            } elseif ($meetingType === 'virtual' && $location !== '' && !str_starts_with($location, 'https://meet.google.com/')) {
+                return new JsonResponse([
+                    'ok' => false,
+                    'error' => 'Virtual meetings require a real Google Meet link (https://meet.google.com/...).',
+                ], 400);
+            }
+
+            $meetingsService->createMeeting(
+                (int) $user->id,
+                $connectionId,
+                $meetingType,
+                $location,
+                $scheduledAt,
+                $duration,
+                true
+            );
+
+            return new JsonResponse([
+                'ok' => true,
+                'message' => 'Meeting scheduled successfully.',
+                'meet_link' => $autoMeetLink
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse(['ok' => false, 'error' => $e->getMessage()], 400);
+        }
     }
 
     private function firstValidationMessage(ConstraintViolationListInterface $violations): string

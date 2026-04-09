@@ -277,7 +277,9 @@ final class AuthController extends AbstractController
 
         return new RedirectResponse($googleAuthService->buildLoginUrl([
             'state' => $state,
-            'access_type' => 'online',
+            'calendar' => true,
+            'access_type' => 'offline',
+            'prompt' => 'consent',
             'approval_prompt' => 'force',
         ]));
     }
@@ -313,7 +315,8 @@ final class AuthController extends AbstractController
         }
 
         try {
-            $token = $googleAuthService->handleAuthorizationCode($code);
+            $loginCallbackUrl = $this->generateUrl('app_auth_google_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
+            $token = $googleAuthService->handleAuthorizationCode($code, $loginCallbackUrl);
             if ($token === null) {
                 throw new \RuntimeException('Failed to exchange Google authorization code.');
             }
@@ -380,7 +383,11 @@ final class AuthController extends AbstractController
     }
 
     #[Route('/auth/google/calendar/connect', name: 'app_auth_google_calendar_connect', methods: ['GET'])]
-    public function googleCalendarConnect(GoogleAuthService $googleAuthService, SessionInterface $session): Response
+    public function googleCalendarConnect(
+        Request $request,
+        GoogleAuthService $googleAuthService,
+        SessionInterface $session
+    ): Response
     {
         $currentUser = $this->getUser();
         if (!$currentUser instanceof User) {
@@ -392,14 +399,21 @@ final class AuthController extends AbstractController
             return $this->redirectToRoute('app_meetings_index');
         }
 
+        $isPopup = $request->query->getBoolean('popup', false);
+        $session->set('google_calendar_popup', $isPopup);
+
         $state = bin2hex(random_bytes(16));
         $session->set('google_calendar_oauth_state', $state);
+
+        $calendarCallbackUrl = $this->generateUrl('app_auth_google_calendar_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
 
         $authUrl = $googleAuthService->buildLoginUrl([
             'state' => $state,
             'calendar' => true,
             'access_type' => 'offline',
+            'prompt' => 'consent',
             'approval_prompt' => 'force',
+            'redirect_uri' => $calendarCallbackUrl,
         ]);
 
         return new RedirectResponse($authUrl);
@@ -419,20 +433,36 @@ final class AuthController extends AbstractController
         $state = (string) $request->query->get('state', '');
         $expectedState = (string) $session->get('google_calendar_oauth_state', '');
         $session->remove('google_calendar_oauth_state');
+        $isPopup = (bool) $session->get('google_calendar_popup', false);
 
         if ($state === '' || !GoogleAuthService::validateState($state, $expectedState)) {
+            if ($isPopup) {
+                $session->remove('google_calendar_popup');
+                return new Response('<!doctype html><html><body><script>\n'
+                    . 'if (window.opener) { window.opener.postMessage({ type: "ghrami-google-calendar", ok: false }, window.location.origin); }\n'
+                    . 'window.close();\n'
+                    . '</script>Invalid OAuth state. You can close this window.</body></html>');
+            }
             $this->addFlash('error', 'Invalid Google OAuth state for calendar.');
             return $this->redirectToRoute('app_meetings_index');
         }
 
         $code = (string) $request->query->get('code', '');
         if ($code === '') {
+            if ($isPopup) {
+                $session->remove('google_calendar_popup');
+                return new Response('<!doctype html><html><body><script>\n'
+                    . 'if (window.opener) { window.opener.postMessage({ type: "ghrami-google-calendar", ok: false }, window.location.origin); }\n'
+                    . 'window.close();\n'
+                    . '</script>Google Calendar linking cancelled. You can close this window.</body></html>');
+            }
             $this->addFlash('info', 'Google Calendar linking was cancelled.');
             return $this->redirectToRoute('app_meetings_index');
         }
 
         try {
-            $token = $googleAuthService->handleAuthorizationCode($code);
+            $calendarCallbackUrl = $this->generateUrl('app_auth_google_calendar_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
+            $token = $googleAuthService->handleAuthorizationCode($code, $calendarCallbackUrl);
             if ($token === null) {
                 throw new \RuntimeException('Failed to exchange Google authorization code.');
             }
@@ -445,9 +475,25 @@ final class AuthController extends AbstractController
                 $session->set('google_refresh_token', $token['refresh_token']);
             }
 
+            $session->remove('google_calendar_popup');
+
+            if ($isPopup) {
+                return new Response('<!doctype html><html><body><script>\n'
+                    . 'if (window.opener) { window.opener.postMessage({ type: "ghrami-google-calendar", ok: true }, window.location.origin); }\n'
+                    . 'window.close();\n'
+                    . '</script>Google Calendar connected. You can close this window.</body></html>');
+            }
+
             $this->addFlash('success', '✅ Google Calendar connected successfully! Virtual meetings will now be added to your calendar.');
             return $this->redirectToRoute('app_meetings_index');
         } catch (\Throwable) {
+            $session->remove('google_calendar_popup');
+            if ($isPopup) {
+                return new Response('<!doctype html><html><body><script>\n'
+                    . 'if (window.opener) { window.opener.postMessage({ type: "ghrami-google-calendar", ok: false }, window.location.origin); }\n'
+                    . 'window.close();\n'
+                    . '</script>Google Calendar linking failed. You can close this window.</body></html>');
+            }
             $this->addFlash('error', 'Google Calendar linking failed. Please try again.');
             return $this->redirectToRoute('app_meetings_index');
         }

@@ -12,6 +12,7 @@ class GoogleMeetService
     private string $serviceAccountPath;
     private string $calendarId;
     private string $timezone;
+    private ?string $lastError = null;
 
     public function __construct()
     {
@@ -25,13 +26,21 @@ class GoogleMeetService
         return $this->serviceAccountPath !== '' && is_file($this->serviceAccountPath);
     }
 
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
+    }
+
     public function createMeetLink(
         string $scheduledAt,
         int $durationMinutes,
         string $summary,
         string $description = ''
     ): ?string {
+        $this->lastError = null;
+
         if (!$this->isConfigured()) {
+            $this->lastError = 'Service-account Google Calendar is not configured.';
             return null;
         }
 
@@ -85,8 +94,10 @@ class GoogleMeetService
                 }
             }
 
+            $this->lastError = 'Google Calendar event created but no Meet video entry-point was returned.';
             return null;
         } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
             error_log('Google Meet link creation failed: ' . $e->getMessage());
             return null;
         }
@@ -110,7 +121,10 @@ class GoogleMeetService
         string $summary,
         string $description = ''
     ): ?string {
+        $this->lastError = null;
+
         if ($userAccessToken === '') {
+            $this->lastError = 'Missing user Google access token.';
             return null;
         }
 
@@ -166,8 +180,10 @@ class GoogleMeetService
                 }
             }
 
+            $this->lastError = 'Google Calendar event created but no Meet video entry-point was returned.';
             return null;
         } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
             error_log('Google Meet link creation with user token failed: ' . $e->getMessage());
             return null;
         }

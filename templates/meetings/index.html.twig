@@ -182,8 +182,10 @@
         </div>
         <div class="modal-body">
             <div class="form-group">
-                <label>Target User ID</label>
-                <input type="number" id="ccUserId" class="form-control" placeholder="Enter user ID (e.g. 42)">
+                <label>Target User</label>
+                <select id="ccUser" class="form-control" required style="padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px;">
+                    <option value="">📋 Select a user...</option>
+                </select>
                 <div id="ccUserLookup" style="margin-top:8px;font-size:12px;min-height:18px;"></div>
             </div>
             <div class="form-group">
@@ -252,10 +254,26 @@
                     </label>
                 </div>
             </div>
+            <!-- Virtual Meeting Location (Google Meet) -->
+            <div id="cmVirtualLocationField" class="form-group" style="display: block;">
+                <label>Google Meet Link</label>
+                <div style="background-color: #f0f9ff; border: 2px solid #0284c7; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <input type="text" id="cmVirtualLocation" readonly class="form-control" placeholder="Auto-generated when date/time is set..." style="background: transparent; border: none; flex: 1; margin: 0; padding: 0; cursor: default; font-size: 14px;">
+                    <button type="button" class="btn" id="btnCopyMeetLink" style="background: #0284c7; color: white; padding: 6px 12px; border-radius: 6px; border: none; margin-left: 8px; display: none;">📋 Copy</button>
+                </div>
+                <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
+                    <button type="button" class="btn" id="btnConnectGoogleCalendar" style="background: #0f766e; color: white; padding: 6px 12px; border-radius: 6px; border: none; display: none;">🔐 Connect Google Calendar</button>
+                    <span id="cmGoogleAuthHint" style="font-size: 12px; color: #64748b;"></span>
+                </div>
+            </div>
             <!-- Physical Location (hidden when virtual) -->
             <div id="cmLocationField" style="display: none;" class="form-group">
                 <label>Location / Address <span style="color:#dc2626;">*</span></label>
-                <input type="text" id="cmLocation" class="form-control" placeholder="Enter meeting location or address">
+                <input type="text" id="cmLocation" class="form-control" placeholder="Search location or click map to select...">
+                <div id="cmMapContainer" style="margin-top: 12px; border-radius: 10px; overflow: hidden; height: 250px; border: 2px solid #e2e8f0; display: none;">
+                    <div id="cmMap" style="width: 100%; height: 100%;"></div>
+                </div>
+                <div id="cmLocationCoords" style="margin-top: 8px; font-size: 12px; color: #64748b; min-height: 18px;"></div>
             </div>
             <!-- Date & Time -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -1154,7 +1172,19 @@ function resetCreateMeetingForm() {
     document.getElementById('cmDate').value = '';
     document.getElementById('cmTime').value = '14:00';
     document.getElementById('cmLocation').value = '';
+    const virtualLoc = document.getElementById('cmVirtualLocation');
+    if (virtualLoc) virtualLoc.value = '';
+    const copyBtn = document.getElementById('btnCopyMeetLink');
+    if (copyBtn) copyBtn.style.display = 'none';
+    const connectBtn = document.getElementById('btnConnectGoogleCalendar');
+    if (connectBtn) connectBtn.style.display = 'none';
+    const authHint = document.getElementById('cmGoogleAuthHint');
+    if (authHint) authHint.textContent = '';
+    document.getElementById('cmLocationCoords').textContent = '';
     document.getElementById('cmLocationField').style.display = 'none';
+    const virtualField = document.getElementById('cmVirtualLocationField');
+    if (virtualField) virtualField.style.display = 'block';
+    document.getElementById('cmMapContainer').style.display = 'none';
     document.getElementById('cmDurationValue').value = '60';
     document.getElementById('cmDurationCustom').style.display = 'none';
     document.getElementById('cmDurationChips').querySelectorAll('.dur-chip').forEach(c => {
@@ -1316,8 +1346,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // CREATE CONNECTION (from Connections tab)
     // ─────────────────────────────────────────────
     document.getElementById('btnCreateConnection').addEventListener('click', () => {
-        document.getElementById('ccUserId').value = '';
-        document.getElementById('ccUserLookup').textContent = '';
+        document.getElementById('ccUser').value = '';
         document.getElementById('ccInitiatorSkill').value = '';
         document.getElementById('ccReceiverSkill').value = '';
         document.getElementById('ccSkillsSection').style.display = 'block'; // skill is default
@@ -1328,28 +1357,8 @@ document.addEventListener('DOMContentLoaded', function () {
         openModal('createConnectionModal');
     });
 
-    // Live user lookup for Create Connection modal
-    let lookupTimer = null;
-    document.getElementById('ccUserId').addEventListener('input', function () {
-        clearTimeout(lookupTimer);
-        const val = this.value.trim();
-        const lookup = document.getElementById('ccUserLookup');
-        if (!val) { lookup.textContent = ''; return; }
-        lookup.textContent = '…';
-        lookupTimer = setTimeout(async () => {
-            try {
-                const resp = await fetch(`/api/connections/lookup-user/${encodeURIComponent(val)}`);
-                const data = await resp.json();
-                if (data.ok) {
-                    lookup.style.color = '#15803d';
-                    lookup.textContent = `✓  ${data.full_name || data.username}  (@${data.username})`;
-                } else {
-                    lookup.style.color = '#dc2626';
-                    lookup.textContent = `✗  ${data.error || 'User not found'}`;
-                }
-            } catch (err) { lookup.textContent = ''; }
-        }, 400);
-    });
+    // User dropdown now loaded by loadAllUsers()
+    // Removed old user ID lookup logic
 
     document.querySelectorAll('input[name="cc-type"]').forEach(radio => {
         radio.addEventListener('change', function () {
@@ -1361,8 +1370,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.getElementById('btnCcConfirm').addEventListener('click', async () => {
-        const userId = parseInt(document.getElementById('ccUserId').value);
-        if (!userId || isNaN(userId)) { showToast('Please enter a valid user ID.', 'error'); return; }
+        const userId = parseInt(document.getElementById('ccUser').value);
+        if (!userId || isNaN(userId)) { showToast('Please select a user.', 'error'); return; }
         const type = document.querySelector('input[name="cc-type"]:checked')?.value || 'general';
         const initiatorSkill = document.getElementById('ccInitiatorSkill').value.trim();
         const receiverSkill  = document.getElementById('ccReceiverSkill').value.trim();
@@ -1418,7 +1427,11 @@ document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('input[name="cm-type"]').forEach(r =>
                 r.closest('.type-radio-label').classList.remove('active'));
             this.closest('.type-radio-label').classList.add('active');
-            document.getElementById('cmLocationField').style.display = this.value === 'physical' ? 'block' : 'none';
+            const isPhysical = this.value === 'physical';
+            document.getElementById('cmLocationField').style.display = isPhysical ? 'block' : 'none';
+            document.getElementById('cmMapContainer').style.display = isPhysical ? 'block' : 'none';
+            const virtualField = document.getElementById('cmVirtualLocationField');
+            if (virtualField) virtualField.style.display = isPhysical ? 'none' : 'block';
         });
     });
 
@@ -1429,15 +1442,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const timeVal  = document.getElementById('cmTime').value;
         const duration = parseInt(document.getElementById('cmDurationValue').value) || 60;
         const location = document.getElementById('cmLocation').value.trim();
+        const virtualLocation = document.getElementById('cmVirtualLocation')?.value?.trim() || '';
 
         if (!connId) { showToast('Please select a connection.', 'error'); return; }
         const dtErr = validateMeetingDatetime(dateVal, timeVal);
         if (dtErr) { showToast(dtErr, 'error'); return; }
         if (type === 'physical' && !location) { showToast('Please enter a location for an in-person meeting.', 'error'); return; }
+        if (type === 'virtual' && !/^https:\/\/meet\.google\.com\//.test(virtualLocation)) {
+            showToast('Please generate a real Google Meet link first.', 'error');
+            return;
+        }
         if (duration <= 0 || duration > 1440) { showToast('Duration must be between 1 and 1440 minutes.', 'error'); return; }
 
         try {
-            const resp = await fetch('/api/meetings/create', {
+            const resp = await fetch('/meetings/api/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1445,20 +1463,24 @@ document.addEventListener('DOMContentLoaded', function () {
                     meeting_type:  type,
                     scheduled_at:  `${dateVal} ${timeVal}:00`,
                     duration,
-                    location:      type === 'physical' ? location : null,
+                    location:      type === 'physical' ? location : virtualLocation,
                 }),
             });
             const data = await resp.json();
             if (data.ok) {
                 closeModal('createMeetingModal');
+                resetCreateMeetingForm();
                 const linkMsg = data.meet_link && data.meet_link.startsWith('http')
-                    ? ` Google Meet link created.` : '';
+                    ? ' ✅ Google Meet link auto-generated!' : '';
                 showToast(`Meeting scheduled!${linkMsg} 📅`, 'success');
                 loadMeetings(state.currentMeetingFilter);
             } else {
                 showToast(data.error || 'Failed to schedule meeting.', 'error');
             }
-        } catch (err) { console.error(err); }
+        } catch (err) { 
+            console.error('Error scheduling meeting:', err);
+            showToast('Error scheduling meeting. Please try again.', 'error');
+        }
     });
 
     // ─────────────────────────────────────────────
@@ -1521,6 +1543,262 @@ document.addEventListener('DOMContentLoaded', function () {
     loadMatches();
     loadConnections();
     loadMeetings('upcoming');
+    loadAllUsers();
+});
+</script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════
+// LOAD ALL USERS FOR DROPDOWN
+// ═══════════════════════════════════════════════
+let cmMap = null;
+let cmMapMarker = null;
+let cmGoogleOauthInProgress = false;
+
+async function loadAllUsers() {
+    try {
+        const resp = await fetch('/meetings/api/users');
+        const data = await resp.json();
+        if (!data.ok || !data.users) return;
+
+        const select = document.getElementById('ccUser');
+        data.users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = `${user.fullName} (@${user.username})`;
+            select.appendChild(option);
+        });
+    } catch (err) { console.error('Error loading users:', err); }
+}
+
+// ═══════════════════════════════════════════════
+// GOOGLE MEET LINK GENERATION
+// ═══════════════════════════════════════════════
+async function generateGoogleMeetLink() {
+    const dateVal = document.getElementById('cmDate').value;
+    const timeVal = document.getElementById('cmTime').value;
+    const meetingType = document.querySelector('input[name="cm-type"]:checked')?.value;
+
+    if (meetingType !== 'virtual' || !dateVal || !timeVal) {
+        return;
+    }
+
+    try {
+        const datetime = `${dateVal}T${timeVal}:00`;
+        const duration = parseInt(document.getElementById('cmDurationValue').value) || 60;
+        const connectBtn = document.getElementById('btnConnectGoogleCalendar');
+        const authHint = document.getElementById('cmGoogleAuthHint');
+        
+        const resp = await fetch('/meetings/api/google-meet-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `datetime=${encodeURIComponent(datetime)}&duration=${duration}`
+        });
+        const data = await resp.json().catch(() => ({}));
+        
+        if (data.ok && data.link) {
+            document.getElementById('cmVirtualLocation').value = data.link;
+            document.getElementById('btnCopyMeetLink').style.display = 'inline-block';
+            showToast('✅ Google Meet link generated! 📞', 'success');
+            if (connectBtn) connectBtn.style.display = 'none';
+            if (authHint) authHint.textContent = '';
+            return;
+        }
+
+        document.getElementById('cmVirtualLocation').value = '';
+        document.getElementById('btnCopyMeetLink').style.display = 'none';
+        if (connectBtn) connectBtn.style.display = 'inline-block';
+        const details = Array.isArray(data.details) ? data.details.filter(Boolean).join(' | ') : '';
+        if (authHint) authHint.textContent = details || 'Connect Google Calendar to generate a real Meet room automatically.';
+        showToast(data.error || 'Could not generate real Google Meet link.', 'error');
+    } catch (err) {
+        console.error('Error generating Google Meet link:', err);
+        document.getElementById('cmVirtualLocation').value = '';
+        document.getElementById('btnCopyMeetLink').style.display = 'none';
+        const connectBtn = document.getElementById('btnConnectGoogleCalendar');
+        const authHint = document.getElementById('cmGoogleAuthHint');
+        if (connectBtn) connectBtn.style.display = 'inline-block';
+        if (authHint) authHint.textContent = 'Google Meet generation failed. Connect Google Calendar and try again.';
+        showToast('Google Meet generation failed.', 'error');
+    }
+}
+
+function connectGoogleCalendarFromMeeting() {
+    if (cmGoogleOauthInProgress) return;
+    cmGoogleOauthInProgress = true;
+
+    const popup = window.open(
+        '/auth/google/calendar/connect?popup=1',
+        'ghrami-google-calendar-auth',
+        'width=560,height=760,resizable=yes,scrollbars=yes'
+    );
+
+    if (!popup) {
+        cmGoogleOauthInProgress = false;
+        showToast('Popup blocked. Please allow popups and try again.', 'error');
+        return;
+    }
+
+    const onMessage = (event) => {
+        if (event.origin !== window.location.origin) return;
+        const data = event.data || {};
+        if (data.type !== 'ghrami-google-calendar') return;
+
+        window.removeEventListener('message', onMessage);
+        cmGoogleOauthInProgress = false;
+
+        if (data.ok) {
+            showToast('Google Calendar connected. Regenerating Meet link...', 'success');
+            generateGoogleMeetLink();
+        } else {
+            showToast('Google Calendar connection failed. Try again.', 'error');
+        }
+    };
+
+    window.addEventListener('message', onMessage);
+}
+
+// ═══════════════════════════════════════════════
+// MAP INITIALIZATION & LOCATION SELECTION
+// ═══════════════════════════════════════════════
+async function initializeMap() {
+    const container = document.getElementById('cmMap');
+    if (!container) return;
+
+    if (cmMap) {
+        cmMap.setView([33.8869, 9.5375], 6);  // Tunisia center
+        return;
+    }
+
+    cmMap = L.map('cmMap').setView([33.8869, 9.5375], 6);  // Tunisia center & zoom
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(cmMap);
+
+    // Add search functionality
+    let searchControl = L.Control.extend({
+        onAdd: function(map) {
+            let div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+            let searchBox = document.createElement('input');
+            searchBox.type = 'text';
+            searchBox.placeholder = '🔍 Search location...';
+            searchBox.style.cssText = 'padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; width: 180px; font-size: 13px;';
+            
+            searchBox.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter') {
+                    const query = searchBox.value.trim();
+                    if (query) {
+                        try {
+                            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&bounded=1&viewbox=8.4607,30.2273,11.5641,37.3436`);
+                            const results = await resp.json();
+                            if (results.length > 0) {
+                                const place = results[0];
+                                const lat = parseFloat(place.lat);
+                                const lng = parseFloat(place.lon);
+                                cmMap.setView([lat, lng], 12);
+                                
+                                if (cmMapMarker) cmMap.removeLayer(cmMapMarker);
+                                cmMapMarker = L.marker([lat, lng]).addTo(cmMap);
+                                
+                                document.getElementById('cmLocation').value = place.display_name || query;
+                                document.getElementById('cmLocationCoords').textContent = `📍 ${place.display_name || query}`;
+                            }
+                        } catch (err) { console.error('Search error:', err); }
+                    }
+                }
+            });
+            
+            div.appendChild(searchBox);
+            return div;
+        }
+    });
+    cmMap.addControl(new searchControl({position: 'topleft'}));
+
+    cmMap.on('click', async function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        if (cmMapMarker) {
+            cmMap.removeLayer(cmMapMarker);
+        }
+        
+        cmMapMarker = L.marker([lat, lng]).addTo(cmMap);
+        
+        // Reverse geocode to get place name
+        try {
+            const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+            const data = await resp.json();
+            const placeName = data.address?.city || data.address?.town || data.address?.village || data.name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            document.getElementById('cmLocation').value = placeName;
+            document.getElementById('cmLocationCoords').textContent = `📍 ${placeName}`;
+        } catch (err) {
+            console.error('Geocoding error:', err);
+            document.getElementById('cmLocation').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            document.getElementById('cmLocationCoords').textContent = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        }
+    });
+}
+
+// Wire up map visibility & location search
+document.addEventListener('DOMContentLoaded', function() {
+    const cmTypeRadios = document.querySelectorAll('input[name="cm-type"]');
+    cmTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            const isPhysical = this.value === 'physical';
+            const mapContainer = document.getElementById('cmMapContainer');
+            const virtualField = document.getElementById('cmVirtualLocationField');
+            const physicalField = document.getElementById('cmLocationField');
+            
+            if (isPhysical) {
+                physicalField.style.display = 'block';
+                mapContainer.style.display = 'block';
+                virtualField.style.display = 'none';
+                document.getElementById('cmLocation').placeholder = 'Click on map or search location...';
+                setTimeout(() => initializeMap(), 50);
+            } else {
+                physicalField.style.display = 'none';
+                mapContainer.style.display = 'none';
+                virtualField.style.display = 'block';
+                document.getElementById('cmLocation').placeholder = 'Click on map or search location...';
+                setTimeout(() => generateGoogleMeetLink(), 100);  // Generate Meet link when switching to virtual
+            }
+        });
+    });
+
+    // Auto-generate Google Meet when date/time changes
+    document.getElementById('cmDate')?.addEventListener('change', generateGoogleMeetLink);
+    document.getElementById('cmTime')?.addEventListener('change', generateGoogleMeetLink);
+    document.getElementById('cmDurationChips')?.addEventListener('click', generateGoogleMeetLink);
+    document.getElementById('cmDurationValue')?.addEventListener('change', generateGoogleMeetLink);
+    
+    // Copy Google Meet link functionality
+    const btnCopyMeetLink = document.getElementById('btnCopyMeetLink');
+    if (btnCopyMeetLink) {
+        btnCopyMeetLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            const meetLink = document.getElementById('cmVirtualLocation').value;
+            if (meetLink) {
+                navigator.clipboard.writeText(meetLink).then(() => {
+                    showToast('📋 Google Meet link copied!', 'success');
+                    const originalText = this.textContent;
+                    this.textContent = '✓ Copied!';
+                    setTimeout(() => { this.textContent = originalText; }, 2000);
+                });
+            }
+        });
+    }
+
+    const btnConnectGoogleCalendar = document.getElementById('btnConnectGoogleCalendar');
+    if (btnConnectGoogleCalendar) {
+        btnConnectGoogleCalendar.addEventListener('click', function(e) {
+            e.preventDefault();
+            connectGoogleCalendarFromMeeting();
+        });
+    }
 });
 </script>
 {% endblock %}
