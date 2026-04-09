@@ -248,5 +248,155 @@ final class ProfileController extends AbstractController
 
         return $this->json(['ok' => true, 'online' => $isOnline]);
     }
+
+    #[Route('/api/generate-image', name: 'app_profile_generate_image', methods: ['POST'])]
+    public function generateProfileImage(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['success' => false, 'error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        // Validate CSRF token
+        $data = json_decode($request->getContent(), true) ?? [];
+        if (!$this->isCsrfTokenValid('profile', $data['_csrf_token'] ?? '')) {
+            return $this->json(['success' => false, 'error' => 'Invalid CSRF token'], Response::HTTP_FORBIDDEN);
+        }
+
+        try {
+            // Get parameters from the request
+            $prompt = isset($data['prompt']) ? trim((string) $data['prompt']) : '';
+            $model = isset($data['model']) ? trim((string) $data['model']) : 'gemini';
+            $aspectRatio = isset($data['ar']) ? trim((string) $data['ar']) : '1:1';
+            
+            if (empty($prompt)) {
+                throw new \Exception('Prompt is required');
+            }
+            
+            // Build the API URL with query parameters
+            $apiUrl = 'https://imfin.it/api/generate';
+            $queryParams = [
+                'prompt' => $prompt,
+                'model' => $model,
+                'ar' => $aspectRatio,
+            ];
+            $apiUrl .= '?' . http_build_query($queryParams);
+            
+            $imageData = null;
+            $error = null;
+
+            // Use cURL to fetch the image
+            if (function_exists('curl_init')) {
+                $ch = curl_init($apiUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_BINARYTRANSFER, true);
+                
+                $imageData = curl_exec($ch);
+                
+                if ($imageData === false) {
+                    $error = 'cURL Error: ' . curl_error($ch);
+                }
+                
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                
+                if (!$error && $httpCode !== 200) {
+                    $error = "API returned HTTP $httpCode";
+                }
+            } else {
+                // Fallback to file_get_contents
+                $context = stream_context_create([
+                    'http' => [
+                        'timeout' => 120,
+                        'ignore_errors' => true,
+                    ],
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                    ],
+                ]);
+                
+                $imageData = @file_get_contents($apiUrl, false, $context);
+                
+                if ($imageData === false) {
+                    $error = 'Failed to connect to imfin.it API';
+                }
+            }
+
+            if ($error) {
+                throw new \Exception($error);
+            }
+
+            if (empty($imageData)) {
+                throw new \Exception('API returned empty response');
+            }
+
+            // Detect MIME type of the generated image
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_buffer($finfo, $imageData);
+            finfo_close($finfo);
+
+            if (!in_array($mimeType, ['image/png', 'image/jpeg', 'image/webp', 'image/jpg'], true)) {
+                // If MIME detection failed, try magic bytes
+                if (str_starts_with($imageData, '\xFF\xD8')) {
+                    $mimeType = 'image/jpeg';
+                } elseif (str_starts_with($imageData, '\x89PNG')) {
+                    $mimeType = 'image/png';
+                } elseif (str_starts_with($imageData, 'RIFF')) {
+                    $mimeType = 'image/webp';
+                } else {
+                    throw new \Exception('Invalid image format received. MIME type: ' . $mimeType . ', first bytes: ' . bin2hex(substr($imageData, 0, 10)));
+                }
+            }
+
+            // Determine file extension from MIME type
+            $extensionMap = [
+                'image/png' => 'png',
+                'image/jpeg' => 'jpg',
+                'image/jpg' => 'jpg',
+                'image/webp' => 'webp',
+            ];
+            $extension = $extensionMap[$mimeType] ?? 'jpg';
+
+            // Save the generated image
+            $uploadDir = $this->getParameter('kernel.project_dir') . '/public/images/profile_pictures';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0775, true);
+            }
+
+            // Generate filename: {userId}_{timestamp}.{ext}
+            $timestamp = (int)(microtime(true) * 1000);
+            $filename = sprintf('%d_%d.%s', $user->id ?? 0, $timestamp, $extension);
+            $filepath = $uploadDir . '/' . $filename;
+
+            // Write the image file
+            $bytesWritten = file_put_contents($filepath, $imageData);
+            if ($bytesWritten === false) {
+                throw new \Exception('Failed to write image file to disk');
+            }
+
+            // Update user's profile picture
+            $user->profilePicture = $filename;
+            $entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Profile picture generated and saved successfully',
+                'filename' => $filename,
+            ]);
+        } catch (\Exception $e) {
+            error_log('Profile image generation error: ' . $e->getMessage());
+            
+            return $this->json([
+                'success' => false,
+                'error' => 'Image generation failed: ' . $e->getMessage(),
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }
 
