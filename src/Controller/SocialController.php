@@ -34,8 +34,15 @@ final class SocialController extends AbstractController
         $userId = $currentUser instanceof User ? (int) $currentUser->id : (int) $request->query->get('user', 8);
         $page = max(1, (int) $request->query->get('page', 1));
         $perPage = max(1, min(50, (int) $request->query->get('perPage', 10)));
+        $searchQuery = trim((string) $request->query->get('query', ''));
+        $sort = (string) $request->query->get('sort', 'recent');
+        
+        // Validate sort parameter
+        if (!in_array($sort, ['recent', 'popular'], true)) {
+            $sort = 'recent';
+        }
 
-        $feed = $socialService->getFeedForUser($userId, $page, $perPage);
+        $feed = $socialService->getFeedForUser($userId, $page, $perPage, $searchQuery, $sort);
         $stories = $socialService->getActiveStoriesForUser($userId);
         $postIds = array_map(static fn(array $row): int => (int) $row['post_id'], $feed);
         $commentsByPost = $socialService->getCommentsForPosts($postIds);
@@ -71,6 +78,8 @@ final class SocialController extends AbstractController
             'userPostCount' => $postCount,
             'userFollowerCount' => $followerCount,
             'userHobbyCount' => $hobbyCount,
+            'searchQuery' => $searchQuery,
+            'sort' => $sort,
         ]);
     }
 
@@ -149,9 +158,10 @@ final class SocialController extends AbstractController
 
         $content = trim((string) $request->request->get('content', ''));
         $commentValidation = new Comment();
-        $commentValidation->content = $content;
+        $commentValidation->content = $content !== '' ? $content : null;
 
         $violations = $validator->validate($commentValidation);
+        
         if (count($violations) > 0) {
             return $this->validationFailure($request, $this->normalizeValidationErrors($violations));
         }
@@ -162,7 +172,7 @@ final class SocialController extends AbstractController
             $content
         );
 
-        if ($request->isXmlHttpRequest() || str_contains((string) $request->headers->get('Accept'), 'application/json')) {
+        if ($request->isXmlHttpRequest() ) {
             return $this->json(['id' => $comment->id, 'ok' => true]);
         }
 
@@ -479,8 +489,9 @@ final class SocialController extends AbstractController
 
     private function validationFailure(Request $request, array $errors): Response
     {
-        if ($request->isXmlHttpRequest() || str_contains((string) $request->headers->get('Accept'), 'application/json')) {
-            return $this->json([
+        
+if ($request->isXmlHttpRequest()) {
+                return $this->json([
                 'ok' => false,
                 'error' => 'Validation failed.',
                 'errors' => $errors,
@@ -507,4 +518,3 @@ final class SocialController extends AbstractController
         return $errors;
     }
 }
-

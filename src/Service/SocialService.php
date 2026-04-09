@@ -16,7 +16,7 @@ class SocialService
     {
     }
 
-    public function getFeedForUser(int $userId, int $page = 1, int $perPage = 20): array
+    public function getFeedForUser(int $userId, int $page = 1, int $perPage = 20, string $searchQuery = '', string $sort = 'recent'): array
     {
         $page = max(1, $page);
         $perPage = max(1, min(50, $perPage));
@@ -29,20 +29,33 @@ class SocialService
                        EXISTS(SELECT 1 FROM post_likes pl2 WHERE pl2.post_id = p.post_id AND pl2.user_id = :uid) AS liked_by_me
                 FROM posts p
                 JOIN users u ON u.user_id = p.user_id
-                WHERE p.user_id = :uid
+                WHERE (p.user_id = :uid
                    OR p.user_id IN (
                       SELECT user2_id FROM friendships WHERE user1_id = :uid AND status = 'ACCEPTED'
                       UNION
                       SELECT user1_id FROM friendships WHERE user2_id = :uid AND status = 'ACCEPTED'
-                   )
-                ORDER BY p.created_at DESC
-                LIMIT :limit OFFSET :offset";
+                   ))";
+        
+        $params = ['uid' => $userId];
+        
+        // Add search filter
+        if ($searchQuery !== '') {
+            $sql .= " AND (u.username LIKE :search OR u.full_name LIKE :search OR p.content LIKE :search)";
+            $params['search'] = '%' . $searchQuery . '%';
+        }
+        
+        // Add sort
+        if ($sort === 'popular') {
+            $sql .= " ORDER BY ((SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) + (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id)) DESC, p.created_at DESC";
+        } else {
+            $sql .= " ORDER BY p.created_at DESC";
+        }
+        
+        $sql .= " LIMIT :limit OFFSET :offset";
+        $params['limit'] = $perPage;
+        $params['offset'] = $offset;
 
-        return $this->em->getConnection()->fetchAllAssociative($sql, [
-            'uid' => $userId,
-            'limit' => $perPage,
-            'offset' => $offset,
-        ], [
+        return $this->em->getConnection()->fetchAllAssociative($sql, $params, [
             'limit' => ParameterType::INTEGER,
             'offset' => ParameterType::INTEGER,
         ]);
@@ -373,4 +386,3 @@ class SocialService
         );
     }
 }
-

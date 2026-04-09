@@ -135,6 +135,28 @@
             </div>
         </div>
         
+        <!-- Search and Sort Section -->
+        <div class="card" style="padding: 16px;">
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <!-- Search Form -->
+                <form method="get" action="{{ path('app_social_index') }}" style="display: flex; gap: 8px; flex: 1; min-width: 250px;">
+                    <input type="hidden" name="page" value="1">
+                    <input type="hidden" name="perPage" value="{{ perPage }}">
+                    <input type="text" name="query" placeholder="Rechercher des posts, utilisateurs..." value="{{ searchQuery }}" style="flex: 1; padding: 10px 12px; border: 1px solid #e4e6eb; border-radius: 20px; font-size: 14px;">
+                    <button type="submit" style="padding: 10px 16px; background: #667eea; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">🔍 Chercher</button>
+                    {% if searchQuery %}
+                    <a href="{{ path('app_social_index', { sort: sort, page: 1, perPage: perPage }) }}" style="padding: 10px 16px; background: #f0f2f5; color: #e74c3c; text-decoration: none; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" title="Effacer la recherche" onmouseover="this.style.background='#e8e9eb'" onmouseout="this.style.background='#f0f2f5'">✕ Réinitialiser</a>
+                    {% endif %}
+                </form>
+                
+                <!-- Sort Buttons -->
+                <div style="display: flex; gap: 8px;">
+                    <a href="{{ path('app_social_index', { query: searchQuery, sort: 'recent', page: 1, perPage: perPage }) }}" style="padding: 10px 16px; background: {% if sort == 'recent' %}#667eea{% else %}#f0f2f5{% endif %}; color: {% if sort == 'recent' %}white{% else %}#1c1e21{% endif %}; text-decoration: none; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='{% if sort == 'recent' %}#5568d3{% else %}#e8e9eb{% endif %}'" onmouseout="this.style.background='{% if sort == 'recent' %}#667eea{% else %}#f0f2f5{% endif %}'">📅 Récent</a>
+                    <a href="{{ path('app_social_index', { query: searchQuery, sort: 'popular', page: 1, perPage: perPage }) }}" style="padding: 10px 16px; background: {% if sort == 'popular' %}#667eea{% else %}#f0f2f5{% endif %}; color: {% if sort == 'popular' %}white{% else %}#1c1e21{% endif %}; text-decoration: none; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='{% if sort == 'popular' %}#5568d3{% else %}#e8e9eb{% endif %}'" onmouseout="this.style.background='{% if sort == 'popular' %}#667eea{% else %}#f0f2f5{% endif %}'">👍 Populaire</a>
+                </div>
+            </div>
+        </div>
+        
         <!-- Create Post Box -->
         <div class="create-post-card">
             <div class="create-post-header">
@@ -280,7 +302,7 @@
             <form method="post" action="{{ path('app_social_comment') }}" style="padding: 12px 16px; border-top: 1px solid #e4e6eb; display: flex; gap: 8px; align-items: center;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_comment') }}">
                 <input type="hidden" name="post_id" value="{{ p.post_id }}">
-                <textarea name="content" rows="1" placeholder="Ecriver Commentaire..." required style="flex: 1; padding: 2px 6px; background-color: #f0f2f5; border: none; border-radius: 16px; resize: none; font-size: 12px; height: 24px; line-height: 18px; max-height: 24px;"></textarea>
+                <textarea name="content" rows="1" placeholder="Ecriver Commentaire..." style="flex: 1; padding: 2px 6px; background-color: #f0f2f5; border: none; border-radius: 16px; resize: none; font-size: 12px; height: 24px; line-height: 18px; max-height: 24px;"></textarea>
                 <button type="submit" class="btn btn-sm btn-primary">Poster</button>
             </form>
         </div>
@@ -296,11 +318,11 @@
         {% if page > 1 or feed|length >= perPage %}
         <div style="display: flex; justify-content: center; gap: 12px; padding: 20px;">
             {% if page > 1 %}
-            <a href="{{ path('app_social_index', { page: page - 1, perPage: perPage }) }}" class="btn btn-outline">← Précédent</a>
+            <a href="{{ path('app_social_index', { query: searchQuery, sort: sort, page: page - 1, perPage: perPage }) }}" class="btn btn-outline">← Précédent</a>
             {% endif %}
             <span style="padding: 10px 16px; text-align: center; color: #65676b;">Page {{ page }}</span>
             {% if feed|length >= perPage %}
-            <a href="{{ path('app_social_index', { page: page + 1, perPage: perPage }) }}" class="btn btn-outline">Suivant →</a>
+            <a href="{{ path('app_social_index', { query: searchQuery, sort: sort, page: page + 1, perPage: perPage }) }}" class="btn btn-outline">Suivant →</a>
             {% endif %}
         </div>
         {% endif %}
@@ -891,6 +913,20 @@
             } finally {
                 imageBtn.disabled = false;
             }
+        });
+
+        // Validation des commentaires
+        document.querySelectorAll('form[action*="{{ path('app_social_comment') }}"]').forEach(form => {
+            form.addEventListener('submit', (e) => {
+                const textarea = form.querySelector('textarea[name="content"]');
+                const content = textarea?.value?.trim();
+                if (!content) {
+                    e.preventDefault();
+                    alert('Le commentaire ne peut pas être vide.');
+                    textarea.focus();
+                    return false;
+                }
+            });
         });
     })();
 </script>

@@ -24,12 +24,14 @@ class Comment
     public ?User $user = null;
 
     #[ORM\Column(type: Types::TEXT)]
-    #[Assert\NotBlank(message: 'Comment content is required.')]
+    #[Assert\NotBlank(
+    message: 'Le commentaire ne peut pas être vide.',
+    normalizer: 'trim')]
     #[Assert\Length(
         max: 2000,
         maxMessage: 'Comment cannot exceed {{ limit }} characters.'
     )]
-    public string $content = '';
+    public ?string $content = null;
 
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_MUTABLE)]
     public ?\DateTimeInterface $createdAt = null;

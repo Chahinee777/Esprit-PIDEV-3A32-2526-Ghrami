@@ -20,6 +20,7 @@ class Post
     public ?User $user = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Assert\NotBlank(message: 'Post content is required.')]
     #[Assert\Length(
         max: 5000,
         maxMessage: 'Post content cannot exceed {{ limit }} characters.'
