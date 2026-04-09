@@ -54,3 +54,41 @@ Stack trace:
 #14 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\autoload_runtime.php(29): Symfony\Component\Runtime\Runner\Symfony\ConsoleApplicationRunner->run()
 #15 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\bin\console(15): require_once('C:\\Users\\MSI\\De...')
 #16 {main}
+2026-04-09 15:02:32 pid:1 Error: Call to undefined method App\Entity\Message::setSender() in C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\src\WebSocket\ChatServer.php:144
+Stack trace:
+#0 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\src\WebSocket\ChatServer.php(48): App\WebSocket\ChatServer->handleMessage(Object(Workerman\Connection\TcpConnection), 'MSG:8:12:good m...')
+#1 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\workerman\workerman\src\Connection\TcpConnection.php(748): App\WebSocket\ChatServer->onMessage(Object(Workerman\Connection\TcpConnection), 'MSG:8:12:good m...')
+#2 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\workerman\workerman\src\Events\Select.php(408): Workerman\Connection\TcpConnection->baseRead(Resource id #916)
+#3 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\workerman\workerman\src\Worker.php(1601): Workerman\Events\Select->run()
+#4 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\workerman\workerman\src\Worker.php(1526): Workerman\Worker::forkWorkersForWindows()
+#5 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\workerman\workerman\src\Worker.php(593): Workerman\Worker::forkWorkers()
+#6 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\src\Command\WebSocketServerCommand.php(77): Workerman\Worker::runAll()
+#7 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\console\Command\Command.php(326): App\Command\WebSocketServerCommand->execute(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#8 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\console\Application.php(1121): Symfony\Component\Console\Command\Command->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#9 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\framework-bundle\Console\Application.php(126): Symfony\Component\Console\Application->doRunCommand(Object(App\Command\WebSocketServerCommand), Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#10 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\console\Application.php(324): Symfony\Bundle\FrameworkBundle\Console\Application->doRunCommand(Object(App\Command\WebSocketServerCommand), Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#11 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\framework-bundle\Console\Application.php(80): Symfony\Component\Console\Application->doRun(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#12 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\console\Application.php(175): Symfony\Bundle\FrameworkBundle\Console\Application->doRun(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#13 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\runtime\Runner\Symfony\ConsoleApplicationRunner.php(49): Symfony\Component\Console\Application->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#14 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\autoload_runtime.php(29): Symfony\Component\Runtime\Runner\Symfony\ConsoleApplicationRunner->run()
+#15 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\bin\console(15): require_once('C:\\Users\\MSI\\De...')
+#16 {main}
+2026-04-09 15:38:45 pid:1 Error: Call to undefined method App\Entity\Message::setSender() in C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\src\WebSocket\ChatServer.php:158
+Stack trace:
+#0 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\src\WebSocket\ChatServer.php(48): App\WebSocket\ChatServer->handleMessage(Object(Workerman\Connection\TcpConnection), 'MSG:8:12:fine')
+#1 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\workerman\workerman\src\Connection\TcpConnection.php(748): App\WebSocket\ChatServer->onMessage(Object(Workerman\Connection\TcpConnection), 'MSG:8:12:fine')
+#2 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\workerman\workerman\src\Events\Select.php(408): Workerman\Connection\TcpConnection->baseRead(Resource id #919)
+#3 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\workerman\workerman\src\Worker.php(1601): Workerman\Events\Select->run()
+#4 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\workerman\workerman\src\Worker.php(1526): Workerman\Worker::forkWorkersForWindows()
+#5 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\workerman\workerman\src\Worker.php(593): Workerman\Worker::forkWorkers()
+#6 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\src\Command\WebSocketServerCommand.php(77): Workerman\Worker::runAll()
+#7 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\console\Command\Command.php(326): App\Command\WebSocketServerCommand->execute(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#8 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\console\Application.php(1121): Symfony\Component\Console\Command\Command->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#9 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\framework-bundle\Console\Application.php(126): Symfony\Component\Console\Application->doRunCommand(Object(App\Command\WebSocketServerCommand), Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#10 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\console\Application.php(324): Symfony\Bundle\FrameworkBundle\Console\Application->doRunCommand(Object(App\Command\WebSocketServerCommand), Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#11 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\framework-bundle\Console\Application.php(80): Symfony\Component\Console\Application->doRun(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#12 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\console\Application.php(175): Symfony\Bundle\FrameworkBundle\Console\Application->doRun(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#13 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\symfony\runtime\Runner\Symfony\ConsoleApplicationRunner.php(49): Symfony\Component\Console\Application->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#14 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\vendor\autoload_runtime.php(29): Symfony\Component\Runtime\Runner\Symfony\ConsoleApplicationRunner->run()
+#15 C:\Users\MSI\Desktop\Ghrami\Ghrami-Web\bin\console(15): require_once('C:\\Users\\MSI\\De...')
+#16 {main}

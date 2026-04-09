@@ -167,6 +167,14 @@
                             ● {% if friend.is_online %}En ligne{% else %}Hors ligne{% endif %}
                         </p>
                     </div>
+                    <!-- Video Call Button -->
+                    <button id="videoCallBtn" onclick="initiateCall({{ selectedConversationUser }})" 
+                            style="width: 40px; height: 40px; padding: 0; background: var(--color-primary); color: white; border: none; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: var(--transition-fast);"
+                            title="Appel vidéo"
+                            onmouseover="this.style.background='var(--color-primary-dark)';"
+                            onmouseout="this.style.background='var(--color-primary)';">
+                        📹
+                    </button>
                 </div>
 
                 <!-- Messages Container -->
@@ -300,6 +308,55 @@
     </aside>
 </div>
 
+<!-- ║ INCOMING CALL NOTIFICATION MODAL ║ -->
+<div id="incomingCallModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="width: 90%; max-width: 400px; text-align: center; padding: var(--spacing-2xl);">
+        <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--gradient-primary); margin: 0 auto var(--spacing-2xl); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <span id="incomingCallerInitial" style="color: white; font-weight: bold; font-size: 40px;">U</span>
+        </div>
+        <h2 id="incomingCallerName" style="margin: 0 0 var(--spacing-md); color: var(--color-text-primary);">Appel entrant</h2>
+        <p id="incomingCallerUsername" style="margin: 0 0 var(--spacing-2xl); color: var(--color-text-secondary); font-size: var(--font-size-base);">@user</p>
+        <div style="display: flex; gap: var(--spacing-lg);">
+            <button onclick="rejectCall()" style="flex: 1; padding: var(--spacing-md) var(--spacing-lg); background: #dc3545; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; transition: var(--transition-fast);"
+                    onmouseover="this.style.background='#bb2d3b';"
+                    onmouseout="this.style.background='#dc3545';">
+                ❌ Rejeter
+            </button>
+            <button onclick="acceptCall()" style="flex: 1; padding: var(--spacing-md) var(--spacing-lg); background: #22c55e; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; transition: var(--transition-fast);"
+                    onmouseover="this.style.background='#16a34a';"
+                    onmouseout="this.style.background='#22c55e';">
+                ✅ Accepter
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ║ ACTIVE VIDEO CALL MODAL ║ -->
+<div id="activeCallModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; flex-direction: column; padding: var(--spacing-lg);">
+    <div style="width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: var(--spacing-lg);">
+        <!-- Remote Video (Large) -->
+        <video id="remoteVideo" autoplay playsinline style="width: 100%; background: #000; border-radius: 8px; aspect-ratio: 16/9; object-fit: cover;"></video>
+        
+        <!-- Local Video (Small, Bottom Right) -->
+        <div style="position: relative; width: 120px; height: 90px;">
+            <video id="localVideo" autoplay muted playsinline style="width: 100%; height: 100%; background: #000; border-radius: 8px; object-fit: cover; border: 2px solid var(--color-primary);"></video>
+        </div>
+
+        <!-- Call Status -->
+        <div style="text-align: center; color: white;">
+            <p id="callStatus" style="margin: 0; font-size: var(--font-size-lg); font-weight: 600;">Connexion en cours...</p>
+            <p id="callDuration" style="margin: var(--spacing-sm) 0 0; font-size: var(--font-size-base); color: rgba(255,255,255,0.7);">00:00</p>
+        </div>
+
+        <!-- End Call Button -->
+        <button onclick="endCall()" style="width: 100%; padding: var(--spacing-md) var(--spacing-lg); background: #dc3545; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: var(--font-size-lg); transition: var(--transition-fast);"
+                onmouseover="this.style.background='#bb2d3b';"
+                onmouseout="this.style.background='#dc3545';">
+            📞 Terminer l'appel
+        </button>
+    </div>
+</div>
+
 <script>
     const userId = {{ userId }};
     const selectedUserId = {{ selectedConversationUser }};
@@ -327,21 +384,122 @@
 
             chatSocket.onmessage = (event) => {
                 const payload = String(event.data || '');
-                if (!payload.startsWith('MSG:')) return;
+                
+                // Handle chat messages
+                if (payload.startsWith('MSG:')) {
+                    const parts = payload.split(':');
+                    if (parts.length < 4) return;
 
-                const parts = payload.split(':');
-                if (parts.length < 4) return;
+                    const fromId = Number(parts[1]);
+                    const toId = Number(parts[2]);
+                    const content = parts.slice(3).join(':');
 
-                const fromId = Number(parts[1]);
-                const toId = Number(parts[2]);
-                const content = parts.slice(3).join(':');
+                    if (content === '__TYPING__') {
+                        return;
+                    }
 
-                if (content === '__TYPING__') {
-                    return;
+                    if (fromId === selectedUserId && toId === userId) {
+                        appendMessageToChat(fromId, toId, content, true);
+                    }
                 }
+                // Handle call initiation
+                else if (payload.startsWith('CALL_INIT:')) {
+                    const parts = payload.split(':');
+                    if (parts.length < 3) return;
+                    const fromId = Number(parts[1]);
+                    console.log('[WebSocket] CALL_INIT received from', fromId);
+                    
+                    // Show incoming call modal
+                    incomingCallFromId = fromId;
+                    const modal = document.getElementById('incomingCallModal');
+                    const nameEl = document.getElementById('incomingCallerName');
+                    const usernameEl = document.getElementById('incomingCallerUsername');
+                    const initialEl = document.getElementById('incomingCallerInitial');
+                    
+                    nameEl.textContent = selectedUserId === fromId ? (document.querySelector('.card-header h3')?.textContent || 'Appel entrant') : 'Appel entrant';
+                    usernameEl.textContent = '📞 Appel entrant...';
+                    initialEl.textContent = (nameEl.textContent[0] || 'U');
+                    
+                    modal.style.display = 'flex';
 
-                if (fromId === selectedUserId && toId === userId) {
-                    appendMessageToChat(fromId, toId, content, true);
+                    // Auto-reject after 30 seconds if not answered
+                    incomingCallTimeout = setTimeout(() => {
+                        if (incomingCallFromId && !isCallActive) {
+                            rejectCall();
+                        }
+                    }, 30000);
+                }
+                // Handle WebRTC offer
+                else if (payload.startsWith('CALL_OFFER:')) {
+                    const match = payload.match(/^CALL_OFFER:(\d+):(\d+):(.*)/);
+                    if (match) {
+                        const fromId = Number(match[1]);
+                        const offerJson = match[3];
+                        console.log('[WebSocket] CALL_OFFER received from', fromId);
+                        handleWebRtcOffer(fromId, offerJson);
+                    }
+                }
+                // Handle WebRTC answer
+                else if (payload.startsWith('CALL_ANSWER_OFFER:')) {
+                    const match = payload.match(/^CALL_ANSWER_OFFER:(\d+):(\d+):(.*)/);
+                    if (match) {
+                        const fromId = Number(match[1]);
+                        const answerJson = match[3];
+                        console.log('[WebSocket] CALL_ANSWER_OFFER received from', fromId);
+                        handleWebRtcAnswer(fromId, answerJson);
+                    }
+                }
+                // Handle ICE candidates
+                else if (payload.startsWith('CALL_ICE:')) {
+                    const match = payload.match(/^CALL_ICE:(\d+):(\d+):(.*)/);
+                    if (match) {
+                        const fromId = Number(match[1]);
+                        const candidateJson = match[3];
+                        handleIceCandidate(fromId, candidateJson);
+                    }
+                }
+                // Handle call acceptance
+                else if (payload.startsWith('CALL_ANSWER:')) {
+                    const parts = payload.split(':');
+                    if (parts.length < 3) return;
+                    const fromId = Number(parts[1]);
+                    console.log('[WebSocket] CALL_ANSWER received from', fromId);
+                    
+                    // Now that recipient is ready, send the offer
+                    if (peerConnection && peerConnection.signalingState === 'stable') {
+                        (async () => {
+                            try {
+                                const offer = await peerConnection.createOffer();
+                                await peerConnection.setLocalDescription(offer);
+                                const offerJson = JSON.stringify(offer);
+                                if (wsConnected && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                                    chatSocket.send(`CALL_OFFER:${userId}:${fromId}:${offerJson}`);
+                                    console.log('[Call] WebRTC offer sent after CALL_ANSWER');
+                                }
+                            } catch (err) {
+                                console.error('[Call] Error creating offer:', err);
+                            }
+                        })();
+                    } else {
+                        console.warn('[Call] Peer connection not ready for offer creation');
+                    }
+                }
+                // Handle call rejection
+                else if (payload.startsWith('CALL_REJECT:')) {
+                    const parts = payload.split(':');
+                    if (parts.length < 3) return;
+                    const fromId = Number(parts[1]);
+                    console.log('[WebSocket] CALL_REJECT received from', fromId);
+                    endCall();
+                    alert('Appel rejeté');
+                }
+                // Handle call end
+                else if (payload.startsWith('CALL_END:')) {
+                    const parts = payload.split(':');
+                    if (parts.length < 3) return;
+                    const fromId = Number(parts[1]);
+                    console.log('[WebSocket] CALL_END received from', fromId);
+                    endCall();
                 }
             };
 
@@ -749,6 +907,411 @@
             hideSmartReplies();
         }
     });
+
+    // ══════════════════════════════════════════════════
+    // WebRTC Video Calling (Manual Signaling via WebSocket)
+    // ══════════════════════════════════════════════════
+
+    let peerConnection = null;
+    let localStream = null;
+    let remoteStream = null;
+    let isCallActive = false;
+    let callStartTime = null;
+    let callDurationInterval = null;
+    let incomingCallTimeout = null;
+    let incomingCallFromId = null;
+    let pendingIceCandidates = []; // Queue ICE candidates if peer connection isn't ready yet
+
+    const ICE_SERVERS = {
+        iceServers: [
+            { urls: ['stun:stun.l.google.com:19302'] },
+            { urls: ['stun:stun1.l.google.com:19302'] },
+            { urls: ['stun:stun2.l.google.com:19302'] },
+            { urls: ['stun:stun3.l.google.com:19302'] },
+        ]
+    };
+
+    async function attachRemoteStreamFromTrackEvent(event) {
+        const remoteVideoEl = document.getElementById('remoteVideo');
+        if (!remoteVideoEl) return;
+
+        if (event.streams && event.streams[0]) {
+            remoteStream = event.streams[0];
+        } else {
+            if (!remoteStream) {
+                remoteStream = new MediaStream();
+            }
+            remoteStream.addTrack(event.track);
+        }
+
+        remoteVideoEl.srcObject = remoteStream;
+        remoteVideoEl.muted = false;
+        remoteVideoEl.volume = 1;
+
+        try {
+            await remoteVideoEl.play();
+        } catch (err) {
+            console.warn('[WebRTC] Remote video autoplay blocked; user interaction may be required.', err);
+        }
+
+        isCallActive = true;
+        if (!callStartTime) {
+            callStartTime = Date.now();
+            startCallDurationTimer();
+        }
+        document.getElementById('callStatus').textContent = '🟢 Appel actif';
+    }
+
+    // Initiate call to recipient
+    async function initiateCall(recipientId) {
+        if (!recipientId || recipientId <= 0) {
+            alert('Erreur: Destinataire invalide');
+            return;
+        }
+
+        try {
+            // Notify recipient of incoming call via WebSocket
+            if (wsConnected && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(`CALL_INIT:${userId}:${recipientId}`);
+                console.log('[Call] CALL_INIT sent to', recipientId);
+            } else {
+                alert('WebSocket non connecté. Impossible d\'effectuer l\'appel.');
+                return;
+            }
+
+            // Get local media
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: { ideal: 480 }, height: { ideal: 360 } },
+                audio: true 
+            });
+
+            console.log('[Call] Got local media stream');
+            localStream = stream;
+
+            // Show active call modal
+            const activeModal = document.getElementById('activeCallModal');
+            const localVideoEl = document.getElementById('localVideo');
+            
+            activeModal.style.display = 'flex';
+            localVideoEl.srcObject = stream;
+            document.getElementById('callStatus').textContent = '⏳ En attente de réponse...';
+
+            // Create peer connection
+            peerConnection = new RTCPeerConnection(ICE_SERVERS);
+
+            // Add local stream tracks
+            stream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, stream);
+            });
+
+            // Handle remote stream
+            peerConnection.ontrack = async (event) => {
+                console.log('[WebRTC] Received remote track');
+                await attachRemoteStreamFromTrackEvent(event);
+            };
+
+            // Handle ICE candidates
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    const candidate = JSON.stringify(event.candidate);
+                    if (wsConnected && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                        chatSocket.send(`CALL_ICE:${userId}:${recipientId}:${candidate}`);
+                    }
+                }
+            };
+
+            // Handle connection state changes
+            peerConnection.onconnectionstatechange = () => {
+                console.log('[WebRTC] Connection state:', peerConnection.connectionState);
+                if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
+                    endCall();
+                }
+            };
+
+            // Store recipient ID for later when sending offer
+            window.currentCallRecipientId = recipientId;
+            console.log('[Call] Peer connection created, waiting for CALL_ANSWER from recipient');
+
+        } catch (err) {
+            console.error('[Call] Error getting media:', err);
+            alert('Erreur: Impossible d\'accéder à la caméra/microphone.\n' + err.message);
+            endCall();
+        }
+    }
+
+    // Accept incoming call
+    async function acceptCall() {
+        if (!incomingCallFromId) {
+            console.error('[Call] No incoming call to accept');
+            return;
+        }
+
+        // Clear auto-reject timeout
+        if (incomingCallTimeout) {
+            clearTimeout(incomingCallTimeout);
+            incomingCallTimeout = null;
+        }
+
+        try {
+            // Close incoming modal, show active call modal
+            document.getElementById('incomingCallModal').style.display = 'none';
+            
+            // Get local media
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: { ideal: 480 }, height: { ideal: 360 } },
+                audio: true 
+            });
+
+            console.log('[Call] Got local media stream for accepting call');
+
+            localStream = stream;
+
+            const activeModal = document.getElementById('activeCallModal');
+            const localVideoEl = document.getElementById('localVideo');
+            
+            activeModal.style.display = 'flex';
+            localVideoEl.srcObject = stream;
+            document.getElementById('callStatus').textContent = '⏳ En attente de connexion...';
+
+            // Create peer connection
+            peerConnection = new RTCPeerConnection(ICE_SERVERS);
+
+            // Add local stream tracks
+            stream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, stream);
+            });
+
+            // Handle remote stream
+            peerConnection.ontrack = async (event) => {
+                console.log('[WebRTC] Received remote track');
+                await attachRemoteStreamFromTrackEvent(event);
+            };
+
+            // Handle ICE candidates
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    const candidate = JSON.stringify(event.candidate);
+                    if (wsConnected && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                        chatSocket.send(`CALL_ICE:${userId}:${incomingCallFromId}:${candidate}`);
+                    }
+                }
+            };
+
+            // Handle connection state changes
+            peerConnection.onconnectionstatechange = () => {
+                console.log('[WebRTC] Connection state:', peerConnection.connectionState);
+                if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
+                    endCall();
+                }
+            };
+
+            // Now that peer connection and media are ready, notify caller
+            if (wsConnected && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(`CALL_ANSWER:${userId}:${incomingCallFromId}`);
+                console.log('[Call] CALL_ANSWER sent to', incomingCallFromId);
+            }
+
+        } catch (err) {
+            console.error('[Call] Error accepting call:', err);
+            alert('Erreur: Impossible d\'accéder à la caméra/microphone.\n' + err.message);
+            rejectCall();
+        }
+    }
+
+    // Reject incoming call
+    function rejectCall() {
+        if (incomingCallTimeout) {
+            clearTimeout(incomingCallTimeout);
+            incomingCallTimeout = null;
+        }
+
+        document.getElementById('incomingCallModal').style.display = 'none';
+
+        // Notify caller
+        if (incomingCallFromId && wsConnected && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(`CALL_REJECT:${userId}:${incomingCallFromId}`);
+            console.log('[Call] CALL_REJECT sent to', incomingCallFromId);
+        }
+
+        incomingCallFromId = null;
+
+        // Close peer connection if it exists
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+        }
+
+        console.log('[Call] Call rejected');
+    }
+
+    // End active call
+    function endCall() {
+        // Stop duration timer
+        if (callDurationInterval) {
+            clearInterval(callDurationInterval);
+            callDurationInterval = null;
+        }
+
+        // Clear pending ICE candidates
+        pendingIceCandidates = [];
+
+        // Close video streams
+        const localVideoEl = document.getElementById('localVideo');
+        const remoteVideoEl = document.getElementById('remoteVideo');
+        
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+
+        if (localVideoEl) {
+            localVideoEl.srcObject = null;
+        }
+
+        if (remoteVideoEl) {
+            remoteVideoEl.srcObject = null;
+        }
+        remoteStream = null;
+
+        // Close peer connection
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+        }
+
+        // Hide modals
+        document.getElementById('activeCallModal').style.display = 'none';
+        document.getElementById('incomingCallModal').style.display = 'none';
+
+        isCallActive = false;
+        callStartTime = null;
+        incomingCallFromId = null;
+
+        console.log('[Call] Call ended');
+
+        // Notify peer
+        if (selectedUserId > 0 && wsConnected && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(`CALL_END:${userId}:${selectedUserId}`);
+        }
+    }
+
+    // Start call duration timer
+    function startCallDurationTimer() {
+        callDurationInterval = setInterval(() => {
+            if (callStartTime) {
+                const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('callDuration').textContent = 
+                    String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+            }
+        }, 1000);
+    }
+
+    // Handle incoming WebRTC offer
+    async function handleWebRtcOffer(fromId, offerJson) {
+        if (!peerConnection) {
+            console.error('[WebRTC] No peer connection for offer handling');
+            return;
+        }
+
+        // Only accept an offer when in stable state
+        if (peerConnection.signalingState !== 'stable') {
+            console.warn('[WebRTC] Ignoring offer – wrong signaling state:', peerConnection.signalingState);
+            return;
+        }
+
+        try {
+            const offer = JSON.parse(offerJson);
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            console.log('[WebRTC] Remote description set with offer');
+
+            // Drain any ICE candidates queued before the offer arrived
+            if (pendingIceCandidates.length > 0) {
+                console.log('[WebRTC] Draining', pendingIceCandidates.length, 'queued ICE candidates');
+                for (const candidateJson of pendingIceCandidates) {
+                    try {
+                        const candidate = JSON.parse(candidateJson);
+                        if (candidate && candidate.candidate) {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                        }
+                    } catch (err) {
+                        console.error('[WebRTC] Error adding queued ICE candidate:', err);
+                    }
+                }
+                pendingIceCandidates = [];
+            }
+
+            // Create and send answer
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+
+            const answerJson = JSON.stringify(answer);
+            if (wsConnected && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(`CALL_ANSWER_OFFER:${userId}:${fromId}:${answerJson}`);
+                console.log('[WebRTC] Answer sent');
+            }
+        } catch (err) {
+            console.error('[WebRTC] Error handling offer:', err);
+        }
+    }
+
+    // Handle incoming WebRTC answer
+    async function handleWebRtcAnswer(fromId, answerJson) {
+        if (!peerConnection) {
+            console.error('[WebRTC] No peer connection for answer handling');
+            return;
+        }
+
+        // Only valid to set a remote answer when we have sent a local offer
+        if (peerConnection.signalingState !== 'have-local-offer') {
+            console.warn('[WebRTC] Ignoring answer – wrong signaling state:', peerConnection.signalingState);
+            return;
+        }
+
+        try {
+            const answer = JSON.parse(answerJson);
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+            console.log('[WebRTC] Remote description set with answer');
+
+            // Drain ICE candidates that arrived before the answer
+            if (pendingIceCandidates.length > 0) {
+                console.log('[WebRTC] Draining', pendingIceCandidates.length, 'queued ICE candidates');
+                for (const candidateJson of pendingIceCandidates) {
+                    try {
+                        const candidate = JSON.parse(candidateJson);
+                        if (candidate && candidate.candidate) {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                        }
+                    } catch (err) {
+                        console.error('[WebRTC] Error adding queued ICE candidate:', err);
+                    }
+                }
+                pendingIceCandidates = [];
+            }
+        } catch (err) {
+            console.error('[WebRTC] Error handling answer:', err);
+        }
+    }
+
+    // Handle incoming ICE candidate
+    async function handleIceCandidate(fromId, candidateJson) {
+        // Queue if peer connection doesn't exist OR remote description not yet set
+        if (!peerConnection || !peerConnection.remoteDescription) {
+            console.log('[WebRTC] Queuing ICE candidate (remote description not ready)');
+            pendingIceCandidates.push(candidateJson);
+            return;
+        }
+
+        try {
+            const candidate = JSON.parse(candidateJson);
+            if (candidate && candidate.candidate) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            }
+        } catch (err) {
+            console.error('[WebRTC] Error adding ICE candidate:', err);
+        }
+    }
 
 </script>
 
