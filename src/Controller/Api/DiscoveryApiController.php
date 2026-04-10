@@ -3,6 +3,7 @@
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Service\GroqSmartMatchingService;
 use App\Service\SmartMatchingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -14,12 +15,15 @@ use Symfony\Component\Routing\Attribute\Route;
 final class DiscoveryApiController extends AbstractController
 {
     public function __construct(
+        private readonly GroqSmartMatchingService $groqSmartMatchingService,
         private readonly SmartMatchingService $smartMatchingService,
         private readonly EntityManagerInterface $em,
     ) {}
 
     /**
      * Get matched user cards with smart matching algorithm.
+     * Uses Groq AI-powered matching if API key is configured,
+     * otherwise falls back to rule-based matching.
      */
     #[Route('/matches', name: 'api_discovery_matches', methods: ['GET'])]
     public function getMatches(): JsonResponse
@@ -30,27 +34,33 @@ final class DiscoveryApiController extends AbstractController
         }
 
         try {
-            $matches = $this->smartMatchingService->calculateMatchScores((int) $user->id);
-            
-            // Convert to JSON-serializable array
-            $data = array_map(fn($match) => [
-                'id' => $match->id,
-                'username' => $match->username,
-                'full_name' => $match->fullName,
-                'location' => $match->location,
-                'bio' => $match->bio,
-                'profile_picture' => $match->profilePicture,
-                'score' => $match->score,
-                'percentage' => $match->getPercentage(),
-                'score_color' => $match->getScoreColor(),
-                'reason' => $match->reason,
-                'common_interests' => array_slice($match->commonInterests, 0, 3),
-            ], $matches);
-
-            return $this->json(['ok' => true, 'matches' => $data]);
-        } catch (\Exception $e) {
-            return $this->json(['ok' => false, 'error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+            // Try Groq AI-powered matching first
+            $matches = $this->groqSmartMatchingService->calculateMatchScores((int) $user->id);
+        } catch (\RuntimeException $e) {
+            // Fallback to rule-based matching if Groq not configured
+            if (str_contains($e->getMessage(), 'GROQ_API_KEY')) {
+                $matches = $this->smartMatchingService->calculateMatchScores((int) $user->id);
+            } else {
+                throw $e;
+            }
         }
+        
+        // Convert to JSON-serializable array
+        $data = array_map(fn($match) => [
+            'id' => $match->id,
+            'username' => $match->username,
+            'full_name' => $match->fullName,
+            'location' => $match->location,
+            'bio' => $match->bio,
+            'profile_picture' => $match->profilePicture,
+            'score' => $match->score,
+            'percentage' => $match->getPercentage(),
+            'score_color' => $match->getScoreColor(),
+            'reason' => $match->reason,
+            'common_interests' => array_slice($match->commonInterests, 0, 3),
+        ], $matches);
+
+        return $this->json(['ok' => true, 'matches' => $data]);
     }
 
     #[Route('/user/{userId}', name: 'api_discovery_user_profile', methods: ['GET'])]
