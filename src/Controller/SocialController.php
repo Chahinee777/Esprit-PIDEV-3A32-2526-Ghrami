@@ -407,6 +407,32 @@ final class SocialController extends AbstractController
         }
     }
 
+    #[Route('/ai/caption', name: 'app_social_ai_caption', methods: ['POST'])]
+    public function aiCaption(Request $request, AiContentService $aiContentService): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid('social_ai_caption', (string) $request->request->get('_csrf_token'))) {
+            return $this->json(['ok' => false, 'error' => 'Invalid CSRF token.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $file = $request->files->get('image');
+        if (!$file) {
+            return $this->json(['ok' => false, 'error' => 'No image provided.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            // Get the original filename from the uploaded file
+            $originalFileName = $file->getClientOriginalName();
+            $caption = $aiContentService->analyzeImageForCaption($file->getPathname(), $originalFileName);
+
+            return $this->json([
+                'ok' => true,
+                'caption' => $caption,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->json(['ok' => false, 'error' => $e->getMessage()], Response::HTTP_BAD_GATEWAY);
+        }
+    }
+
     private function storeSocialImage(UploadedFile $file, SluggerInterface $slugger, string $scope): ?string
     {
         $allowed = ['image/jpeg', 'image/png', 'image/webp'];

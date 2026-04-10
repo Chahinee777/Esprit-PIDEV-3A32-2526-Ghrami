@@ -6,6 +6,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[AsCommand(
@@ -16,13 +17,14 @@ class TestGroqApiCommand extends Command
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
+        private readonly ParameterBagInterface $params,
     ) {
         parent::__construct();
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $apiKey = $_ENV['GROQ_API_KEY'] ?? '';
+        $apiKey = $this->params->get('groq_api_key') ?? '';
 
         if (empty($apiKey)) {
             $output->writeln('<error>❌ GROQ_API_KEY not set in .env</error>');

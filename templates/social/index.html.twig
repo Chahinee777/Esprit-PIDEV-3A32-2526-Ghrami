@@ -177,10 +177,7 @@
                     <span>📷</span> Photo
                 </button>
                 <button class="action-btn" id="social-ai-complete-btn">
-                    <span>🤖</span> Compléter
-                </button>
-                <button class="action-btn" id="social-ai-image-btn">
-                    <span>🎨</span> Générer Image
+                    <span>🤖</span> Compléter avec IA
                 </button>
                 <button class="publish-btn" id="social-publish-btn">Publier</button>
             </div>
@@ -1015,7 +1012,6 @@
         const content = document.getElementById('social-post-content');
         const imageUrlInput = document.getElementById('social-post-image-url');
         const completeBtn = document.getElementById('social-ai-complete-btn');
-        const imageBtn = document.getElementById('social-ai-image-btn');
         const photoBtn = document.getElementById('social-photo-btn');
         const publishBtn = document.getElementById('social-publish-btn');
         const postInput = document.getElementById('social-post-input');
@@ -1055,13 +1051,45 @@
         });
 
         // Handle file selection from file picker
-        imageFileInput?.addEventListener('change', () => {
+        imageFileInput?.addEventListener('change', async () => {
             if (imageFileInput.files?.length > 0) {
-                const fileName = imageFileInput.files[0].name;
-                const size = (imageFileInput.files[0].size / 1024 / 1024).toFixed(2);
+                const file = imageFileInput.files[0];
+                const fileName = file.name;
+                const size = (file.size / 1024 / 1024).toFixed(2);
                 const status = document.getElementById('postInputStatus');
-                status.textContent = '📷 Image: ' + fileName + ' (' + size + 'MB)';
+                
+                status.textContent = '🤖 Analyse de l\'image...';
                 status.style.color = '#667eea';
+
+                try {
+                    // Send image to AI captioning endpoint
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    formData.append('_csrf_token', '{{ csrf_token('social_ai_caption') }}');
+
+                    const response = await fetch('{{ path('app_social_ai_caption') }}', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (data.ok && data.caption) {
+                        // Insert caption into textarea
+                        postInput.value = data.caption;
+                        postInput.dispatchEvent(new Event('input'));
+                        
+                        status.textContent = '✨ Caption générée | 📷 Image: ' + fileName + ' (' + size + 'MB)';
+                        status.style.color = '#27ae60';
+                    } else {
+                        status.textContent = '⚠️ Caption échouée: ' + (data.error || 'Erreur inconnue');
+                        status.style.color = '#f39c12';
+                    }
+                } catch (e) {
+                    console.error('Image analysis failed:', e);
+                    status.textContent = '⚠️ Erreur réseau lors de l\'analyse';
+                    status.style.color = '#f39c12';
+                }
             }
         });
 
@@ -1109,7 +1137,7 @@
             }
 
             completeBtn.disabled = true;
-            completeBtn.textContent = '⏳ Génération...';
+            completeBtn.textContent = '⏳ Complétion par IA...';
             try {
                 const response = await fetch('{{ path('app_social_ai_complete') }}', {
                     method: 'POST',
@@ -1128,7 +1156,7 @@
                     if (content) content.value = data.fullText;
                     postInput.dispatchEvent(new Event('input'));
                     const status = document.getElementById('postInputStatus');
-                    status.textContent = '✨ Complété par IA';
+                    status.textContent = '✨ Complété par IA!';
                     status.style.color = '#667eea';
                 } else {
                     alert('❌ Erreur: ' + (data.error || 'Impossible de compléter'));
@@ -1138,46 +1166,7 @@
                 alert('❌ Erreur réseau');
             } finally {
                 completeBtn.disabled = false;
-                completeBtn.textContent = '🤖 Compléter';
-            }
-        });
-
-        imageBtn?.addEventListener('click', async () => {
-            const prompt = postInput?.value?.trim() || content?.value?.trim();
-            if (!prompt) {
-                alert('Décrivez votre post d\'abord');
-                return;
-            }
-
-            imageBtn.disabled = true;
-            imageBtn.textContent = '⏳ Génération...';
-            try {
-                const response = await fetch('{{ path('app_social_ai_image') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: new URLSearchParams({
-                        _csrf_token: '{{ csrf_token('social_ai_image') }}',
-                        prompt
-                    })
-                });
-                const data = await response.json();
-                if (data.ok && data.url) {
-                    imageUrlInput.value = data.url;
-                    const status = document.getElementById('postInputStatus');
-                    status.textContent = '🎨 Image générée';
-                    status.style.color = '#667eea';
-                } else {
-                    alert('❌ Erreur: ' + (data.error || 'Impossible de générer l\'image'));
-                }
-            } catch (e) {
-                console.error('AI image generation failed:', e);
-                alert('❌ Erreur réseau');
-            } finally {
-                imageBtn.disabled = false;
-                imageBtn.textContent = '🎨 Générer Image';
+                completeBtn.textContent = '🤖 Compléter avec IA';
             }
         });
 

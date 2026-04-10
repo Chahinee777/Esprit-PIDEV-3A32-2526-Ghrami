@@ -3,7 +3,6 @@
 namespace App\Service;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
 class HobbyCoachService
 {
@@ -12,11 +11,12 @@ class HobbyCoachService
     private HttpClientInterface $httpClient;
 
     public function __construct(
-        ParameterBagInterface $params,
+        string $groqApiKey,
+        string $groqModel,
         HttpClientInterface $httpClient
     ) {
-        $this->groqApiKey = $params->get('groq_api_key');
-        $this->groqModel = $params->get('groq_text_model') ?? 'llama-3.1-8b-instant';
+        $this->groqApiKey = $groqApiKey;
+        $this->groqModel = $groqModel;
         $this->httpClient = $httpClient;
     }
 
@@ -26,38 +26,83 @@ class HobbyCoachService
     public function chat(string $userMessage, string $systemContext): ?string
     {
         try {
-            $response = $this->httpClient->request('POST', 'https://api.groq.com/openai/v1/chat/completions', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $this->groqApiKey,
-                    'Content-Type' => 'application/json',
-                ],
-                'json' => [
-                    'model' => $this->groqModel,
-                    'messages' => [
-                        [
-                            'role' => 'system',
-                            'content' => $systemContext
-                        ],
-                        [
-                            'role' => 'user',
-                            'content' => $userMessage
-                        ]
+            if (empty($this->groqApiKey)) {
+                return $this->getFallbackResponse($userMessage);
+            }
+
+            $response = $this->httpClient->request(
+                'POST',
+                'https://api.groq.com/openai/v1/chat/completions',
+                [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $this->groqApiKey,
+                        'Content-Type' => 'application/json',
                     ],
-                    'temperature' => 0.7,
-                    'max_tokens' => 300,
-                ],
-                'timeout' => 15,
-            ]);
+                    'json' => [
+                        'model' => $this->groqModel,
+                        'messages' => [
+                            [
+                                'role' => 'system',
+                                'content' => $systemContext
+                            ],
+                            [
+                                'role' => 'user',
+                                'content' => $userMessage
+                            ]
+                        ],
+                        'temperature' => 0.7,
+                        'max_tokens' => 300,
+                    ],
+                    'timeout' => 15,
+                ]
+            );
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode !== 200) {
+                error_log("Groq API error (Status {$statusCode}): " . $response->getContent(false));
+                return $this->getFallbackResponse($userMessage);
+            }
 
             $data = $response->toArray();
-            
+
             if (isset($data['choices'][0]['message']['content'])) {
                 return trim($data['choices'][0]['message']['content']);
             }
 
-            return null;
-        } catch (\Exception $e) {
-            return null;
+            error_log("Groq API: No content in response. Data: " . json_encode($data));
+            return $this->getFallbackResponse($userMessage);
+        } catch (\Throwable $e) {
+            error_log("Groq API exception: " . $e->getMessage());
+            return $this->getFallbackResponse($userMessage);
         }
     }
+
+    /**
+     * Fallback response when Groq API is unavailable
+     */
+    private function getFallbackResponse(string $userMessage): string
+    {
+        // Basic fallback responses
+        $lowerMessage = strtolower($userMessage);
+
+        if (strpos($lowerMessage, 'motivat') !== false || strpos($lowerMessage, 'encour') !== false) {
+            return "💪 Keep pushing! Consistency is the key to mastery. Every hour you invest in your hobby brings you closer to your goals. You've got this!";
+        }
+
+        if (strpos($lowerMessage, 'tip') !== false || strpos($lowerMessage, 'advice') !== false) {
+            return "💡 Here's a tip: Focus on progress, not perfection. Break your learning into smaller, manageable goals and celebrate each milestone. Steady progress beats sporadic effort!";
+        }
+
+        if (strpos($lowerMessage, 'stuck') !== false || strpos($lowerMessage, 'help') !== false || strpos($lowerMessage, 'difficult') !== false) {
+            return "🎯 Feeling stuck is part of the learning journey! Try breaking the problem into smaller steps, take a short break, or explore a different approach. Sometimes a fresh perspective is all you need.";
+        }
+
+        if (strpos($lowerMessage, 'congratulat') !== false || strpos($lowerMessage, 'achieved') !== false) {
+            return "🎉 That's awesome! Celebrate this win—you've earned it! Use this momentum to set your next challenge. You're building amazing habits!";
+        }
+
+        // Default fallback
+        return "🎓 Great question! Keep exploring and practicing consistently. Every moment dedicated to your hobby is a step forward. What else would you like to know?";
+    }
 }
+
