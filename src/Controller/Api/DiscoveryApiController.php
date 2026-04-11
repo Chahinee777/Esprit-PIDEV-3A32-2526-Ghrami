@@ -6,8 +6,11 @@ use App\Entity\User;
 use App\Service\GroqSmartMatchingService;
 use App\Service\SmartMatchingService;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -18,6 +21,7 @@ final class DiscoveryApiController extends AbstractController
         private readonly GroqSmartMatchingService $groqSmartMatchingService,
         private readonly SmartMatchingService $smartMatchingService,
         private readonly EntityManagerInterface $em,
+        private readonly CacheInterface $cache,
     ) {}
 
     /**
@@ -26,39 +30,51 @@ final class DiscoveryApiController extends AbstractController
      * otherwise falls back to rule-based matching.
      */
     #[Route('/matches', name: 'api_discovery_matches', methods: ['GET'])]
-    public function getMatches(): JsonResponse
+    public function getMatches(Request $request): JsonResponse
     {
         $user = $this->getUser();
         if (!$user instanceof User) {
             return $this->json(['ok' => false], Response::HTTP_UNAUTHORIZED);
         }
 
-        try {
-            // Try Groq AI-powered matching first
-            $matches = $this->groqSmartMatchingService->calculateMatchScores((int) $user->id);
-        } catch (\RuntimeException $e) {
-            // Fallback to rule-based matching if Groq not configured
-            if (str_contains($e->getMessage(), 'GROQ_API_KEY')) {
-                $matches = $this->smartMatchingService->calculateMatchScores((int) $user->id);
-            } else {
-                throw $e;
-            }
+        $userId = (int) $user->id;
+        $cacheKey = 'discovery_matches_user_' . $userId;
+        $forceRefresh = $request->query->getBoolean('refresh', false);
+
+        if ($forceRefresh) {
+            $this->cache->delete($cacheKey);
         }
-        
-        // Convert to JSON-serializable array
-        $data = array_map(fn($match) => [
-            'id' => $match->id,
-            'username' => $match->username,
-            'full_name' => $match->fullName,
-            'location' => $match->location,
-            'bio' => $match->bio,
-            'profile_picture' => $match->profilePicture,
-            'score' => $match->score,
-            'percentage' => $match->getPercentage(),
-            'score_color' => $match->getScoreColor(),
-            'reason' => $match->reason,
-            'common_interests' => array_slice($match->commonInterests, 0, 3),
-        ], $matches);
+
+        $data = $this->cache->get($cacheKey, function (ItemInterface $item) use ($userId) {
+            $item->expiresAfter(90);
+
+            try {
+                // Try Groq AI-powered matching first
+                $matches = $this->groqSmartMatchingService->calculateMatchScores($userId);
+            } catch (\RuntimeException $e) {
+                // Fallback to rule-based matching if Groq not configured
+                if (str_contains($e->getMessage(), 'GROQ_API_KEY')) {
+                    $matches = $this->smartMatchingService->calculateMatchScores($userId);
+                } else {
+                    throw $e;
+                }
+            }
+
+            // Convert to JSON-serializable array
+            return array_map(fn($match) => [
+                'id' => $match->id,
+                'username' => $match->username,
+                'full_name' => $match->fullName,
+                'location' => $match->location,
+                'bio' => $match->bio,
+                'profile_picture' => $match->profilePicture,
+                'score' => $match->score,
+                'percentage' => $match->getPercentage(),
+                'score_color' => $match->getScoreColor(),
+                'reason' => $match->reason,
+                'common_interests' => array_slice($match->commonInterests, 0, 3),
+            ], $matches);
+        });
 
         return $this->json(['ok' => true, 'matches' => $data]);
     }
