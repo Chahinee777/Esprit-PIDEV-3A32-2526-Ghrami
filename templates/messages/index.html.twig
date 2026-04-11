@@ -144,8 +144,14 @@
     <!-- Center Main Chat Area -->
     <main>
         {% if selectedConversationUser > 0 %}
-            {% set friend = acceptedFriends[selectedConversationUser] %}
-            
+            {% set friend = null %}
+            {% for candidate in acceptedFriends %}
+                {% if candidate.user_id == selectedConversationUser %}
+                    {% set friend = candidate %}
+                {% endif %}
+            {% endfor %}
+
+            {% if friend %}
             <div class="card" style="display: flex; flex-direction: column; height: calc(100vh - 110px);">
                 
                 <!-- Chat Header -->
@@ -247,6 +253,15 @@
                     </form>
                 </div>
             </div>
+            {% else %}
+            <div class="card" style="display: flex; align-items: center; justify-content: center; height: calc(100vh - 110px); flex-direction: column; gap: var(--spacing-xl);">
+                <div style="font-size: 64px;">💬</div>
+                <div style="text-align: center;">
+                    <h3 style="margin: 0; color: var(--color-text-primary); font-size: var(--font-size-2xl);">Conversation introuvable</h3>
+                    <p style="font-size: var(--font-size-base); margin: var(--spacing-md) 0 0; color: var(--color-text-secondary);">Choisissez une conversation valide dans la liste de gauche</p>
+                </div>
+            </div>
+            {% endif %}
 
         {% else %}
             <!-- Empty State -->
@@ -799,10 +814,33 @@
     let msgIsRecording = false;
     let msgMediaRecorder = null;
     let msgAudioChunks = [];
+    let msgRecordingMimeType = 'audio/wav';
+
+    function setMicIdleState(disabled = false) {
+        const micBtn = document.getElementById('micButton');
+        if (!micBtn) return;
+        micBtn.textContent = '🎤';
+        micBtn.style.setProperty('background', 'var(--color-background-light)', 'important');
+        micBtn.style.setProperty('color', 'var(--color-text-secondary)', 'important');
+        micBtn.style.setProperty('box-shadow', 'none', 'important');
+        micBtn.disabled = disabled;
+        micBtn.style.opacity = disabled ? '0.65' : '1';
+    }
+
+    function setMicRecordingState() {
+        const micBtn = document.getElementById('micButton');
+        if (!micBtn) return;
+        micBtn.textContent = '🎤';
+        micBtn.style.setProperty('background', '#dc3545', 'important');
+        micBtn.style.setProperty('color', '#ffffff', 'important');
+        micBtn.style.setProperty('box-shadow', '0 0 0 3px rgba(220, 53, 69, 0.25)', 'important');
+        micBtn.disabled = false;
+        micBtn.style.opacity = '1';
+    }
 
     async function toggleMicrophone() {
         if (!msgIsRecording) {
-            startRecording();
+            await startRecording();
         } else {
             stopRecordingAndTranscribe();
         }
@@ -810,31 +848,47 @@
 
     async function startRecording() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            msgMediaRecorder = new MediaRecorder(stream);
+            // Show recording state immediately on click
+            setMicRecordingState();
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000 } });
+            
+            // Try to use WAV format if supported, fallback to browser default
+            const mimeType = MediaRecorder.isTypeSupported('audio/wav')
+                ? 'audio/wav'
+                : MediaRecorder.isTypeSupported('audio/webm')
+                ? 'audio/webm'
+                : '';
+            msgRecordingMimeType = mimeType || 'audio/webm';
+            
+            const options = mimeType ? { mimeType } : {};
+            msgMediaRecorder = new MediaRecorder(stream, options);
             msgAudioChunks = [];
+
+            console.log('[Voice] Recording started with format:', mimeType || 'browser default');
 
             msgMediaRecorder.ondataavailable = (e) => {
                 msgAudioChunks.push(e.data);
             };
 
             msgMediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(msgAudioChunks, { type: 'audio/wav' });
+                console.log('[Voice] Recording stopped, chunks:', msgAudioChunks.length);
+                const audioBlob = new Blob(msgAudioChunks, { type: msgRecordingMimeType });
+                console.log('[Voice] Audio blob size:', audioBlob.size, 'bytes');
                 await transcribeAudio(audioBlob);
                 stream.getTracks().forEach(track => track.stop());
             };
 
+            msgMediaRecorder.onerror = (e) => {
+                console.error('[Voice] Recording error:', e.error);
+                alert('Erreur lors de l\'enregistrement: ' + e.error);
+            };
+
             msgMediaRecorder.start();
             msgIsRecording = true;
-
-            // Visual feedback
-            const micBtn = document.getElementById('micButton');
-            micBtn.textContent = '⏹️';
-            micBtn.style.background = '#dc3545';
-            micBtn.style.color = 'white';
-            micBtn.style.boxShadow = '0 0 0 3px rgba(220, 53, 69, 0.25)';
         } catch (err) {
             console.error('[Voice] Error:', err);
+            setMicIdleState(false);
             alert('Erreur: Impossible d\'accéder au microphone. Vérifiez les permissions.');
         }
     }
@@ -844,20 +898,18 @@
             msgMediaRecorder.stop();
             msgIsRecording = false;
 
-            // Visual feedback: thinking state
-            const micBtn = document.getElementById('micButton');
-            micBtn.textContent = '⏳';
-            micBtn.style.background = 'var(--color-background-light)';
-            micBtn.style.color = 'var(--color-text-secondary)';
-            micBtn.style.boxShadow = 'none';
-            micBtn.disabled = true;
+            // Revert immediately on stop; keep disabled during upload/transcribe
+            setMicIdleState(true);
         }
     }
 
     async function transcribeAudio(audioBlob) {
         try {
+            console.log('[Transcribe] Starting transcription, blob size:', audioBlob.size);
+            
             const formData = new FormData();
-            formData.append('audio', audioBlob, 'audio.wav');
+            const extension = msgRecordingMimeType.includes('webm') ? 'webm' : 'wav';
+            formData.append('audio', audioBlob, `audio.${extension}`);
 
             const response = await fetch('{{ path("app_messages_transcribe") }}', {
                 method: 'POST',
@@ -865,27 +917,36 @@
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
 
+            console.log('[Transcribe] Response status:', response.status);
             const data = await response.json();
+            console.log('[Transcribe] Response data:', data);
 
             if (data.success && data.text) {
+                console.log('[Transcribe] Success! Text:', data.text);
                 const input = document.getElementById('messageInput');
                 const current = input.value.trim();
                 input.value = current ? current + ' ' + data.text : data.text;
                 input.focus();
+                // Hide smart replies since user has typed
+                hideSmartReplies();
+            } else if (data.text) {
+                // Handle case where success flag might be missing but text is present
+                console.log('[Transcribe] Text received without explicit success flag:', data.text);
+                const input = document.getElementById('messageInput');
+                const current = input.value.trim();
+                input.value = current ? current + ' ' + data.text : data.text;
+                input.focus();
+                hideSmartReplies();
             } else {
+                console.error('[Transcribe] Error response:', data);
                 alert('Erreur: ' + (data.error || 'Transcription failed'));
             }
         } catch (err) {
-            console.error('[Transcribe] Error:', err);
-            alert('Erreur lors de la transcription');
+            console.error('[Transcribe] Exception:', err);
+            alert('Erreur lors de la transcription: ' + err.message);
         } finally {
             // Reset mic button
-            const micBtn = document.getElementById('micButton');
-            micBtn.textContent = '🎤';
-            micBtn.style.background = 'var(--color-background-light)';
-            micBtn.style.color = 'var(--color-text-secondary)';
-            micBtn.style.boxShadow = 'none';
-            micBtn.disabled = false;
+            setMicIdleState(false);
         }
     }
 

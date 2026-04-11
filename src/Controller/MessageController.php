@@ -7,6 +7,8 @@ use App\Entity\User;
 use App\Service\MatchingService;
 use App\Service\ChatClient;
 use App\Service\ChatServerSimple;
+use App\Service\SmartRepliesService;
+use App\Service\VoiceTranscriptionService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -165,7 +167,7 @@ final class MessageController extends AbstractController
     }
 
     #[Route('/smart-replies', name: 'app_messages_smart_replies', methods: ['POST'])]
-    public function getSmartReplies(Request $request, MatchingService $matchingService): JsonResponse
+    public function getSmartReplies(Request $request, SmartRepliesService $smartRepliesService): JsonResponse
     {
         /** @var User $currentUser */
         $currentUser = $this->getUser();
@@ -173,34 +175,15 @@ final class MessageController extends AbstractController
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
-        $otherUserId = (int) $request->request->get('other_user_id');
         $lastMessage = trim($request->request->get('last_message', ''));
 
-        if ($otherUserId <= 0 || empty($lastMessage)) {
+        if (empty($lastMessage)) {
             return $this->json(['error' => 'Invalid parameters'], 400);
         }
 
         try {
-            // Get recent message history for context
-            $conversation = $matchingService->getConversation((int) $currentUser->id, $otherUserId);
-            $selectedFriend = $matchingService->getUsersById([$otherUserId])[0] ?? null;
-            
-            if (!$selectedFriend) {
-                return $this->json(['error' => 'Friend not found'], 404);
-            }
-
-            // Build context from last 6 messages
-            $start = max(0, count($conversation) - 6);
-            $context = '';
-            foreach (array_slice($conversation, $start) as $msg) {
-                $isMine = $msg['sender_id'] == $currentUser->id;
-                $senderName = $isMine ? 'Moi' : $selectedFriend['username'];
-                $context .= $senderName . ": " . $msg['content'] . "\n";
-            }
-            $context .= $selectedFriend['username'] . ": " . $lastMessage . "\n";
-
-            // Call Groq LLaMA API
-            $replies = $this->callGroqSmartReplies($context);
+            // Generate smart replies using Groq
+            $replies = $smartRepliesService->generateReplies($lastMessage);
 
             return $this->json([
                 'success' => true,
@@ -212,7 +195,7 @@ final class MessageController extends AbstractController
     }
 
     #[Route('/transcribe', name: 'app_messages_transcribe', methods: ['POST'])]
-    public function transcribeVoice(Request $request): JsonResponse
+    public function transcribeVoice(Request $request, VoiceTranscriptionService $voiceTranscriptionService): JsonResponse
     {
         /** @var User $currentUser */
         $currentUser = $this->getUser();
@@ -226,8 +209,12 @@ final class MessageController extends AbstractController
         }
 
         try {
-            // Call Groq Whisper API
-            $transcript = $this->transcribeWithGroq($audioFile->getPathname());
+            // Transcribe audio using Groq Whisper
+            $transcript = $voiceTranscriptionService->transcribeFromFile($audioFile);
+
+            if (!$transcript) {
+                return $this->json(['error' => 'Could not transcribe audio'], 400);
+            }
 
             return $this->json([
                 'success' => true,
@@ -238,129 +225,4 @@ final class MessageController extends AbstractController
         }
     }
 
-    /**
-     * Call Groq LLaMA API for smart reply suggestions
-     */
-    private function callGroqSmartReplies(string $context): array
-    {
-        $apiKey = getenv('GROQ_API_KEY');
-        if (!$apiKey) {
-            throw new \Exception('GROQ_API_KEY environment variable not set');
-        }
-
-        $systemPrompt = 'Tu es un assistant de messagerie. ' .
-            'En te basant sur la conversation fournie, génère exactement 3 réponses courtes et naturelles ' .
-            'que l\'utilisateur ("Moi") pourrait envoyer. ' .
-            'Réponds UNIQUEMENT avec les 3 réponses, une par ligne, sans numérotation ni ponctuation initiale. ' .
-            'Chaque réponse doit faire maximum 8 mots.';
-
-        $requestBody = json_encode([
-            'model' => 'llama-3.1-8b-instant',
-            'max_tokens' => 120,
-            'temperature' => 0.8,
-            'messages' => [
-                ['role' => 'system', 'content' => $systemPrompt],
-                ['role' => 'user', 'content' => $context],
-            ],
-        ]);
-
-        $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
-        curl_setopt_array($ch, [
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $apiKey,
-                'Content-Type: application/json',
-            ],
-            CURLOPT_POSTFIELDS => $requestBody,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 30,
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200) {
-            throw new \Exception('Groq API error: ' . $httpCode);
-        }
-
-        $data = json_decode($response, true);
-        if (!isset($data['choices'][0]['message']['content'])) {
-            throw new \Exception('Invalid Groq API response');
-        }
-
-        $content = $data['choices'][0]['message']['content'];
-        $replies = [];
-        foreach (explode("\n", $content) as $line) {
-            $trimmed = preg_replace('/^[\d.\-*) ]+/', '', trim($line));
-            if (!empty($trimmed)) {
-                $replies[] = $trimmed;
-                if (count($replies) === 3) break;
-            }
-        }
-
-        return $replies;
-    }
-
-    /**
-     * Transcribe audio file using Groq Whisper API
-     */
-    private function transcribeWithGroq(string $audioFilePath): string
-    {
-        $apiKey = getenv('GROQ_API_KEY');
-        if (!$apiKey) {
-            throw new \Exception('GROQ_API_KEY environment variable not set');
-        }
-
-        // Create multipart form data
-        $boundary = '----GhramiBoundary' . time();
-        $body = '';
-
-        // Add model field
-        $body .= "--" . $boundary . "\r\n";
-        $body .= "Content-Disposition: form-data; name=\"model\"\r\n\r\n";
-        $body .= "whisper-large-v3-turbo\r\n";
-
-        // Add language field
-        $body .= "--" . $boundary . "\r\n";
-        $body .= "Content-Disposition: form-data; name=\"language\"\r\n\r\n";
-        $body .= "fr\r\n";
-
-        // Add response format field
-        $body .= "--" . $boundary . "\r\n";
-        $body .= "Content-Disposition: form-data; name=\"response_format\"\r\n\r\n";
-        $body .= "json\r\n";
-
-        // Add audio file
-        $body .= "--" . $boundary . "\r\n";
-        $body .= "Content-Disposition: form-data; name=\"file\"; filename=\"audio.wav\"\r\n";
-        $body .= "Content-Type: audio/wav\r\n\r\n";
-        $body .= file_get_contents($audioFilePath) . "\r\n";
-        $body .= "--" . $boundary . "--\r\n";
-
-        $ch = curl_init('https://api.groq.com/openai/v1/audio/transcriptions');
-        curl_setopt_array($ch, [
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $apiKey,
-                'Content-Type: multipart/form-data; boundary=' . $boundary,
-            ],
-            CURLOPT_POSTFIELDS => $body,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 60,
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200) {
-            throw new \Exception('Groq Whisper API error: ' . $httpCode);
-        }
-
-        $data = json_decode($response, true);
-        if (!isset($data['text'])) {
-            throw new \Exception('Invalid Groq Whisper API response');
-        }
-
-        return $data['text'];
-    }
 }

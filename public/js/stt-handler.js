@@ -1,7 +1,12 @@
 /**
  * Speech-to-Text Handler for Ghrami Messaging
  * Uses browser's Web Audio API + recorder.js + Groq Whisper API
+ *
+ * Wrapped in an IIFE to avoid polluting the global scope and conflicting
+ * with functions of the same name declared in the page's inline scripts
+ * (startRecording, stopRecording, handleRecordingStop, etc.).
  */
+(function () {
 
 let mediaRecorder = null;
 let audioChunks = [];
@@ -13,6 +18,17 @@ const selectedConversationUser = document.querySelector('input[name="receiver_id
 
 const STT_ENDPOINT = '/matching/stt/transcribe';
 const AI_REPLY_ENDPOINT = '/matching/api/generate-reply';
+
+function hasSttUi() {
+    return Boolean(recordBtn && messageInput && statusDiv);
+}
+
+function updateStatus(text, color = '#667eea', visible = true) {
+    if (!statusDiv) return;
+    statusDiv.style.display = visible ? 'block' : 'none';
+    statusDiv.textContent = text;
+    statusDiv.style.color = color;
+}
 
 /**
  * Initialize recording when button is clicked
@@ -35,6 +51,11 @@ if (recordBtn) {
  * Start audio recording from microphone
  */
 async function startRecording() {
+    if (!hasSttUi()) {
+        console.warn('[STT] Missing required DOM nodes (record button, input, or status).');
+        return;
+    }
+
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
             audio: {
@@ -43,21 +64,25 @@ async function startRecording() {
                 autoGainControl: true
             }
         });
-        
-        mediaRecorder = new MediaRecorder(stream, {
-            mimeType: 'audio/webm;codecs=opus'
-        });
-        
+
+        // Pick best supported mimeType (Safari doesn't support webm;codecs=opus)
+        const mimeType = [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/ogg;codecs=opus',
+            'audio/mp4',
+        ].find(type => MediaRecorder.isTypeSupported(type)) || '';
+
+        mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+
         audioChunks = [];
         isRecording = true;
-        
-        // Update UI
+
+        // Update UI immediately after confirming recorder is ready
         recordBtn.textContent = '⏹️ Stop Recording';
         recordBtn.classList.add('btn-danger');
         recordBtn.classList.remove('btn-secondary');
-        statusDiv.style.display = 'block';
-        statusDiv.textContent = '🎤 Recording...';
-        statusDiv.style.color = '#22c55e';
+        updateStatus('🎤 Recording...', '#22c55e');
         
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
@@ -72,9 +97,13 @@ async function startRecording() {
         mediaRecorder.start();
         
     } catch (err) {
-        statusDiv.style.display = 'block';
-        statusDiv.textContent = '❌ Microphone access denied: ' + err.message;
-        statusDiv.style.color = '#dc3545';
+        // Reset button state in case it was partially updated
+        recordBtn.textContent = '🎤 Record Voice';
+        recordBtn.classList.remove('btn-danger');
+        recordBtn.classList.add('btn-secondary');
+        isRecording = false;
+
+        updateStatus('❌ Microphone access denied: ' + err.message, '#dc3545');
         console.error('Error accessing microphone:', err);
     }
 }
@@ -89,8 +118,7 @@ function stopRecording() {
         recordBtn.classList.add('btn-secondary');
         recordBtn.classList.remove('btn-danger');
         
-        statusDiv.textContent = '⏳ Transcribing audio...';
-        statusDiv.style.color = '#667eea';
+        updateStatus('⏳ Transcribing audio...', '#667eea');
         
         mediaRecorder.stop();
         isRecording = false;
@@ -101,12 +129,16 @@ function stopRecording() {
  * Handle completion of recording - send to backend STT
  */
 async function handleRecordingStop() {
+    if (!hasSttUi()) {
+        console.warn('[STT] Missing required DOM nodes while finishing recording.');
+        return;
+    }
+
     try {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm; codecs=opus' });
         
         // Show uploading status
-        statusDiv.textContent = '📤 Sending to Groq Whisper API...';
-        statusDiv.style.color = '#667eea';
+        updateStatus('📤 Sending to Groq Whisper API...', '#667eea');
         
         const formData = new FormData();
         formData.append('audio', audioBlob, 'audio.webm');
@@ -130,8 +162,7 @@ async function handleRecordingStop() {
         messageInput.value = result.text || '';
         messageInput.focus();
         
-        statusDiv.textContent = '✅ Voice transcribed successfully!';
-        statusDiv.style.color = '#22c55e';
+        updateStatus('✅ Voice transcribed successfully!', '#22c55e');
         
         // Show AI reply suggestion button
         const aiBtn = document.getElementById('chat-ai-reply-btn');
@@ -141,18 +172,19 @@ async function handleRecordingStop() {
         
         // Auto-close status after 3 seconds
         setTimeout(() => {
-            statusDiv.style.display = 'none';
+            updateStatus('', '#667eea', false);
         }, 3000);
         
     } catch (err) {
-        statusDiv.textContent = '❌ Transcription failed: ' + err.message;
-        statusDiv.style.color = '#dc3545';
+        updateStatus('❌ Transcription failed: ' + err.message, '#dc3545');
         console.error('STT Error:', err);
     } finally {
-        recordBtn.textContent = '🎤 Record Voice';
-        recordBtn.disabled = false;
-        recordBtn.classList.add('btn-secondary');
-        recordBtn.classList.remove('btn-danger');
+        if (recordBtn) {
+            recordBtn.textContent = '🎤 Record Voice';
+            recordBtn.disabled = false;
+            recordBtn.classList.add('btn-secondary');
+            recordBtn.classList.remove('btn-danger');
+        }
     }
 }
 
@@ -172,9 +204,7 @@ if (aiReplyBtn) {
         try {
             aiReplyBtn.disabled = true;
             aiReplyBtn.textContent = '⏳ Generating...';
-            statusDiv.style.display = 'block';
-            statusDiv.textContent = '✨ Generating AI reply suggestions...';
-            statusDiv.style.color = '#667eea';
+            updateStatus('✨ Generating AI reply suggestions...', '#667eea');
             
             const response = await fetch(AI_REPLY_ENDPOINT, {
                 method: 'POST',
@@ -196,17 +226,15 @@ if (aiReplyBtn) {
             
             if (result.text) {
                 messageInput.value = result.text;
-                statusDiv.textContent = '✅ AI suggestion applied!';
-                statusDiv.style.color = '#22c55e';
+                updateStatus('✅ AI suggestion applied!', '#22c55e');
             }
             
             setTimeout(() => {
-                statusDiv.style.display = 'none';
+                updateStatus('', '#667eea', false);
             }, 2000);
             
         } catch (err) {
-            statusDiv.textContent = '❌ AI suggestion failed: ' + err.message;
-            statusDiv.style.color = '#dc3545';
+            updateStatus('❌ AI suggestion failed: ' + err.message, '#dc3545');
             console.error('AI Reply Error:', err);
         } finally {
             aiReplyBtn.disabled = false;
@@ -223,3 +251,5 @@ if (!navigator.mediaDevices) {
         recordBtn.title = 'Microphone not available in this browser';
     }
 }
+
+})(); // end IIFE — keeps startRecording/stopRecording/etc. out of global scope

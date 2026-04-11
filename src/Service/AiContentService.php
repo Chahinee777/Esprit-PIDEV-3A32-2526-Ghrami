@@ -2,20 +2,15 @@
 
 namespace App\Service;
 
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class AiContentService
 {
-    private string $groqApiKey;
-    private string $groqModel;
-
     public function __construct(
+        private readonly string $groqApiKey,
+        private readonly string $groqModel,
         private readonly HttpClientInterface $httpClient,
-        ParameterBagInterface $params
     ) {
-        $this->groqApiKey = $params->get('groq_api_key') ?? '';
-        $this->groqModel = $params->get('groq_text_model') ?? 'llama-3.1-8b-instant';
     }
 
     public function completePostText(string $currentText): string

@@ -155,16 +155,16 @@ class ChatServer
             }
 
             $messageEntity = new Message();
-            $messageEntity->setSender($sender);
-            $messageEntity->setReceiver($receiver);
-            $messageEntity->setContent($content);
-            $messageEntity->setSentAt(new \DateTime());
-            $messageEntity->setIsRead(false);
+            $messageEntity->sender = $sender;
+            $messageEntity->receiver = $receiver;
+            $messageEntity->content = $content;
+            $messageEntity->sentAt = new \DateTime();
+            $messageEntity->isRead = false;
 
             $this->em->persist($messageEntity);
             $this->em->flush();
             
-            echo "[ChatServer] Message saved to DB: ID {$messageEntity->getId()}\n";
+            echo "[ChatServer] Message saved to DB: ID {$messageEntity->id}\n";
         } catch (\Exception $e) {
             echo "[ChatServer] Database error: {$e->getMessage()}\n";
         }
