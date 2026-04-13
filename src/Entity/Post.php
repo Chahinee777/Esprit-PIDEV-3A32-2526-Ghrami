@@ -31,6 +31,25 @@ class Post
     #[Assert\Length(max: 500, maxMessage: 'Image URL cannot exceed {{ limit }} characters.')]
     public ?string $imageUrl = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Length(max: 255, maxMessage: 'Location cannot exceed {{ limit }} characters.')]
+    public ?string $location = null;
+
+    #[ORM\Column(length: 100, nullable: true)]
+    #[Assert\Length(max: 100, maxMessage: 'Mood cannot exceed {{ limit }} characters.')]
+    public ?string $mood = null;
+
+    #[ORM\Column(name: 'hobby_tag', length: 100, nullable: true)]
+    #[Assert\Length(max: 100, maxMessage: 'Hobby tag cannot exceed {{ limit }} characters.')]
+    public ?string $hobbyTag = null;
+
+    #[ORM\Column(length: 20)]
+    #[Assert\Choice(choices: ['public', 'friends', 'private'])]
+    public string $visibility = 'public';
+
+    #[ORM\Column(name: 'updated_at', type: Types::DATETIME_MUTABLE, nullable: true)]
+    public ?\DateTimeInterface $updatedAt = null;
+
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_MUTABLE)]
     public ?\DateTimeInterface $createdAt = null;
 }

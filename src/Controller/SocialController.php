@@ -24,6 +24,36 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 #[Route('/social')]
 final class SocialController extends AbstractController
 {
+    private const TUNISIAN_GOVERNORATES = [
+        'Ariana', 'Béja', 'Ben Arous', 'Bizerte', 'Gabès', 'Gafsa', 'Jendouba',
+        'Kairouan', 'Kasserine', 'Kébili', 'Le Kef', 'Mahdia', 'La Manouba',
+        'Médenine', 'Monastir', 'Nabeul', 'Sfax', 'Sidi Bouzid', 'Siliana',
+        'Sousse', 'Tataouine', 'Tozeur', 'Tunis', 'Zaghouan',
+    ];
+
+    private const MOOD_OPTIONS = [
+        'Heureux(se) 😀',
+        'Motivé(e) 💪',
+        'Calme 😌',
+        'Excité(e) 🤩',
+        'Curieux(se) 🧐',
+        'Concentré(e) 🎯',
+        'Créatif(ve) 🎨',
+        'Sociable 🥳',
+        'Fatigué(e) 😴',
+        'Stressé(e) 😓',
+    ];
+
+    private const HOBBY_OPTIONS = [
+        'Lecture', 'Écriture', 'Dessin', 'Peinture', 'Photographie', 'Cinéma',
+        'Séries TV', 'Musique', 'Chant', 'Danse', 'Cuisine', 'Pâtisserie',
+        'Voyage', 'Randonnée', 'Camping', 'Jardinage', 'Jeux vidéo',
+        'Jeux de société', 'Échecs', 'Sport', 'Fitness', 'Yoga', 'Méditation',
+        'Natation', 'Course à pied', 'Cyclisme', 'Bricolage', 'DIY',
+        'Mode', 'Collection', 'Technologie', 'Programmation', 'Blogging',
+        'Podcast', 'Bénévolat', 'Langues', 'Calligraphie', 'Théâtre',
+    ];
+
     public function __construct(private readonly EntityManagerInterface $em)
     {
     }
@@ -80,6 +110,9 @@ final class SocialController extends AbstractController
             'userHobbyCount' => $hobbyCount,
             'searchQuery' => $searchQuery,
             'sort' => $sort,
+            'governorates' => self::TUNISIAN_GOVERNORATES,
+            'moodOptions' => self::MOOD_OPTIONS,
+            'hobbyOptions' => self::HOBBY_OPTIONS,
         ]);
     }
 
@@ -96,6 +129,15 @@ final class SocialController extends AbstractController
 
         $content = trim((string) $request->request->get('content', ''));
         $imageUrl = trim((string) $request->request->get('image_url', ''));
+        $location = trim((string) $request->request->get('location', '')) ?: null;
+        $mood = trim((string) $request->request->get('mood', '')) ?: null;
+        $hobbyTag = trim((string) $request->request->get('hobbyTag', '')) ?: null;
+        $visibility = trim((string) $request->request->get('visibility', 'public'));
+        $allowedVisibilities = ['public', 'friends', 'private'];
+        if (!in_array($visibility, $allowedVisibilities, true)) {
+            $visibility = 'public';
+        }
+
         /** @var UploadedFile|null $imageFile */
         $imageFile = $request->files->get('image_file');
 
@@ -114,6 +156,10 @@ final class SocialController extends AbstractController
         $postValidation = new Post();
         $postValidation->content = $content;
         $postValidation->imageUrl = $imageUrl !== '' ? $imageUrl : null;
+        $postValidation->location = $location;
+        $postValidation->mood = $mood;
+        $postValidation->hobbyTag = $hobbyTag;
+        $postValidation->visibility = $visibility;
         $violations = $validator->validate($postValidation);
         if (count($violations) > 0) {
             return $this->validationFailure($request, $this->normalizeValidationErrors($violations));
@@ -122,7 +168,11 @@ final class SocialController extends AbstractController
         $post = $socialService->createPost(
             $userId,
             $content,
-            $imageUrl !== '' ? $imageUrl : null
+            $imageUrl !== '' ? $imageUrl : null,
+            $location,
+            $mood,
+            $hobbyTag,
+            $visibility
         );
 
         // Check and award badges after post creation
@@ -146,7 +196,7 @@ final class SocialController extends AbstractController
     }
 
     #[Route('/comment', name: 'app_social_comment', methods: ['POST'])]
-    public function addComment(Request $request, SocialService $socialService, ValidatorInterface $validator): Response
+    public function addComment(Request $request, SocialService $socialService, SluggerInterface $slugger, ValidatorInterface $validator): Response
     {
         if (!$this->isCsrfTokenValid('social_comment', (string) $request->request->get('_csrf_token'))) {
             $this->addFlash('error', 'Invalid CSRF token.');
@@ -157,8 +207,30 @@ final class SocialController extends AbstractController
         $userId = $currentUser instanceof User ? (int) $currentUser->id : (int) $request->request->get('user_id');
 
         $content = trim((string) $request->request->get('content', ''));
+        $mood = trim((string) $request->request->get('mood', '')) ?: null;
+        /** @var UploadedFile|null $imageFile */
+        $imageFile = $request->files->get('image_file');
+
+        if ($imageFile !== null && !$imageFile->isValid()) {
+            return $this->validationFailure($request, ['image_file' => 'Uploaded image is invalid.']);
+        }
+
+        $imageUrl = null;
+        if ($imageFile instanceof UploadedFile && $imageFile->isValid()) {
+            $imageUrl = $this->storeSocialImage($imageFile, $slugger, 'comments');
+            if ($imageUrl === null) {
+                return $this->validationFailure($request, ['image_file' => 'Comment image must be JPG, PNG or WEBP.']);
+            }
+        }
+
+        if ($content === '' && $imageUrl === null) {
+            return $this->validationFailure($request, ['content' => 'Comment text or image is required.']);
+        }
+
         $commentValidation = new Comment();
-        $commentValidation->content = $content !== '' ? $content : null;
+        $commentValidation->content = $content;
+        $commentValidation->imageUrl = $imageUrl;
+        $commentValidation->mood = $mood;
 
         $violations = $validator->validate($commentValidation);
         
@@ -169,7 +241,9 @@ final class SocialController extends AbstractController
         $comment = $socialService->addComment(
             (int) $request->request->get('post_id'),
             $userId,
-            $content
+            $content,
+            $imageUrl,
+            $mood
         );
 
         if ($request->isXmlHttpRequest() ) {
@@ -327,7 +401,7 @@ final class SocialController extends AbstractController
     }
 
     #[Route('/comment/edit', name: 'app_social_comment_edit', methods: ['POST'])]
-    public function editComment(Request $request, SocialService $socialService, ValidatorInterface $validator): Response
+    public function editComment(Request $request, SocialService $socialService, SluggerInterface $slugger, ValidatorInterface $validator): Response
     {
         if (!$this->isCsrfTokenValid('social_comment_edit', (string) $request->request->get('_csrf_token'))) {
             $this->addFlash('error', 'Invalid CSRF token.');
@@ -338,15 +412,43 @@ final class SocialController extends AbstractController
         $userId = $currentUser instanceof User ? (int) $currentUser->id : 0;
         $commentId = (int) $request->request->get('comment_id');
         $content = trim((string) $request->request->get('content', ''));
+        $mood = trim((string) $request->request->get('mood', '')) ?: null;
+        $removeImage = (bool) $request->request->get('remove_image', false);
+        /** @var UploadedFile|null $imageFile */
+        $imageFile = $request->files->get('image_file');
+
+        $existingComment = $this->em->getRepository(Comment::class)->find($commentId);
+        if (!$existingComment instanceof Comment || (int) ($existingComment->user?->id ?? 0) !== $userId) {
+            $this->addFlash('error', 'Unable to edit this comment.');
+            return $this->redirectToRoute('app_social_index');
+        }
+
+        if ($imageFile !== null && !$imageFile->isValid()) {
+            return $this->validationFailure($request, ['image_file' => 'Uploaded image is invalid.']);
+        }
+
+        $imageUrl = $removeImage ? null : $existingComment->imageUrl;
+        if ($imageFile instanceof UploadedFile && $imageFile->isValid()) {
+            $imageUrl = $this->storeSocialImage($imageFile, $slugger, 'comments');
+            if ($imageUrl === null) {
+                return $this->validationFailure($request, ['image_file' => 'Comment image must be JPG, PNG or WEBP.']);
+            }
+        }
+
+        if ($content === '' && $imageUrl === null) {
+            return $this->validationFailure($request, ['content' => 'Comment text or image is required.']);
+        }
 
         $commentValidation = new Comment();
         $commentValidation->content = $content;
+        $commentValidation->imageUrl = $imageUrl;
+        $commentValidation->mood = $mood;
         $violations = $validator->validate($commentValidation);
         if (count($violations) > 0) {
             return $this->validationFailure($request, $this->normalizeValidationErrors($violations));
         }
 
-        if (!$socialService->updateCommentContent($commentId, $userId, $content)) {
+        if (!$socialService->updateComment($commentId, $userId, $content, $imageUrl, $mood)) {
             $this->addFlash('error', 'Unable to edit this comment.');
         } else {
             $this->addFlash('success', 'Comment updated.');

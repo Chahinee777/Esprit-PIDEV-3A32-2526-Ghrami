@@ -867,4 +867,29 @@ final class HobbiesController extends AbstractController
             return new JsonResponse(['ok' => false, 'error' => $e->getMessage()], 400);
         }
     }
+
+    #[Route('/{id}/music-recommendations', name: 'app_hobbies_music_recommendations', methods: ['GET'])]
+    public function getMusicRecommendations(
+        Hobby $hobby,
+        \App\Service\MusicBrainzService $musicBrainzService
+    ): JsonResponse {
+        $this->denyAccessUnlessGranted('HOBBY_VIEW', $hobby);
+
+        try {
+            $recommendations = $musicBrainzService->getRecommendations(
+                $hobby->name,
+                $hobby->category ?? ''
+            );
+
+            return new JsonResponse([
+                'ok' => $recommendations['success'],
+                'data' => $recommendations,
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'ok' => false,
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+    }
 }

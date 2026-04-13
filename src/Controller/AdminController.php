@@ -125,6 +125,26 @@ final class AdminController extends AbstractController
              LIMIT 300"
         );
 
+        $commentsByPost = [];
+        $commentSearchByPost = [];
+        foreach ($comments as $comment) {
+            $postId = (int) ($comment['post_id'] ?? 0);
+            if (!isset($commentsByPost[$postId])) {
+                $commentsByPost[$postId] = [];
+                $commentSearchByPost[$postId] = [];
+            }
+
+            $commentsByPost[$postId][] = $comment;
+            $commentSearchByPost[$postId][] = mb_strtolower(trim((string) ($comment['content'] ?? '')));
+        }
+
+        foreach ($posts as &$post) {
+            $postId = (int) ($post['post_id'] ?? 0);
+            $post['comments_list'] = $commentsByPost[$postId] ?? [];
+            $post['comments_search'] = implode(' ', array_filter($commentSearchByPost[$postId] ?? []));
+        }
+        unset($post);
+
         $stats['comments'] = (int) $conn->fetchOne('SELECT COUNT(*) FROM comments');
 
         $hobbies = $conn->fetchAllAssociative(
@@ -163,7 +183,6 @@ final class AdminController extends AbstractController
             'badgeNames'  => $badgeNames,
             'badgeStats'  => $badgeStats,
             'posts'       => $posts,
-            'comments'    => $comments,
             'hobbies'     => $hobbies,
             'meetings'    => $meetings,
         ]);

@@ -181,6 +181,39 @@
                 </button>
                 <button class="publish-btn" id="social-publish-btn">Publier</button>
             </div>
+            <div class="create-post-meta" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 12px;">
+                <div style="position: relative;">
+                    <select name="location" form="social-post-form" style="padding: 10px 12px; border-radius: 16px; border: 1px solid #e4e6eb; font-size: 13px; width: 100%; background: white;">
+                        <option value="">📍 Choisir un gouvernorat</option>
+                        {% for governorate in governorates %}
+                        <option value="{{ governorate }}">{{ governorate }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="position: relative;">
+                    <select name="mood" form="social-post-form" style="padding: 10px 12px; border-radius: 16px; border: 1px solid #e4e6eb; font-size: 13px; width: 100%; background: white;">
+                        <option value="">😊 Choisir une humeur</option>
+                        {% for mood in moodOptions %}
+                        <option value="{{ mood }}">{{ mood }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="position: relative;">
+                    <select name="hobbyTag" form="social-post-form" style="padding: 10px 12px; border-radius: 16px; border: 1px solid #e4e6eb; font-size: 13px; width: 100%; background: white;">
+                        <option value="">🏷️ Choisir un loisir</option>
+                        {% for hobby in hobbyOptions %}
+                        <option value="{{ hobby }}">{{ hobby }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="position: relative;">
+                    <select name="visibility" form="social-post-form" style="padding: 10px 12px; border-radius: 16px; border: 1px solid #e4e6eb; font-size: 13px; width: 100%; background: white;">
+                        <option value="public">🌐 Public</option>
+                        <option value="friends">👥 Amis</option>
+                        <option value="private">🔒 Privé</option>
+                    </select>
+                </div>
+            </div>
             
             <form method="post" action="{{ path('app_social_post') }}" enctype="multipart/form-data" style="display: contents;" id="social-post-form">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_post') }}">
@@ -203,6 +236,13 @@
                         <div class="post-author-name">{{ p.full_name ?: p.username }}</div>
                         <div class="post-metadata">
                             @{{ p.username }} • {{ p.created_at }}
+                            {% if p.updated_at %}• modifié{% endif %}
+                        </div>
+                        <div class="post-extra-meta" style="margin-top: 6px; font-size: 12px; color: #65676b; display: flex; flex-wrap: wrap; gap: 8px;">
+                            {% if p.location %}<span>📍 {{ p.location }}</span>{% endif %}
+                            {% if p.mood %}<span>✨ {{ p.mood }}</span>{% endif %}
+                            {% if p.hobby_tag %}<span>🏷️ {{ p.hobby_tag }}</span>{% endif %}
+                            {% if p.visibility %}<span>🔒 {{ p.visibility|capitalize }}</span>{% endif %}
                         </div>
                     </div>
                 </div>
@@ -268,14 +308,25 @@
                                 <span class="comment-reply-indicator" style="font-size: 12px; color: #8a8d91; margin-left: 8px;" title="Réponse à @{{ comment.reply_to_username }}">↳ @{{ comment.reply_to_username }}</span>
                                 {% endif %}
                                 <span class="comment-time">{{ comment.created_at }}</span>
+                                {% if comment.updated_at %}<span class="comment-time" style="margin-left: 6px;">• modifié</span>{% endif %}
+                                {% if comment.mood %}<span class="comment-time" style="margin-left: 6px;">• {{ comment.mood }}</span>{% endif %}
                             </div>
                             <div class="comment-text">
                                 {{ comment.content }}
                             </div>
+                            {% if comment.image_url %}
+                            <div style="margin-top: 10px;">
+                                {% if comment.image_url starts with 'http://' or comment.image_url starts with 'https://' %}
+                                <img src="{{ comment.image_url }}" alt="Comment image" style="max-width: 260px; width: 100%; border-radius: 12px; border: 1px solid #e4e6eb; object-fit: cover;">
+                                {% else %}
+                                <img src="{{ asset('images/comments/' ~ comment.image_url) }}" alt="Comment image" style="max-width: 260px; width: 100%; border-radius: 12px; border: 1px solid #e4e6eb; object-fit: cover;">
+                                {% endif %}
+                            </div>
+                            {% endif %}
                             <div class="comment-actions">
                                 <button onclick="addMention('@{{ comment.username }}', {{ postId }})">↳ Répondre</button>
                                 {% if comment.user_id == userId %}
-                                <button type="button" onclick="openEditComment('{{ comment.comment_id }}', '{{ comment.content|escape('js') }}')" style="background: none; border: none; color: #2563eb; cursor: pointer; padding: 0; font-weight: 600;">Modifier</button>
+                                <button type="button" onclick="openEditComment('{{ comment.comment_id }}', '{{ (comment.content ?? '')|escape('js') }}', '{{ (comment.mood ?? '')|escape('js') }}', '{{ (comment.image_url ?? '')|escape('js') }}')" style="background: none; border: none; color: #2563eb; cursor: pointer; padding: 0; font-weight: 600;">Modifier</button>
                                 <form method="post" action="{{ path('app_social_comment_delete') }}" style="display: inline;">
                                     <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_comment_delete') }}">
                                     <input type="hidden" name="comment_id" value="{{ comment.comment_id }}">
@@ -302,12 +353,21 @@
             {% endif %}
             
             <!-- Add Comment Form -->
-            <form method="post" action="{{ path('app_social_comment') }}" style="padding: 12px 16px; border-top: 1px solid #e4e6eb; display: flex; flex-direction: column; gap: 8px;">
+            <form method="post" action="{{ path('app_social_comment') }}" enctype="multipart/form-data" class="social-comment-form" style="padding: 12px 16px; border-top: 1px solid #e4e6eb; display: flex; flex-direction: column; gap: 8px;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_comment') }}">
                 <input type="hidden" name="post_id" value="{{ p.post_id }}">
                 <div style="display: flex; gap: 8px; align-items: flex-start;">
                     <textarea name="content" rows="1" placeholder="Écrivez un commentaire..." style="flex: 1; padding: 8px 12px; background-color: #f0f2f5; border: 1px solid #e4e6eb; border-radius: 16px; resize: none; font-size: 13px; min-height: 32px; line-height: 18px; max-height: 100px; font-family: inherit;" class="comment-textarea"></textarea>
                     <button type="submit" class="btn btn-sm btn-primary" style="padding: 8px 14px; height: fit-content; align-self: flex-end;">Poster</button>
+                </div>
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 8px; align-items: center;">
+                    <input type="file" name="image_file" accept="image/jpeg,image/png,image/webp" class="comment-image-input" style="padding: 8px 10px; background-color: #f8f9fa; border: 1px solid #e4e6eb; border-radius: 12px; font-size: 12px;">
+                    <select name="mood" style="padding: 8px 10px; background-color: #f8f9fa; border: 1px solid #e4e6eb; border-radius: 12px; font-size: 12px;">
+                        <option value="">😊 Humeur (optionnel)</option>
+                        {% for mood in moodOptions %}
+                        <option value="{{ mood }}">{{ mood }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
                     <span class="comment-status" style="color: #65676b;"></span>
@@ -342,10 +402,9 @@
             <textarea name="content" id="social-edit-post-content"></textarea>
         </form>
 
-        <form id="social-edit-comment-form" method="post" action="{{ path('app_social_comment_edit') }}" style="display: none;">
+        <form id="social-edit-comment-form" method="post" action="{{ path('app_social_comment_edit') }}" enctype="multipart/form-data" style="display: none;">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_comment_edit') }}">
             <input type="hidden" name="comment_id" id="social-edit-comment-id">
-            <textarea name="content" id="social-edit-comment-content"></textarea>
         </form>
     </main>
     
@@ -899,12 +958,22 @@
     }
 
     // Edit Comment Modal
-    function openEditComment(commentId, currentContent) {
+    function openEditComment(commentId, currentContent, currentMood = '', currentImage = '') {
         const modal = document.getElementById('editCommentModal') || createEditCommentModal();
         const textarea = modal.querySelector('textarea[name="content"]');
         const counter = modal.querySelector('#editCommentCharCounter');
+        const moodSelect = modal.querySelector('select[name="mood"]');
+        const preview = modal.querySelector('#editCommentImagePreview');
+        const removeImage = modal.querySelector('input[name="remove_image"]');
+        const fileInput = modal.querySelector('input[name="image_file"]');
         
         textarea.value = currentContent || '';
+        moodSelect.value = currentMood || '';
+        removeImage.checked = false;
+        fileInput.value = '';
+        preview.innerHTML = currentImage
+            ? `<img src="${currentImage.startsWith('http') ? currentImage : '{{ asset('images/comments/') }}${currentImage}'}" alt="Comment image" style="max-width: 100%; max-height: 180px; border-radius: 10px; border: 1px solid #e4e6eb;">`
+            : '<div style="font-size: 12px; color: #8a8d91;">Aucune image actuelle</div>';
         textarea.focus();
         updateEditCommentCounter();
         
@@ -926,7 +995,21 @@
                     <button type="button" onclick="closeEditCommentModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
                 </div>
                 <div style="padding: 20px;">
-                    <textarea name="content" placeholder="Modifiez votre commentaire..." style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 80px; box-sizing: border-box;" id="editCommentContent"></textarea>
+                    <textarea name="content" form="social-edit-comment-form" placeholder="Modifiez votre commentaire..." style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 80px; box-sizing: border-box;" id="editCommentContent"></textarea>
+                    <div style="display: grid; gap: 10px; margin-top: 12px;">
+                        <select name="mood" form="social-edit-comment-form" style="width: 100%; padding: 10px 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 13px; background: #f8f9fa; box-sizing: border-box;">
+                            <option value="">😊 Humeur (optionnel)</option>
+                            {% for mood in moodOptions %}
+                            <option value="{{ mood }}">{{ mood }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="file" name="image_file" form="social-edit-comment-form" accept="image/jpeg,image/png,image/webp" style="width: 100%; padding: 10px 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 12px; background: #f8f9fa; box-sizing: border-box;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #65676b;">
+                            <input type="checkbox" name="remove_image" value="1" form="social-edit-comment-form">
+                            Supprimer l'image actuelle
+                        </label>
+                        <div id="editCommentImagePreview" style="display: flex; align-items: center; min-height: 40px;"></div>
+                    </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
                         <span id="editCommentCharCounter" style="font-size: 12px; color: #65676b;">0 / 500</span>
                     </div>
@@ -940,6 +1023,22 @@
         `;
         
         modal.querySelector('textarea[name="content"]').addEventListener('input', updateEditCommentCounter);
+        modal.querySelector('input[name="image_file"]').addEventListener('change', function () {
+            const preview = modal.querySelector('#editCommentImagePreview');
+            const file = this.files?.[0];
+            if (!file) {
+                updateEditCommentCounter();
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                preview.innerHTML = `<img src="${event.target.result}" alt="Preview" style="max-width: 100%; max-height: 180px; border-radius: 10px; border: 1px solid #e4e6eb;">`;
+                updateEditCommentCounter();
+            };
+            reader.readAsDataURL(file);
+        });
+        modal.querySelector('input[name="remove_image"]').addEventListener('change', updateEditCommentCounter);
         modal.addEventListener('click', (e) => {
             if (e.target.id === 'editCommentModal') closeEditCommentModal();
         });
@@ -952,9 +1051,13 @@
         const modal = document.getElementById('editCommentModal');
         if (!modal) return;
         const textarea = modal.querySelector('textarea[name="content"]');
+        const fileInput = modal.querySelector('input[name="image_file"]');
+        const removeImage = modal.querySelector('input[name="remove_image"]');
+        const hasExistingImage = modal.querySelector('#editCommentImagePreview img') !== null;
         const counter = modal.querySelector('#editCommentCharCounter');
         const MAX_CHARS = 500;
         const len = textarea.value.length;
+        const hasImage = !!fileInput.files?.length || (hasExistingImage && !removeImage.checked);
         
         counter.textContent = len + ' / ' + MAX_CHARS;
         
@@ -962,7 +1065,7 @@
             counter.style.color = '#e74c3c';
             counter.style.fontWeight = 'bold';
             textarea.style.borderColor = '#e74c3c';
-        } else if (len === 0) {
+        } else if (len === 0 && !hasImage) {
             counter.style.color = '#e74c3c';
             textarea.style.borderColor = '#e74c3c';
         } else {
@@ -975,13 +1078,16 @@
     function submitEditComment() {
         const modal = document.getElementById('editCommentModal');
         const textarea = modal.querySelector('textarea[name="content"]');
+        const fileInput = modal.querySelector('input[name="image_file"]');
+        const removeImage = modal.querySelector('input[name="remove_image"]');
+        const hasExistingImage = modal.querySelector('#editCommentImagePreview img') !== null;
         const errorDiv = modal.querySelector('#editCommentError');
         const content = textarea.value.trim();
         const MAX_CHARS = 500;
         
         // Validation
-        if (!content) {
-            errorDiv.textContent = '❌ Le commentaire ne peut pas être vide.';
+        if (!content && !fileInput.files?.length && !(hasExistingImage && !removeImage.checked)) {
+            errorDiv.textContent = '❌ Ajoutez du texte ou une image.';
             errorDiv.style.display = 'block';
             textarea.style.borderColor = '#e74c3c';
             return;
@@ -996,7 +1102,6 @@
         
         // Submit
         document.getElementById('social-edit-comment-id').value = modal.dataset.commentId;
-        document.getElementById('social-edit-comment-content').value = content;
         document.getElementById('social-edit-comment-form').submit();
     }
 
@@ -1179,11 +1284,14 @@
                 const charCount = form.querySelector('.comment-char-count');
                 const status = form.querySelector('.comment-status');
                 const len = e.target.value.trim().length;
+                const fileInput = form.querySelector('input[name="image_file"]');
+                const hasImage = !!fileInput?.files?.length;
                 
                 charCount.textContent = len + ' / ' + MAX_COMMENT_CHARS;
                 
-                if (len === 0) {
+                if (len === 0 && !hasImage) {
                     charCount.style.color = '#e4e6eb';
+                    charCount.style.fontWeight = 'normal';
                     status.textContent = '';
                 } else if (len > MAX_COMMENT_CHARS) {
                     charCount.style.color = '#e74c3c';
@@ -1199,22 +1307,71 @@
             }
         });
 
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('comment-image-input')) {
+                const form = e.target.closest('form');
+                if (!form) return;
+
+                const textarea = form.querySelector('textarea[name="content"]');
+                const charCount = form.querySelector('.comment-char-count');
+                const status = form.querySelector('.comment-status');
+                const len = textarea?.value?.trim().length || 0;
+                const hasImage = !!e.target.files?.length;
+
+                charCount.textContent = len + ' / ' + MAX_COMMENT_CHARS;
+
+                if (len === 0 && !hasImage) {
+                    charCount.style.color = '#e4e6eb';
+                    charCount.style.fontWeight = 'normal';
+                    status.textContent = '';
+                } else if (len > MAX_COMMENT_CHARS) {
+                    charCount.style.color = '#e74c3c';
+                    charCount.style.fontWeight = 'bold';
+                    status.textContent = '❌ Trop long';
+                    status.style.color = '#e74c3c';
+                } else {
+                    charCount.style.color = '#65676b';
+                    charCount.style.fontWeight = 'normal';
+                    status.textContent = hasImage ? '🖼️ Image prête' : '✅ Prêt';
+                    status.style.color = '#27ae60';
+                }
+            }
+        });
+
         // Comment form validation on submit
         document.addEventListener('submit', (e) => {
-            if (e.target.action && e.target.action.includes('{{ path('app_social_comment') }}')) {
+            if (e.target.classList && e.target.classList.contains('social-comment-form')) {
                 const textarea = e.target.querySelector('textarea[name="content"]');
                 const content = textarea?.value?.trim();
+                const imageInput = e.target.querySelector('input[name="image_file"]');
+                const status = e.target.querySelector('.comment-status');
+                const charCount = e.target.querySelector('.comment-char-count');
+                const hasImage = !!imageInput?.files?.length;
                 
-                if (!content) {
+                if (!content && !hasImage) {
                     e.preventDefault();
-                    textarea.style.borderColor = '#e74c3c';
-                    textarea.style.backgroundColor = '#ffe6e6';
-                    textarea.focus();
+                    if (textarea) {
+                        textarea.style.borderColor = '#e74c3c';
+                        textarea.style.backgroundColor = '#ffe6e6';
+                        textarea.focus();
+                    }
+                    if (status) {
+                        status.textContent = '❌ Écrivez un commentaire ou ajoutez une image';
+                        status.style.color = '#e74c3c';
+                    }
+                    if (charCount) {
+                        charCount.style.color = '#e74c3c';
+                        charCount.style.fontWeight = 'bold';
+                    }
                     return false;
                 }
                 
-                if (content.length > MAX_COMMENT_CHARS) {
+                if ((content?.length || 0) > MAX_COMMENT_CHARS) {
                     e.preventDefault();
+                    if (status) {
+                        status.textContent = '❌ Le commentaire est trop long';
+                        status.style.color = '#e74c3c';
+                    }
                     alert('❌ Le commentaire dépasse ' + MAX_COMMENT_CHARS + ' caractères.');
                     return false;
                 }

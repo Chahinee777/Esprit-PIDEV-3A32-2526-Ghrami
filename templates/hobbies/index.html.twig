@@ -124,6 +124,7 @@
             <div style="display: flex; gap: 8px;">
                 <button onclick="openDetailsModal({{ hobby.id }})" class="btn-action" style="flex: 1; padding: 10px; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">📊 Détails</button>
                 <button onclick="openLogProgressModal({{ hobby.id }}, '{{ hobby.name }}')" class="btn-action" style="flex: 1; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">➕ Temps</button>
+                <button onclick="openMusicModal({{ hobby.id }}, '{{ hobby.name }}')" class="btn-action" style="flex: 1; padding: 10px; background: #E91E63; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">🎵 Musique</button>
                 <button onclick="openEditHobbyModal({{ hobby.id }}, '{{ hobby.name }}', '{{ hobby.category }}', '{{ hobby.description }}')" style="padding: 10px 12px; background: #FF9800; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">✏️</button>
                 <button onclick="deleteHobby({{ hobby.id }})" style="padding: 10px 12px; background: #f44336; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">🗑️</button>
             </div>
@@ -279,6 +280,30 @@
 
         <div style="display: flex; gap: 12px; margin-top: 24px; border-top: 1px solid #e4e6eb; padding-top: 16px;">
             <button type="button" onclick="closeDetailsModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Fermer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Recommandations Musicales -->
+<div id="musicModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1001; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 600px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20px; font-weight: bold;">🎵 Recommandations Musicales</h2>
+            <button onclick="closeMusicModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <div style="background: #f0f2f5; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+            <p style="margin: 0; font-size: 14px; color: #1c1e21;"><strong>Loisir:</strong> <span id="musicHobbyName"></span></p>
+        </div>
+
+        <div id="musicResults" style="display: flex; flex-direction: column; gap: 12px; min-height: 200px;">
+            <div style="text-align: center; padding: 40px; color: #65676b;">⏳ Chargement...</div>
+        </div>
+
+        <input type="hidden" id="musicHobbyId">
+
+        <div style="display: flex; gap: 12px; margin-top: 16px; border-top: 1px solid #e4e6eb; padding-top: 16px;">
+            <button onclick="closeMusicModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Fermer</button>
         </div>
     </div>
 </div>
@@ -1157,6 +1182,78 @@
             submitBtn.textContent = '✨ Enregistrer';
         }
     });
+
+    // Music Recommendations Functions
+    function openMusicModal(hobbyId, hobbyName) {
+        const modal = document.getElementById('musicModal');
+        modal.style.display = 'flex';
+        document.getElementById('musicHobbyId').value = hobbyId;
+        document.getElementById('musicHobbyName').textContent = hobbyName;
+        document.getElementById('musicResults').innerHTML = '<div style="text-align: center; padding: 40px; color: #65676b;">⏳ Chargement des recommandations musicales...</div>';
+        
+        fetchMusicRecommendations(hobbyId);
+    }
+
+    function closeMusicModal() {
+        document.getElementById('musicModal').style.display = 'none';
+    }
+
+    async function fetchMusicRecommendations(hobbyId) {
+        try {
+            const response = await fetch(`/hobbies/${hobbyId}/music-recommendations`);
+            const json = await response.json();
+            
+            if (json.ok && json.data.recommendations && json.data.recommendations.length > 0) {
+                displayMusicRecommendations(json.data.recommendations);
+            } else {
+                document.getElementById('musicResults').innerHTML = '<div style="text-align: center; padding: 40px; color: #65676b;">😢 Pas de recommandations trouvées. Veuillez réessayer.</div>';
+            }
+        } catch (error) {
+            console.error('Music fetch error:', error);
+            document.getElementById('musicResults').innerHTML = '<div style="text-align: center; padding: 40px; color: #e74c3c;">❌ Erreur lors du chargement: ' + error.message + '</div>';
+        }
+    }
+
+    function displayMusicRecommendations(tracks) {
+        let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+        
+        tracks.forEach((track, index) => {
+            const youtubeQuery = encodeURIComponent(track.title + ' ' + track.artists);
+            const youtubeUrl = `https://www.youtube.com/results?search_query=${youtubeQuery}`;
+            
+            html += `
+                <div style="background: #f8f8f8; padding: 12px; border-radius: 8px; border-left: 4px solid #E91E63;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #1c1e21; margin-bottom: 4px;">${index + 1}. ${escapeHtml(track.title)}</div>
+                            <div style="font-size: 13px; color: #65676b; margin-bottom: 4px;">🎤 ${escapeHtml(track.artists)}</div>
+                            <div style="font-size: 12px; color: #999;">📅 ${escapeHtml(track.date)}</div>
+                        </div>
+                        <a href="${youtubeUrl}" target="_blank" style="padding: 6px 12px; background: #E91E63; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; text-decoration: none; font-size: 12px; white-space: nowrap;">
+                            ▶️ YouTube
+                        </a>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        document.getElementById('musicResults').innerHTML = html;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Close modal on outside click
+    window.onclick = function(event) {
+        const musicModal = document.getElementById('musicModal');
+        if (event.target === musicModal) {
+            closeMusicModal();
+        }
+    }
 
     // Fermer les modals en cliquant en dehors
     document.getElementById('createHobbyModal')?.addEventListener('click', (e) => {

@@ -1265,10 +1265,10 @@
           <div class="ad-section-header">
             <div>
               <div class="ad-section-title">Posts Moderation</div>
-              <div class="ad-section-sub">Review, edit and remove user posts</div>
+              <div class="ad-section-sub">Review posts and open the comments list for each post</div>
             </div>
             <div class="ad-section-actions">
-              <input class="ad-search" id="postSearch" type="text" placeholder="Search posts...">
+              <input class="ad-search" id="postSearch" type="text" placeholder="Search posts or comments...">
               <a href="{{ path('app_admin_post_export') }}" class="ad-btn ad-btn-green" data-tip="Export all posts to CSV">Export CSV</a>
             </div>
           </div>
@@ -1288,7 +1288,7 @@
               </thead>
               <tbody>
                 {% for p in posts %}
-                  <tr class="post-row" data-content="{{ p.content|lower }}" data-author="{{ p.username|lower }}">
+                  <tr class="post-row" data-content="{{ p.content|lower }}" data-author="{{ p.username|lower }}" data-comments="{{ (p.comments_search ?? '')|lower }}">
                     <td style="color:#adb0bb;font-size:12px;">{{ p.post_id }}</td>
                     <td><strong>{{ p.username }}</strong></td>
                     <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#444;">
@@ -1296,7 +1296,15 @@
                       {{ p.content|slice(0,100) }}{% if p.content|length > 100 %}…{% endif %}
                     </td>
                     <td style="text-align:center;">
-                      <span class="ad-badge ad-badge-local">{{ p.comment_count }}</span>
+                      <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+                        <span class="ad-badge ad-badge-local">{{ p.comment_count }}</span>
+                        <button type="button"
+                                class="ad-btn ad-btn-blue ad-btn-sm"
+                                onclick="togglePostComments({{ p.post_id }}, this)"
+                                data-tip="Open this post comments">
+                          {{ p.comment_count > 0 ? 'View comments' : 'No comments' }}
+                        </button>
+                      </div>
                     </td>
                     <td style="text-align:center;">
                       <span class="ad-badge ad-badge-accepted">{{ p.like_count }}</span>
@@ -1321,84 +1329,55 @@
                       </div>
                     </td>
                   </tr>
-                {% else %}
-                  <tr><td colspan="7" style="text-align:center;padding:40px;color:#adb0bb;">No posts found.</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-
-          {# Comments sub-section #}
-          <div class="ad-section-header">
-            <div>
-              <div class="ad-section-title">Comments Moderation</div>
-              <div class="ad-section-sub">Review, edit and remove user comments</div>
-            </div>
-            <div class="ad-section-actions">
-              <select id="commentYearFilter" onchange="filterComments()" style="margin-right:8px;padding:9px 14px;border:1.5px solid var(--c-border);border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;background:var(--c-bg);outline:none;">
-                <option value="">All Years</option>
-                {% set years = [] %}
-                {% for c in comments %}
-                  {% set year = c.created_at|date('Y') %}
-                  {% if year not in years %}
-                    {% set years = years|merge([year]) %}
-                  {% endif %}
-                {% endfor %}
-                {% for year in years|sort|reverse %}
-                  <option value="{{ year }}">{{ year }}</option>
-                {% endfor %}
-              </select>
-              <select id="commentMonthFilter" onchange="filterComments()" style="margin-right:8px;padding:9px 14px;border:1.5px solid var(--c-border);border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;background:var(--c-bg);outline:none;">
-                <option value="">All Months</option>
-                {% for month in 1..12 %}
-                  <option value="{{ month }}">{{ month|date('M') }}</option>
-                {% endfor %}
-              </select>
-              <input class="ad-search" id="commentSearch" type="text" placeholder="Search comments..." onkeyup="filterComments()">
-            </div>
-          </div>
-
-          <div class="ad-table-wrap">
-            <table class="ad-table" id="commentsTable">
-              <thead>
-                <tr>
-                  <th onclick="sortTable('commentsTable',0,this)">ID</th>
-                  <th onclick="sortTable('commentsTable',1,this)">Author</th>
-                  <th onclick="sortTable('commentsTable',2,this)">Comment</th>
-                  <th onclick="sortTable('commentsTable',3,this)">On Post by</th>
-                  <th onclick="sortTable('commentsTable',4,this)">Created</th>
-                  <th class="no-sort">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for c in comments %}
-                  <tr class="comment-row" data-content="{{ c.content|lower }}" data-author="{{ c.username|lower }}" data-date="{{ c.created_at }}">
-                    <td style="color:#adb0bb;font-size:12px;">{{ c.comment_id }}</td>
-                    <td><strong>{{ c.username }}</strong></td>
-                    <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#444;">
-                      {{ c.content|slice(0,100) }}{% if c.content|length > 100 %}…{% endif %}
-                    </td>
-                    <td style="color:#65676b;font-size:12px;">
-                      <span title="{{ c.post_excerpt }}">#{{ c.post_id }} — {{ c.post_author }}</span>
-                    </td>
-                    <td style="color:#65676b;font-size:12px;">{{ c.created_at }}</td>
-                    <td>
-                      <div class="ad-action-group">
-                        <button class="ad-btn ad-btn-orange ad-btn-sm" data-tip="Edit comment"
-                                onclick="openEditCommentModal({{ c.comment_id }}, {{ c.content|json_encode }})">
-                          Edit
-                        </button>
-                        <form method="post" action="{{ path('app_admin_comment_delete') }}" style="display:inline;"
-                              onsubmit="return confirm('Delete this comment by {{ c.username }}?');">
-                          <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_comment_delete') }}">
-                          <input type="hidden" name="comment_id" value="{{ c.comment_id }}">
-                          <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Delete comment">Delete</button>
-                        </form>
+                  <tr id="post-comments-{{ p.post_id }}" class="post-comments-row" style="display:none;">
+                    <td colspan="7" style="background:#fafbff;padding:0;">
+                      <div style="padding:18px 22px;border-top:1px solid #edf0f6;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
+                          <div style="font-size:13px;font-weight:700;color:#1c1e21;">Comments for post #{{ p.post_id }}</div>
+                          <div style="font-size:12px;color:#9095a0;">{{ p.comment_count }} total</div>
+                        </div>
+                        {% if p.comments_list is not empty %}
+                          <div style="display:flex;flex-direction:column;gap:12px;">
+                            {% for c in p.comments_list %}
+                              <div style="background:#fff;border:1px solid #e8ebf2;border-radius:12px;padding:14px 16px;">
+                                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+                                  <div style="min-width:0;flex:1;">
+                                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+                                      <strong style="color:#1c1e21;">{{ c.username }}</strong>
+                                      <span style="font-size:12px;color:#9095a0;">#{{ c.comment_id }}</span>
+                                      <span style="font-size:12px;color:#9095a0;">{{ c.created_at }}</span>
+                                    </div>
+                                    <div style="font-size:13px;line-height:1.55;color:#444;white-space:pre-wrap;word-break:break-word;">
+                                      {{ c.content ?: '—' }}
+                                    </div>
+                                  </div>
+                                  <div class="ad-action-group">
+                                    <button class="ad-btn ad-btn-orange ad-btn-sm"
+                                            type="button"
+                                            onclick="openEditCommentModal({{ c.comment_id }}, {{ c.content|json_encode }})">
+                                      Edit
+                                    </button>
+                                    <form method="post" action="{{ path('app_admin_comment_delete') }}" style="display:inline;"
+                                          onsubmit="return confirm('Delete this comment by {{ c.username }}?');">
+                                      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_comment_delete') }}">
+                                      <input type="hidden" name="comment_id" value="{{ c.comment_id }}">
+                                      <button type="submit" class="ad-btn ad-btn-red ad-btn-sm">Delete</button>
+                                    </form>
+                                  </div>
+                                </div>
+                              </div>
+                            {% endfor %}
+                          </div>
+                        {% else %}
+                          <div style="padding:14px 16px;background:#fff;border:1px dashed #dde3ee;border-radius:12px;color:#9095a0;font-size:13px;text-align:center;">
+                            No comments for this post.
+                          </div>
+                        {% endif %}
                       </div>
                     </td>
                   </tr>
                 {% else %}
-                  <tr><td colspan="6" style="text-align:center;padding:40px;color:#adb0bb;">No comments found.</td></tr>
+                  <tr><td colspan="7" style="text-align:center;padding:40px;color:#adb0bb;">No posts found.</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -1814,8 +1793,20 @@ bindSearch('hobbySearch',      '.hobby-row',      ['user','name','category']);
 bindSearch('meetingSearch',    '.meeting-row',    ['organizer','type','status','location']);
 bindSearch('friendshipSearch', '.friendship-row', ['user1','user2','status']);
 bindSearch('badgeSearch',      '.badge-row',      ['name','user']);
-bindSearch('postSearch',       '.post-row',       ['content','author']);
-// bindSearch('commentSearch',    '.comment-row',    ['content','author']); // Replaced with filterComments
+bindSearch('postSearch',       '.post-row',       ['content','author','comments']);
+
+document.getElementById('postSearch')?.addEventListener('keyup', () => {
+  document.querySelectorAll('.post-row').forEach(row => {
+    const detailsRow = row.nextElementSibling;
+    if (detailsRow && detailsRow.classList.contains('post-comments-row') && row.style.display === 'none') {
+      detailsRow.style.display = 'none';
+      const toggleBtn = row.querySelector('button[onclick*="togglePostComments"]');
+      if (toggleBtn && !toggleBtn.textContent.toLowerCase().includes('no comments')) {
+        toggleBtn.textContent = 'View comments';
+      }
+    }
+  });
+});
 
 function filterFriendships() {
   const val = document.getElementById('friendshipFilter').value.toLowerCase();
@@ -1824,21 +1815,6 @@ function filterFriendships() {
     const matchFilter = !val || r.dataset.status === val;
     const matchSearch = !q || (r.dataset.user1 + r.dataset.user2 + r.dataset.status).includes(q);
     r.style.display = (matchFilter && matchSearch) ? '' : 'none';
-  });
-}
-
-function filterComments() {
-  const year = document.getElementById('commentYearFilter').value;
-  const month = document.getElementById('commentMonthFilter').value;
-  const q = document.getElementById('commentSearch').value.toLowerCase();
-  document.querySelectorAll('.comment-row').forEach(r => {
-    const rowDate = r.dataset.date;
-    const rowYear = rowDate ? new Date(rowDate).getFullYear().toString() : '';
-    const rowMonth = rowDate ? (new Date(rowDate).getMonth() + 1).toString() : '';
-    const matchYear = !year || rowYear === year;
-    const matchMonth = !month || rowMonth === month;
-    const matchSearch = !q || (r.dataset.content + ' ' + r.dataset.author).includes(q);
-    r.style.display = (matchYear && matchMonth && matchSearch) ? '' : 'none';
   });
 }
 
@@ -2274,6 +2250,21 @@ function openEditCommentModal(id, content) {
   document.getElementById('editCommentId').value      = id;
   document.getElementById('editCommentContent').value = content;
   document.getElementById('editCommentModal').classList.add('show');
+}
+
+function togglePostComments(postId, btn) {
+  const row = document.getElementById('post-comments-' + postId);
+  if (!row) return;
+
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'table-row';
+
+  if (btn) {
+    const hasComments = btn.textContent.toLowerCase().includes('no comments');
+    if (!hasComments) {
+      btn.textContent = isOpen ? 'View comments' : 'Hide comments';
+    }
+  }
 }
 </script>
 {% endblock %}
