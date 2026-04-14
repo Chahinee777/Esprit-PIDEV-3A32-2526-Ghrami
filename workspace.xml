@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="488ff3be-f75a-417f-b83e-491f2b8da2db" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/module-info.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/module-info.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/controller/BookingController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/controller/BookingController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/controller/ClassController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/controller/ClassController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/controller/ClassProviderController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/controller/ClassProviderController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/model/Booking.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/model/Booking.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/model/BookingStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/model/BookingStatus.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/model/ClassEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/model/ClassEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/AdminDashboardController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/AdminDashboardController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/ClassMarketplaceController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/ClassMarketplaceController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/FriendsViewController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/FriendsViewController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/HobbiesViewController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/HobbiesViewController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/InstructorDashboardController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/InstructorDashboardController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/MeetingsViewController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/MeetingsViewController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/UserFeedController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/opgg/ghrami/view/UserFeedController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/init_db.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/opgg/ghrami/view/AdminDashboard.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/opgg/ghrami/view/AdminDashboard.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/opgg/ghrami/view/HobbiesView.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/opgg/ghrami/view/HobbiesView.fxml" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="nourhene" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 3
+}</component>
+  <component name="ProjectId" id="38nnsjff5LogifjJmLrbovh6Qv0" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.GhramiApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Application.Main.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.BadgeControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.BookingControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ClassControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ClassProviderControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.CommentControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ConnectionControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.FriendshipControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.HobbyControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.MeetingControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.MeetingParticipantControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.MilestoneControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.PostControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ProgressControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ProgressControllerTest.testCreateProgress.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.UserControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;Maven.Ghrami [org.openjfx:javafx-maven-plugin:0.0.8:run].executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;ChahineV0.0.2&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/MSI/Desktop/Ghrami/Ghrami-Desktop&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;onboarding.tips.debug.path&quot;: &quot;C:/Users/MSI/Desktop/Ghrami-UserManagement/src/main/java/org/example/Main.java&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RunManager">
+    <configuration name="ProgressControllerTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="Ghrami-UserManagement" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="opgg.ghrami.test.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="opgg.ghrami.test" />
+      <option name="MAIN_CLASS_NAME" value="opgg.ghrami.test.ProgressControllerTest" />
+      <option name="TEST_OBJECT" value="class" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ProgressControllerTest.testCreateProgress" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <module name="Ghrami-UserManagement" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="opgg.ghrami.test.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <option name="PACKAGE_NAME" value="opgg.ghrami.test" />
+      <option name="MAIN_CLASS_NAME" value="opgg.ghrami.test.ProgressControllerTest" />
+      <option name="METHOD_NAME" value="testCreateProgress" />
+      <option name="TEST_OBJECT" value="method" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="Ghrami-Desktop" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="Ghrami-Desktop" />
+      <option name="filePath" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="JUnit.ProgressControllerTest" />
+        <item itemvalue="JUnit.ProgressControllerTest.testCreateProgress" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.25557.131" />
+        <option value="bundled-js-predefined-d6986cc7102b-b598e85cdad2-JavaScript-IU-252.25557.131" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="488ff3be-f75a-417f-b83e-491f2b8da2db" name="Changes" comment="" />
+      <created>1769444412455</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1769444412455</updated>
+      <workItem from="1769444414271" duration="8000" />
+      <workItem from="1769445340108" duration="17983000" />
+      <workItem from="1769518352749" duration="4616000" />
+      <workItem from="1769531654179" duration="87000" />
+      <workItem from="1769542526624" duration="4451000" />
+      <workItem from="1769623864454" duration="8083000" />
+      <workItem from="1770038731564" duration="6250000" />
+      <workItem from="1770144942332" duration="11483000" />
+      <workItem from="1770192170278" duration="2331000" />
+      <workItem from="1770487297063" duration="5668000" />
+      <workItem from="1770543458350" duration="17294000" />
+      <workItem from="1770713450625" duration="2387000" />
+      <workItem from="1770717323979" duration="332000" />
+      <workItem from="1770729730959" duration="292000" />
+      <workItem from="1770800191414" duration="151000" />
+      <workItem from="1770825232169" duration="56919000" />
+      <workItem from="1771177640081" duration="13274000" />
+      <workItem from="1771323191856" duration="1210000" />
+      <workItem from="1771682566153" duration="35334000" />
+      <workItem from="1771956947951" duration="13114000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>
