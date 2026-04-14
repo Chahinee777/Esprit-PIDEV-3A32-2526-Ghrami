@@ -1396,6 +1396,22 @@
             </div>
           </div>
 
+          <!-- AI Insights Section -->
+          <div style="margin: 20px 0 30px 0; padding: 20px; background: white; border-radius: 12px; border: 1px solid var(--c-border); box-shadow: var(--shadow-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="margin: 0; color: var(--c-primary);">🤖 AI Platform Insights</h3>
+              <button id="load-ai-insights-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                💡 Load Insights
+              </button>
+            </div>
+            <div id="ai-insights-container" style="min-height: 100px; padding: 16px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #667eea; display: none;">
+              <div style="color: #999; text-align: center; padding: 20px;">Click the button above to generate AI-powered insights...</div>
+            </div>
+            <div id="ai-insights-loading" style="display: none; text-align: center; padding: 20px;">
+              <p style="color: #667eea; font-weight: 600;">⏳ Generating insights...</p>
+            </div>
+          </div>
+
           {# 7 Detail Cards #}
           <div class="ad-detail-cards-grid">
             <div class="ad-detail-card dcard-purple">
@@ -2266,5 +2282,43 @@ function togglePostComments(postId, btn) {
     }
   }
 }
+
+// AI Insights Event Handler
+document.getElementById('load-ai-insights-btn')?.addEventListener('click', async function() {
+  const btn = this;
+  const container = document.getElementById('ai-insights-container');
+  const loading = document.getElementById('ai-insights-loading');
+  
+  btn.disabled = true;
+  btn.textContent = '⏳ Loading...';
+  loading.style.display = 'block';
+  container.style.display = 'none';
+
+  try {
+    const response = await fetch('{{ path("app_admin_analytics_insights") }}', {
+      method: 'GET',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    
+    const data = await response.json();
+    
+    loading.style.display = 'none';
+    
+    if (data.ok && data.insights) {
+      container.innerHTML = `<div style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 16px; border-radius: 4px; margin-top: 12px;"><pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: 'Segoe UI', sans-serif;">${data.insights}</pre></div>`;
+      container.style.display = 'block';
+    } else {
+      container.innerHTML = '<div style="color: #d32f2f; padding: 12px;">Failed to load insights</div>';
+      container.style.display = 'block';
+    }
+  } catch (err) {
+    loading.style.display = 'none';
+    container.innerHTML = `<div style="color: #d32f2f; padding: 12px;">Error loading insights: ${err.message}</div>`;
+    container.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💡 Load Insights';
+  }
+});
 </script>
 {% endblock %}

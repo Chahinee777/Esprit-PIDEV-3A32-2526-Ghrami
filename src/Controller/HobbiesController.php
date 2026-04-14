@@ -7,6 +7,7 @@ use App\Entity\Hobby;
 use App\Entity\Progress;
 use App\Entity\ProgressLog;
 use App\Entity\Milestone;
+use App\Service\GroqAnalyticsService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -891,5 +892,41 @@ final class HobbiesController extends AbstractController
                 'error' => $e->getMessage(),
             ], 400);
         }
+    }
+
+    #[Route('/api/insights', name: 'app_hobbies_api_insights', methods: ['GET'])]
+    public function apiHobbyInsights(GroqAnalyticsService $groqAnalytics): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['ok' => false, 'error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $insights = $groqAnalytics->getUserHobbyInsights((int) $user->id);
+        return $this->json(['ok' => true, 'insights' => $insights['insights']]);
+    }
+
+    #[Route('/api/engagement-insights', name: 'app_hobbies_api_engagement', methods: ['GET'])]
+    public function apiEngagementInsights(GroqAnalyticsService $groqAnalytics): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['ok' => false, 'error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $insights = $groqAnalytics->getUserEngagementInsights((int) $user->id);
+        return $this->json(['ok' => true, 'insights' => $insights['insights']]);
+    }
+
+    #[Route('/api/recommendations', name: 'app_hobbies_api_recommendations', methods: ['GET'])]
+    public function apiHobbyRecommendations(GroqAnalyticsService $groqAnalytics): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['ok' => false, 'error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $insights = $groqAnalytics->getHobbyRecommendations((int) $user->id);
+        return $this->json(['ok' => true, 'insights' => $insights['insights']]);
     }
 }

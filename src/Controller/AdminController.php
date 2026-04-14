@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Service\AnalyticsService;
+use App\Service\GroqAnalyticsService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -368,6 +369,13 @@ final class AdminController extends AbstractController
             'friendshipsByStatus' => $this->formatChartData($chartData['friendshipsByStatus']),
             'topBadges' => $this->formatChartData($chartData['topBadges']),
         ]);
+    }
+
+    #[Route('/analytics-insights', name: 'app_admin_analytics_insights', methods: ['GET'])]
+    public function getAnalyticsInsights(GroqAnalyticsService $groqAnalytics): JsonResponse
+    {
+        $insights = $groqAnalytics->getPlatformInsights();
+        return $this->json(['ok' => true, 'insights' => $insights['insights']]);
     }
 
     private function formatChartData(array $data): array
