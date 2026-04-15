@@ -1,0 +1,50 @@
+# Documentation on how to configure the bundle can be found at: https://symfony.com/doc/current/bundles/LiipImagineBundle/basic-usage.html
+liip_imagine:
+    # valid drivers options include "gd" or "gmagick" or "imagick"
+    driver: "gd"
+    
+    resolvers:
+        default:
+            web_path:
+                web_root: '%kernel.project_dir%/public'
+                cache_prefix: 'media/cache'
+    
+    filter_sets:
+        # Thumbnail for instructor dashboard class cards (small preview)
+        admin_thumb:
+            quality: 85
+            filters:
+                thumbnail: { size: [300, 200], mode: outbound }
+        
+        # Larger thumbnail for class detail page
+        class_card:
+            quality: 90
+            filters:
+                thumbnail: { size: [400, 250], mode: outbound }
+                strip: ~
+        
+        # Full-width class banner image
+        class_banner:
+            quality: 85
+            filters:
+                thumbnail: { size: [1200, 300], mode: outbound }
+        
+        # Student progress photo thumbnail
+        progress_photo:
+            quality: 80
+            filters:
+                thumbnail: { size: [200, 200], mode: outbound }
+                strip: ~
+        
+        # Instructor profile picture
+        instructor_avatar:
+            quality: 85
+            filters:
+                thumbnail: { size: [150, 150], mode: outbound }
+        
+        # Mobile-friendly version for responsive design
+        mobile_thumb:
+            quality: 75
+            filters:
+                thumbnail: { size: [200, 150], mode: outbound }
+                strip: ~

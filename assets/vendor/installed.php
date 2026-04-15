@@ -1,4 +1,3 @@
-git commit -m "Last Commit Before Validation"
 <?php return array (
   '@hotwired/stimulus' => 
   array (
@@ -13,6 +12,16 @@ git commit -m "Last Commit Before Validation"
   '@hotwired/turbo' => 
   array (
     'version' => '7.3.0',
+    'dependencies' => 
+    array (
+    ),
+    'extraFiles' => 
+    array (
+    ),
+  ),
+  'chart.js' => 
+  array (
+    'version' => '3.9.1',
     'dependencies' => 
     array (
     ),
