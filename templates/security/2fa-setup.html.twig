@@ -1,0 +1,206 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Enable Two-Factor Authentication - Ghrami{% endblock %}
+
+{% block body %}
+
+<div style="max-width: 600px; margin: 40px auto; padding: 20px;">
+    <div style="background: white; border-radius: 16px; border: 1px solid #e8ecf4; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 32px; overflow: hidden;">
+
+        {% for message in app.flashes('error') %}
+            <div style="background: #fee2e2; padding: 12px 14px; border-radius: 10px; border-left: 4px solid #dc2626; margin-bottom: 16px; color: #991b1b; font-size: 13px;">
+                <strong>Error:</strong> {{ message }}
+            </div>
+        {% endfor %}
+        {% for message in app.flashes('warning') %}
+            <div style="background: #fff7ed; padding: 12px 14px; border-radius: 10px; border-left: 4px solid #f97316; margin-bottom: 16px; color: #9a3412; font-size: 13px;">
+                <strong>Warning:</strong> {{ message }}
+            </div>
+        {% endfor %}
+        {% for message in app.flashes('success') %}
+            <div style="background: #ecfdf5; padding: 12px 14px; border-radius: 10px; border-left: 4px solid #10b981; margin-bottom: 16px; color: #065f46; font-size: 13px;">
+                <strong>Success:</strong> {{ message }}
+            </div>
+        {% endfor %}
+
+        {% if debugCodes is defined and debugCodes %}
+            <div style="background: #fff7ed; padding: 12px 14px; border-radius: 10px; border-left: 4px solid #f97316; margin-bottom: 16px; color: #9a3412; font-size: 12px; font-family: monospace;">
+                <strong>DEV DEBUG CODES</strong><br>
+                prev: {{ debugCodes.previous }}<br>
+                curr: {{ debugCodes.current }}<br>
+                next: {{ debugCodes.next }}
+            </div>
+        {% endif %}
+        
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 32px; position: relative;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
+            <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 800; color: #0f172a;">Enable Two-Factor Authentication</h1>
+            <p style="margin: 0; font-size: 14px; color: #94a3b8;">Secure your account with an extra layer of protection</p>
+            <a href="{{ path('app_profile') }}" style="position: absolute; top: 0; right: 0; background: transparent; color: #4f46e5; padding: 8px 16px; border-radius: 20px; text-decoration: none; font-weight: 600; font-size: 14px; border: 1px solid #e8ecf4; transition: all 0.3s; cursor: pointer;">
+                ← Back to Profile
+            </a>
+        </div>
+
+        <!-- Step 1: QR Code -->
+        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 2px solid #eef2ff;">
+            <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 12px; flex-shrink: 0;">1</div>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">Install Authenticator App</h3>
+            </div>
+            <p style="margin: 0 0 12px 44px; font-size: 13px; color: #64748b;">
+                Download an authenticator app on your phone:
+            </p>
+            <ul style="margin: 0 0 16px 44px; padding-left: 16px; font-size: 13px; color: #64748b;">
+                <li>Google Authenticator</li>
+                <li>Microsoft Authenticator</li>
+                <li>Authy</li>
+                <li>1Password</li>
+                <li>Any TOTP-compatible app</li>
+            </ul>
+        </div>
+
+        <!-- Step 2: Scan QR Code -->
+        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 2px solid #eef2ff;">
+            <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 12px; flex-shrink: 0;">2</div>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">Scan QR Code</h3>
+            </div>
+            <p style="margin: 0 0 12px 44px; font-size: 13px; color: #64748b;">
+                Open your authenticator app and scan this QR code:
+            </p>
+            <div style="text-align: center; margin: 16px 44px;">
+                {{ qrCode|raw }}
+            </div>
+        </div>
+
+        <!-- Step 3: Manual Entry -->
+        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 2px solid #eef2ff;">
+            <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 12px; flex-shrink: 0;">2</div>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">Or Enter Manually</h3>
+            </div>
+            <p style="margin: 0 0 12px 44px; font-size: 13px; color: #64748b;">
+                If you can't scan, enter this secret key manually:
+            </p>
+            <div style="margin: 16px 44px; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e8ecf4; font-family: monospace; font-size: 12px; letter-spacing: 2px; text-align: center; color: #0f172a; font-weight: 700; word-break: break-all;">
+                {{ secret }}
+            </div>
+        </div>
+
+        <!-- Step 4: Verify Code -->
+        <div style="background: #f8fafc; padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 2px solid #eef2ff;">
+            <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 12px; flex-shrink: 0;">3</div>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">Enter Verification Code</h3>
+            </div>
+            <p style="margin: 0 0 16px 44px; font-size: 13px; color: #64748b;">
+                Enter the 6-digit code from your authenticator app:
+            </p>
+            <form id="verifyForm" method="POST" action="{{ path('app_2fa_verify_setup') }}" style="margin-left: 44px;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('verify_2fa_setup') }}">
+                
+                <div style="margin-bottom: 16px;">
+                    <input 
+                        type="text" 
+                        name="code" 
+                        id="verificationCode"
+                        maxlength="6" 
+                        inputmode="numeric" 
+                        pattern="[0-9]{6}"
+                        required
+                        autofocus
+                        placeholder="000000"
+                        style="font-size: 32px; letter-spacing: 8px; text-align: center; padding: 12px; border: 2px solid #e8ecf4; border-radius: 8px; width: 100%; box-sizing: border-box; font-weight: 700;">
+                </div>
+                <button type="submit" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px;">
+                    ✓ Verify & Enable 2FA
+                </button>
+            </form>
+        </div>
+
+        <!-- Backup Codes -->
+        <div style="background: #fef9e7; padding: 24px; border-radius: 12px; border: 2px solid #fbbf24; margin-bottom: 24px;">
+            <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                <div style="font-size: 20px; margin-right: 12px;">⚠️</div>
+                <div>
+                    <h3 style="margin: 0 0 4px 0; font-size: 16px; font-weight: 700; color: #92400e;">Save Your Backup Codes</h3>
+                    <p style="margin: 0; font-size: 13px; color: #854d0e;">
+                        Save these codes in a safe place. You can use them to access your account if you lose your authenticator app.
+                    </p>
+                </div>
+            </div>
+            
+            <div style="background: white; padding: 16px; border-radius: 8px; margin-top: 12px; border: 1px solid #fcd34d;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace; font-size: 12px; font-weight: 700;">
+                    {% for code in backupCodes %}
+                        <div style="background: #fef9e7; padding: 8px; border-radius: 4px; text-align: center; letter-spacing: 1px;">
+                            {{ code }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button onclick="copyBackupCodes()" style="flex: 1; padding: 8px; background: white; border: 1px solid #fbbf24; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 12px;">
+                    📋 Copy All
+                </button>
+                <button onclick="downloadBackupCodes()" style="flex: 1; padding: 8px; background: white; border: 1px solid #fbbf24; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 12px;">
+                    💾 Download
+                </button>
+                <button onclick="printBackupCodes()" style="flex: 1; padding: 8px; background: white; border: 1px solid #fbbf24; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 12px;">
+                    🖨️ Print
+                </button>
+            </div>
+        </div>
+
+        <!-- Security Notice -->
+        <div style="background: #e0f2fe; padding: 16px; border-radius: 12px; border-left: 4px solid #0369a1; margin-bottom: 24px;">
+            <p style="margin: 0; font-size: 12px; color: #0369a1; line-height: 1.6;">
+                <strong>🔒 Security Notice:</strong> Two-Factor Authentication adds an important security layer to your account. 
+                After enabling 2FA, you'll need both your password and your authenticator app to log in.
+            </p>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Auto-format verification code input
+    document.getElementById('verificationCode')?.addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+    });
+
+    // Copy backup codes to clipboard
+    function copyBackupCodes() {
+        const codes = Array.from(document.querySelectorAll('[style*="fef9e7"]')).map(el => el.textContent.trim()).join('\n');
+        navigator.clipboard.writeText(codes).then(() => {
+            alert('✅ Backup codes copied to clipboard!');
+        });
+    }
+
+    // Download backup codes as text file
+    function downloadBackupCodes() {
+        const codes = Array.from(document.querySelectorAll('[style*="fef9e7"]')).map(el => el.textContent.trim()).join('\n');
+        const element = document.createElement("a");
+        element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(codes));
+        element.setAttribute("download", "ghrami-backup-codes.txt");
+        element.style.display = "none";
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+        alert('✅ Backup codes downloaded!');
+    }
+
+    // Print backup codes
+    function printBackupCodes() {
+        const codes = Array.from(document.querySelectorAll('[style*="fef9e7"]')).map(el => el.textContent.trim()).join('\n');
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write('<pre style="font-family: monospace; font-weight: bold;">GHRAMI BACKUP CODES\n' +
+            '==================\n\n' + codes + '\n\nKeep these codes in a safe place!\n\nGenerated: ' + new Date().toLocaleString() + '</pre>');
+        printWindow.document.close();
+        printWindow.print();
+    }
+</script>
+
+{% endblock %}

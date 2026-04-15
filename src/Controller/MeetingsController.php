@@ -509,6 +509,114 @@ final class MeetingsController extends AbstractController
         }
     }
 
+    #[Route('/calendar', name: 'app_meetings_calendar', methods: ['GET'])]
+    public function calendar(Request $request, MeetingsService $meetingsService, EntityManagerInterface $em): Response
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User || $user->id === null) {
+            return $this->redirectToRoute('app_login');
+        }
+
+        $status = $request->query->get('status', '');
+        
+        // Get meetings from database
+        $meetingRepo = $em->getRepository(Meeting::class);
+        $query = $meetingRepo->createQueryBuilder('m')
+            ->where('m.user1 = :user OR m.user2 = :user')
+            ->setParameter('user', $user)
+            ->orderBy('m.scheduledAt', 'ASC');
+
+        // Filter by status if provided
+        if ($status && in_array($status, ['scheduled', 'completed', 'cancelled'])) {
+            $query->andWhere('m.status = :status')
+                ->setParameter('status', $status);
+        }
+
+        $meetings = $query->getQuery()->getResult();
+
+        // Format events for calendar
+        $events = array_map(function(Meeting $meeting) {
+            return [
+                'id' => $meeting->id,
+                'title' => $meeting->title ?? 'Meeting',
+                'start' => $meeting->scheduledAt->format('Y-m-d H:i'),
+                'end' => (clone $meeting->scheduledAt)
+                    ->modify('+' . ($meeting->duration ?? 60) . ' minutes')
+                    ->format('Y-m-d H:i'),
+                'backgroundColor' => match($meeting->status) {
+                    'scheduled' => '#4f46e5',
+                    'completed' => '#059669',
+                    'cancelled' => '#dc2626',
+                    default => '#94a3b8'
+                },
+                'borderColor' => match($meeting->status) {
+                    'scheduled' => '#4338ca',
+                    'completed' => '#047857',
+                    'cancelled' => '#991b1b',
+                    default => '#64748b'
+                },
+                'textColor' => '#fff',
+                'extendedProps' => [
+                    'location' => $meeting->location,
+                    'type' => $meeting->meetingType,
+                    'status' => $meeting->status,
+                    'duration' => $meeting->duration,
+                    'meetingId' => $meeting->id,
+                ]
+            ];
+        }, $meetings);
+
+        return $this->render('meetings/calendar.html.twig', [
+            'events' => $events,
+            'meetings' => $meetings,
+        ]);
+    }
+
+    #[Route('/api/details', name: 'api_meetings_details', methods: ['GET'])]
+    public function getMeetingDetails(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        try {
+            $user = $this->getUser();
+            if (!$user instanceof User || $user->id === null) {
+                return new JsonResponse(['ok' => false, 'error' => 'Not authenticated'], 401);
+            }
+
+            $meetingId = (int) $request->query->get('id', 0);
+            if ($meetingId === 0) {
+                return new JsonResponse(['ok' => false, 'error' => 'Meeting ID required'], 400);
+            }
+
+            $meetingRepo = $em->getRepository(Meeting::class);
+            $meeting = $meetingRepo->find($meetingId);
+
+            if (!$meeting) {
+                return new JsonResponse(['ok' => false, 'error' => 'Meeting not found'], 404);
+            }
+
+            // Check access
+            if ($meeting->user1?->id !== $user->id && $meeting->user2?->id !== $user->id) {
+                return new JsonResponse(['ok' => false, 'error' => 'Access denied'], 403);
+            }
+
+            return new JsonResponse([
+                'ok' => true,
+                'meeting' => [
+                    'id' => $meeting->id,
+                    'title' => $meeting->title,
+                    'scheduledAt' => $meeting->scheduledAt->format('c'),
+                    'duration' => $meeting->duration,
+                    'location' => $meeting->location,
+                    'type' => $meeting->meetingType,
+                    'status' => $meeting->status,
+                    'notes' => $meeting->notes,
+                    'googleMeetLink' => $meeting->googleMeetLink,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse(['ok' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
     private function firstValidationMessage(ConstraintViolationListInterface $violations): string
     {
         foreach ($violations as $violation) {

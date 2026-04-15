@@ -64,6 +64,13 @@ class LoginFormAuthenticator extends AbstractLoginFormAuthenticator
     {
         $user = $token->getUser();
         if ($user instanceof User) {
+            // Check if user has 2FA enabled
+            if ($user->isTwoFactorEnabled) {
+                // Pause the login process for 2FA verification
+                $request->getSession()->set('pending_2fa_user_id', $user->id);
+                return new RedirectResponse($this->urlGenerator->generate('app_2fa_verify_form'));
+            }
+
             $user->isOnline = true;
             $user->lastLogin = new \DateTime();
             $this->entityManager->flush();
