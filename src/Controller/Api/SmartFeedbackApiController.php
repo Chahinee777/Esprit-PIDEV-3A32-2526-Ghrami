@@ -43,9 +43,17 @@ final class SmartFeedbackApiController extends AbstractController
             $answer = $data['answer'] ?? '';
             $context = $data['context'] ?? null;
             $expectedAnswer = $data['expectedAnswer'] ?? null;
+            $className = $data['className'] ?? null;
+            $category = $data['category'] ?? null;
 
             if (empty($question) || empty($answer)) {
                 return $this->json(['ok' => false, 'error' => 'Question and answer required'], Response::HTTP_BAD_REQUEST);
+            }
+
+            // Enhance context with class details if provided
+            if ($className) {
+                $classInfo = $className . ($category ? " ($category)" : "");
+                $context = $context ? $context . " | Class: $classInfo" : "Class: $classInfo";
             }
 
             $feedback = $this->feedbackService->generateFeedback(

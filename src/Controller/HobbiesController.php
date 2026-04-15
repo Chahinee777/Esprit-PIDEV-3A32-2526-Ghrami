@@ -571,11 +571,10 @@ final class HobbiesController extends AbstractController
 
     private function buildCoachSystemContext(Hobby $hobby, EntityManagerInterface $entityManager): string
     {
-        $context = "You are an enthusiastic AI hobby coach called 'Hobby Coach'. ";
-        $context .= "Help users improve in their hobbies with personalized tips, practice plans, and motivation. ";
-        $context .= "Be friendly, concise (under 120 words unless asked for more), and use emojis occasionally. ";
-        $context .= "Always reference the user's actual hobby data when it is relevant.\n\n";
-        $context .= "User's hobby data:\n";
+        $context = "You are an AI hobby coach called 'Hobby Coach'. YOUR ROLE: Help users improve specifically in the hobby they track with you. ";
+        $context .= "IMPORTANT BOUNDARY: You can ONLY provide coaching for the specific hobby below. ";
+        $context .= "If the user asks about something unrelated to their hobby (sports teams, general knowledge, politics, etc.), politely decline and refocus on their hobby.\n\n";
+        $context .= "Hobby you're coaching for:\n";
 
         $totalHours = 0;
         if ($hobby->progress && $hobby->progress->count() > 0) {
@@ -601,7 +600,8 @@ final class HobbiesController extends AbstractController
             count($milestones)
         );
 
-        $context .= "\nBe encouraging, realistic, and actionable in all your responses.";
+        $context .= "\n🚫 STRICT RULE: Only answer questions about " . $hobby->name . ". Decline politely for any off-topic requests.\n";
+        $context .= "Be encouraging, realistic, and actionable in all your responses about their hobby.";
         return $context;
     }
 
@@ -624,17 +624,17 @@ final class HobbiesController extends AbstractController
         }
 
         // Build context with ALL user's hobbies
-        $systemContext = "You are an enthusiastic AI hobby coach called 'Hobby Coach'. ";
-        $systemContext .= "Help users improve in their hobbies with personalized tips, practice plans, and motivation. ";
-        $systemContext .= "Be friendly, concise (under 120 words unless asked for more), and use emojis occasionally. ";
-        $systemContext .= "Always reference the user's actual hobby data when it is relevant.\n\n";
-        $systemContext .= "User's current hobby data:\n";
+        $systemContext = "You are an AI hobby coach called 'Hobby Coach'. YOUR ROLE: Help users improve in the hobbies they track with you. ";
+        $systemContext .= "CRITICAL BOUNDARY: You can ONLY provide coaching for the hobbies listed below. ";
+        $systemContext .= "If the user asks about something unrelated to their hobbies (sports teams, celebrities, general knowledge, politics, etc.), politely decline and ask them to focus on their hobbies.\n\n";
+        $systemContext .= "User's tracked hobbies:\n";
 
         $hobbyRepo = $entityManager->getRepository(Hobby::class);
         $hobbies = $hobbyRepo->findBy(['user' => $user]);
 
         if (empty($hobbies)) {
-            $systemContext .= "• No hobbies tracked yet — encourage the user to start tracking.\n";
+            $systemContext .= "• User has no hobbies tracked yet.\n";
+            $systemContext .= "If they start describing a hobby, enthusiastically encourage them to track it.\n";
         } else {
             $progressRepo = $entityManager->getRepository(Progress::class);
             $milestoneRepo = $entityManager->getRepository(Milestone::class);
@@ -660,7 +660,8 @@ final class HobbiesController extends AbstractController
             }
         }
 
-        $systemContext .= "\nBe encouraging, realistic, and actionable in all your responses.";
+        $systemContext .= "\n🚫 STRICT RULE: Only discuss the hobbies above. If asked about unrelated topics, respond with: 'I'm your hobby coach! I can only help with [hobby names]. Let's focus on improving your skills there!'\n";
+        $systemContext .= "Be encouraging, realistic, and actionable in all responses about their hobbies.";
 
         try {
             $response = $coachService->chat($message, $systemContext);

@@ -104,7 +104,7 @@ class SmartFeedbackService
         ?string $context,
         ?string $correctAnswer
     ): string {
-        $prompt = "You are evaluating a student's answer to an educational question.\n\n" .
+        $prompt = "You are an EXTREMELY STRICT, BRUTAL educator. NO MERCY. NO ENCOURAGEMENT. ONLY RAW TRUTH.\n\n" .
                   "QUESTION: $question\n\n" .
                   "STUDENT'S ANSWER: $studentAnswer\n";
 
@@ -113,19 +113,36 @@ class SmartFeedbackService
         }
 
         if ($context) {
-            $prompt .= "\nCONTEXT: $context\n";
+            $prompt .= "\nCONTEXT: $context\n" .
+                       "VALIDATION RULE: If the answer is OFF-TOPIC or IRRELEVANT to this class, DESTROY IT. " .
+                       "Be absolutely SAVAGE. Tell them they're wasting time and money. " .
+                       "Make them feel the pain of their incompetence. " .
+                       "NO supportive language. NO 'good effort'. NO encouragement. ONLY BRUTAL HONESTY.\n";
         }
 
         $prompt .= "\nProvide feedback in this EXACT JSON format (no markdown, pure JSON):\n" .
                    "{\n" .
                    "  \"isCorrect\": true/false,\n" .
-                   "  \"feedback\": \"Encouragement + constructive comment (1-2 sentences)\",\n" .
+                   "  \"feedback\": \"BRUTAL, MERCILESS feedback. Attack the answer directly. NO positive words. (2-3 sentences)\",\n" .
                    "  \"score\": 0-100,\n" .
-                   "  \"reasoning\": \"Brief explanation of why this is correct/incorrect\",\n" .
-                   "  \"suggestions\": [\"Suggestion 1\", \"Suggestion 2\", \"Suggestion 3\"],\n" .
-                   "  \"nextLessonHint\": \"What specific topic or lesson to review next\"\n" .
+                   "  \"reasoning\": \"Savage explanation. Be ruthless. Point out every failure.\",\n" .
+                   "  \"suggestions\": [\"Harsh demand 1\", \"Harsh demand 2\", \"Harsh demand 3\"],\n" .
+                   "  \"nextLessonHint\": \"What they MUST fix immediately or they're wasting their time\"\n" .
                    "}\n\n" .
-                   "Be encouraging! Mistakes are learning opportunities. Focus on growth.";
+                   "SCORING RULES (STRICT):\n" .
+                   "- COMPLETELY OFF-TOPIC: 10-20 max. Call out the stupidity.\n" .
+                   "- SOMEWHAT RELEVANT BUT TERRIBLE: 25-35. Brutal criticism.\n" .
+                   "- PARTIALLY CORRECT BUT WEAK: 40-50. Harsh demands.\n" .
+                   "- MOSTLY CORRECT BUT INCOMPLETE: 60-70. Point out failures.\n" .
+                   "- EXCELLENT: 85-100. Acknowledge but demand perfection.\n\n" .
+                   "TONE RULES (MANDATORY):\n" .
+                   "✗ NEVER say 'Good effort', 'Well done', or any positive words\n" .
+                   "✗ NEVER be encouraging or supportive\n" .
+                   "✗ NEVER sugarcoat anything\n" .
+                   "✓ Always be direct, harsh, and brutal\n" .
+                   "✓ Attack weak thinking\n" .
+                   "✓ Demand immediate improvement\n" .
+                   "✓ Make them regret not studying properly";
 
         return $prompt;
     }
