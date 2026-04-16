@@ -144,6 +144,15 @@
                             </button>
                         {% endif %}
 
+                        {# 🧠 Take Quiz — answer questions and get smart feedback #}
+                        {% if isPaid %}
+                            <button type="button"
+                                    onclick="openQuizModal({{ b.class_id }}, '{{ b.class_title|escape('js') }}', '{{ b.class_category|escape('js') }}')"
+                                    style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 8px 18px; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;">
+                                🧠 Test Knowledge
+                            </button>
+                        {% endif %}
+
                         {# 📄 Certificate — for completed bookings #}
                         {% if isCompleted %}
                             <a href="{{ path('app_marketplace_certificate_download', {bookingId: b.booking_id}) }}"
@@ -282,6 +291,95 @@
                 <p id="viewReviewText" style="margin:0; font-size:14px; color:#65676b; line-height:1.5;"></p>
             </div>
             <button onclick="closeViewRatingModal()" style="width:100%; padding:10px 16px; background:#f3f4f6; border:none; border-radius:6px; font-weight:600; cursor:pointer; color:#1c1e21;">Close</button>
+        </div>
+    </div>
+</div>
+
+{# ── Smart Feedback / Quiz Modal ──────────────────────────────────────────── #}
+<div id="quizModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; max-width:700px; width:90%; max-height:85vh; overflow-y:auto;" onclick="event.stopPropagation()">
+        
+        {# Header #}
+        <div style="background:linear-gradient(to right, #8b5cf6, #7c3aed); padding:20px; border-radius:12px 12px 0 0; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h2 style="margin:0; font-size:20px; font-weight:700; color:white;">🧠 Test Your Knowledge</h2>
+                <p id="quizSubtitle" style="margin:4px 0 0 0; font-size:13px; color:rgba(255,255,255,0.9);"></p>
+            </div>
+            <button onclick="closeQuizModal()" style="background:none; border:none; font-size:26px; cursor:pointer; color:white;">✕</button>
+        </div>
+
+        {# Content #}
+        <div style="padding:24px;">
+            
+            {# Question display #}
+            <div id="quizContent" style="margin-bottom:20px;">
+                <div id="questionDisplay" style="background:#f3f4f6; padding:16px; border-radius:8px; margin-bottom:20px; border-left:4px solid #8b5cf6;">
+                    <p id="currentQuestion" style="margin:0; font-size:15px; font-weight:600; color:#1c1e21; line-height:1.6;"></p>
+                </div>
+
+                {# Answer input #}
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12px; font-weight:600; color:#65676b; margin-bottom:8px; text-transform:uppercase;">
+                        Your Answer
+                    </label>
+                    <textarea id="studentAnswer" placeholder="Type your answer here..." rows="4"
+                              style="width:100%; padding:10px 12px; border:2px solid #e5e7eb; border-radius:6px; font-size:14px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
+                </div>
+
+                {# Submit button #}
+                <button onclick="submitAnswer()" style="width:100%; padding:12px 16px; background:linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color:white; border:none; border-radius:6px; font-weight:600; font-size:14px; cursor:pointer;">
+                    ✓ Get Feedback
+                </button>
+            </div>
+
+            {# Feedback display (hidden initially) #}
+            <div id="feedbackContent" style="display:none;">
+                <div id="feedbackBox" style="background:#f0fdf4; border:2px solid #86efac; border-radius:8px; padding:16px; margin-bottom:20px;">
+                    
+                    {# Result badge #}
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+                        <div id="resultBadge" style="font-size:24px; font-weight:700;"></div>
+                        <div>
+                            <p id="resultText" style="margin:0; font-size:15px; font-weight:700; color:#065f46;"></p>
+                            <p id="scoreBadge" style="margin:2px 0 0 0; font-size:12px; color:#059669; font-weight:600;"></p>
+                        </div>
+                    </div>
+
+                    {# Main feedback #}
+                    <div style="background:white; padding:12px; border-radius:6px; margin-bottom:12px;">
+                        <p id="feedbackText" style="margin:0; font-size:14px; color:#1c1e21; line-height:1.6;"></p>
+                    </div>
+
+                    {# Reasoning #}
+                    <div style="background:white; padding:12px; border-radius:6px; margin-bottom:12px; border-left:3px solid #10b981;">
+                        <p style="margin:0 0 4px 0; font-size:11px; font-weight:600; color:#059669; text-transform:uppercase;">Why</p>
+                        <p id="reasoningText" style="margin:0; font-size:13px; color:#65676b;"></p>
+                    </div>
+
+                    {# Suggestions #}
+                    <div style="background:white; padding:12px; border-radius:6px; margin-bottom:12px;">
+                        <p style="margin:0 0 8px 0; font-size:11px; font-weight:600; color:#059669; text-transform:uppercase;">💡 Tips to improve</p>
+                        <ul id="suggestionsList" style="margin:0; padding-left:20px; color:#65676b; font-size:13px;">
+                        </ul>
+                    </div>
+
+                    {# Next lesson hint #}
+                    <div style="background:linear-gradient(135deg, #dbeafe, #e0f2fe); padding:12px; border-radius:6px; border-left:3px solid #0ea5e9;">
+                        <p style="margin:0 0 4px 0; font-size:11px; font-weight:600; color:#0369a1; text-transform:uppercase;">📚 Next topic</p>
+                        <p id="nextLessonText" style="margin:0; font-size:13px; color:#0c4a6e;"></p>
+                    </div>
+                </div>
+
+                {# Action buttons #}
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <button onclick="closeQuizModal()" style="padding:12px 16px; border:1px solid #e5e7eb; background:white; border-radius:6px; font-weight:600; cursor:pointer; color:#1c1e21;">
+                        Close
+                    </button>
+                    <button onclick="tryAnotherQuestion()" style="padding:12px 16px; background:linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;">
+                        🔄 Try Another Question
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -524,8 +622,240 @@
 
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
+    // ── Smart Feedback / Quiz Functions ───────────────────────────────────────
+    const sampleQuestions = {
+        'coding': [
+            'What is Object-Oriented Programming and its main principles?',
+            'Explain the difference between a class and an object.',
+            'What is inheritance in programming?',
+            'How do you handle exceptions in code?',
+            'What is the difference between a function and a method?',
+        ],
+        'docker': [
+            'What is Docker and what problem does it solve?',
+            'Explain the difference between a Docker image and a container.',
+            'What is a Dockerfile and what does it contain?',
+            'How do you run a container from an image?',
+            'What are Docker volumes and why are they important?',
+        ],
+        'kubernetes': [
+            'What is Kubernetes and why is it used?',
+            'Explain what a Pod is in Kubernetes.',
+            'What is a Service in Kubernetes?',
+            'How do you deploy an application to Kubernetes?',
+            'What is a ConfigMap?',
+        ],
+        'football': [
+            'What are the main positions in football and their responsibilities?',
+            'Explain the offside rule and why it exists.',
+            'What makes an effective passing strategy?',
+            'How do defensive formations impact game play?',
+            'What are the key skills needed to be a good goalkeeper?',
+        ],
+        'music': [
+            'What are the basic music notes and their durations?',
+            'Explain the difference between major and minor scales.',
+            'What is rhythm and how does it relate to tempo?',
+            'How do you read sheet music?',
+            'What are the main instruments in an orchestra?',
+        ],
+        'web development': [
+            'What is the difference between HTML, CSS, and JavaScript?',
+            'Explain the concept of responsive design.',
+            'What is a REST API?',
+            'How does the DOM work in web browsers?',
+            'What is the difference between server-side and client-side rendering?',
+        ],
+        'symfony': [
+            'What is the Symfony framework and what are its main components?',
+            'Explain the MVC architecture used in Symfony.',
+            'What is a Symfony bundle?',
+            'How do Symfony controllers work?',
+            'What is dependency injection in Symfony?',
+        ],
+        'general': [
+            'Summarize what you learned from this lesson.',
+            'How would you apply this to a real-world scenario?',
+            'What was the most important concept from this section?',
+            'Explain one key takeaway in your own words.',
+        ]
+    };
+
+    let currentQuizClassId = null;
+    let currentQuizClassName = null;
+    let currentQuizCategory = null;
+
+    // Extract knowledge domain from class name/category
+    function getKnowledgeDomain(className, category) {
+        const combined = (className + ' ' + (category || '')).toLowerCase();
+        
+        // Check class name keywords
+        if (combined.includes('coding') || combined.includes('code') || combined.includes('programming')) return 'coding';
+        if (combined.includes('docker')) return 'docker';
+        if (combined.includes('kubernetes')) return 'kubernetes';
+        if (combined.includes('football') || combined.includes('soccer')) return 'football';
+        if (combined.includes('music') || combined.includes('violin') || combined.includes('guitar') || combined.includes('piano')) return 'music';
+        if (combined.includes('web') || combined.includes('html') || combined.includes('css') || combined.includes('javascript') || combined.includes('react')) return 'web development';
+        if (combined.includes('symfony') || combined.includes('php')) return 'symfony';
+        
+        return null;
+    }
+
+    function openQuizModal(classId, className, category) {
+        currentQuizClassId = classId;
+        currentQuizClassName = className;
+        currentQuizCategory = category || '';
+        
+        // Determine knowledge domain from class name/category
+        const domain = getKnowledgeDomain(className, category);
+        
+        const quizSubtitle = document.getElementById('quizSubtitle');
+        if (domain) {
+            quizSubtitle.textContent = `${className} - ${domain.charAt(0).toUpperCase() + domain.slice(1)} Knowledge`;
+        } else {
+            quizSubtitle.textContent = `${className} - General Knowledge`;
+        }
+        
+        // Select a random question - use domain-specific or general fallback
+        const questions = domain ? sampleQuestions[domain] : sampleQuestions['general'];
+        const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+        
+        document.getElementById('currentQuestion').textContent = randomQuestion;
+        document.getElementById('studentAnswer').value = '';
+        document.getElementById('quizContent').style.display = 'block';
+        document.getElementById('feedbackContent').style.display = 'none';
+        document.getElementById('quizModal').style.display = 'flex';
+    }
+
+    function closeQuizModal() {
+        document.getElementById('quizModal').style.display = 'none';
+    }
+
+    async function submitAnswer() {
+        const question = document.getElementById('currentQuestion').textContent;
+        const answer = document.getElementById('studentAnswer').value.trim();
+
+        if (!answer) {
+            alert('⚠️ Please enter an answer.');
+            return;
+        }
+
+        // Show loading state
+        const submitBtn = event.target;
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = '🔄 Analyzing...';
+        submitBtn.disabled = true;
+
+        try {
+            // Build detailed context including class name and category for AI validation
+            const domain = getKnowledgeDomain(currentQuizClassName, currentQuizCategory);
+            const contextDetails = `${currentQuizClassName}${currentQuizCategory ? ' (' + currentQuizCategory + ')' : ''}`;
+            const contextTopic = domain ? domain.charAt(0).toUpperCase() + domain.slice(1) : 'General Knowledge';
+            
+            const response = await fetch('{{ path('api_smart_feedback_analyze') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: question,
+                    answer: answer,
+                    context: `${contextDetails} - ${contextTopic} Test`,
+                    className: currentQuizClassName,
+                    category: currentQuizCategory
+                })
+            });
+
+            const data = await response.json();
+
+            if (!data.ok) {
+                alert('❌ ' + (data.error || 'Failed to get feedback.'));
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                return;
+            }
+
+            displayFeedback(data.feedback);
+        } catch (error) {
+            console.error('Feedback error:', error);
+            alert('❌ Error getting feedback. Please try again.');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+
+    function displayFeedback(feedback) {
+        const score = feedback.score;
+        
+        // Result badge and message based on SCORE
+        const resultBadge = document.getElementById('resultBadge');
+        const resultText = document.getElementById('resultText');
+        const scoreBadge = document.getElementById('scoreBadge');
+
+        if (score >= 85) {
+            resultBadge.textContent = '✅';
+            resultBadge.style.color = '#22c55e';
+            resultText.textContent = 'Excellent!';
+            resultText.style.color = '#065f46';
+        } else if (score >= 60) {
+            resultBadge.textContent = '⚠️';
+            resultBadge.style.color = '#f59e0b';
+            resultText.textContent = 'Acceptable';
+            resultText.style.color = '#92400e';
+        } else if (score >= 40) {
+            resultBadge.textContent = '❌';
+            resultBadge.style.color = '#ef4444';
+            resultText.textContent = 'Inadequate';
+            resultText.style.color = '#7f1d1d';
+        } else if (score >= 20) {
+            resultBadge.textContent = '💥';
+            resultBadge.style.color = '#dc2626';
+            resultText.textContent = 'Unacceptable';
+            resultText.style.color = '#7f1d1d';
+        } else {
+            resultBadge.textContent = '🚫';
+            resultBadge.style.color = '#991b1b';
+            resultText.textContent = 'FAILURE';
+            resultText.style.color = '#7f1d1d';
+        }
+
+        scoreBadge.textContent = `Score: ${score}/100`;
+
+        // Feedback text
+        document.getElementById('feedbackText').textContent = feedback.feedback;
+        document.getElementById('reasoningText').textContent = feedback.reasoning;
+
+        // Suggestions list
+        const suggestionsList = document.getElementById('suggestionsList');
+        suggestionsList.innerHTML = feedback.suggestions
+            .map(s => `<li style="margin-bottom:4px;">${s}</li>`)
+            .join('');
+
+        // Next lesson hint
+        document.getElementById('nextLessonText').textContent = feedback.nextLessonHint;
+
+        // Show feedback, hide question
+        document.getElementById('quizContent').style.display = 'none';
+        document.getElementById('feedbackContent').style.display = 'block';
+    }
+
+    function tryAnotherQuestion() {
+        const domain = getKnowledgeDomain(currentQuizClassName, currentQuizCategory);
+        const questions = domain ? sampleQuestions[domain] : sampleQuestions['general'];
+        const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+        
+        document.getElementById('currentQuestion').textContent = randomQuestion;
+        document.getElementById('studentAnswer').value = '';
+        document.getElementById('quizContent').style.display = 'block';
+        document.getElementById('feedbackContent').style.display = 'none';
+        
+        const submitBtn = document.querySelector('#quizContent button');
+        submitBtn.textContent = '✓ Get Feedback';
+        submitBtn.disabled = false;
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
     // Click-outside-to-close
-    ['ratingModal','viewRatingModal','classDetailModal','videoPlayerModal'].forEach(id => {
+    ['ratingModal','viewRatingModal','classDetailModal','videoPlayerModal','quizModal'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('click', e => {
             if (e.target.id === id) id === 'videoPlayerModal' ? closeVideoPlayer() : closeModal(id);

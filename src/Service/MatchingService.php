@@ -420,7 +420,7 @@ class MatchingService
     public function getPendingRequestsForUser(int $userId): array
     {
         return $this->em->getConnection()->fetchAllAssociative(
-            "SELECT f.friendship_id, f.user1_id, u.username, u.full_name AS user_full_name, u.bio, u.location, u.profile_picture
+            "SELECT f.friendship_id, f.user1_id, f.created_date, u.username, u.full_name AS user_full_name, u.bio, u.location, u.profile_picture
              FROM friendships f
              JOIN users u ON f.user1_id = u.user_id
              WHERE f.user2_id = :uid AND f.status = 'PENDING'

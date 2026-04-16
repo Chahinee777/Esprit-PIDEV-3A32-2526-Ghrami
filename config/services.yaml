@@ -34,5 +34,37 @@ services:
         arguments:
             $projectDir: '%kernel.project_dir%'
 
+    App\Service\GroqSmartMatchingService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
+    App\Service\SmartFeedbackService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
+    App\Service\HobbyCoachService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+            $groqModel: '%env(GROQ_TEXT_MODEL)%'
+
+    App\Service\GroqAnalyticsService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+            $groqModel: '%env(GROQ_TEXT_MODEL)%'
+
+    App\Service\SmartRepliesService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+            $groqModel: '%env(GROQ_TEXT_MODEL)%'
+
+    App\Service\VoiceTranscriptionService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
+    App\Service\AiContentService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+            $groqModel: '%env(GROQ_TEXT_MODEL)%'
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

@@ -25,8 +25,8 @@
         <div>
             <h1 style="margin: 0 0 8px 0; color: white;">{{ profile.fullName ?: profile.username }}</h1>
             <p style="margin: 0; opacity: 0.9;">@{{ profile.username }}</p>
-            {% if profile.location %}
-            <p style="margin: 4px 0 0 0; opacity: 0.8; font-size: 14px;">📍 {{ profile.location }}</p>
+            {% if profileLocation %}
+            <p style="margin: 4px 0 0 0; opacity: 0.8; font-size: 14px;">📍 {{ profileLocation }}</p>
             {% endif %}
         </div>
     </div>
@@ -86,7 +86,7 @@
                 <!-- Location -->
                 <div class="form-group">
                     <label for="location" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">📍 Localisation</label>
-                    <input id="location" type="text" name="location" value="{{ profile.location ?? '' }}" placeholder="Ville, Pays" maxlength="100" style="width: 100%; padding: 12px 16px; border: 2px solid #e4e6eb; border-radius: 8px; font-size: 14px; transition: all 0.3s ease;" onfocus="this.style.borderColor='#667eea'">
+                    <input id="location" type="text" name="location" value="{{ profileLocation|default('') }}" placeholder="Ville, Pays" maxlength="100" style="width: 100%; padding: 12px 16px; border: 2px solid #e4e6eb; border-radius: 8px; font-size: 14px; transition: all 0.3s ease;" onfocus="this.style.borderColor='#667eea'">
                 </div>
                 
                 <!-- Bio -->
@@ -99,11 +99,21 @@
                 <!-- Profile Picture -->
                 <div class="form-group">
                     <label for="profile_picture" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">📷 Photo de Profil</label>
-                    <div style="border: 2px dashed #667eea; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;" id="upload-zone">
-                        <input id="profile_picture" type="file" name="profile_picture" accept="image/jpeg,image/png,image/webp" style="display: none;">
-                        <div style="font-size: 32px; margin-bottom: 8px;">📸</div>
-                        <div style="font-weight: 600; color: #1c1e21; margin-bottom: 4px;">Cliquez pour télécharger</div>
-                        <div style="font-size: 13px; color: #65676b;">JPG, PNG ou WEBP (Max 5MB)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <!-- Upload Zone -->
+                        <div style="border: 2px dashed #667eea; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;" id="upload-zone">
+                            <input id="profile_picture" type="file" name="profile_picture" accept="image/jpeg,image/png,image/webp" style="display: none;">
+                            <div style="font-size: 32px; margin-bottom: 8px;">📸</div>
+                            <div style="font-weight: 600; color: #1c1e21; margin-bottom: 4px;">Cliquez pour télécharger</div>
+                            <div style="font-size: 13px; color: #65676b;">JPG, PNG ou WEBP (Max 5MB)</div>
+                        </div>
+                        
+                        <!-- Generate Zone -->
+                        <div style="border: 2px dashed #764ba2; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;" id="generate-zone" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+                            <div style="font-size: 32px; margin-bottom: 8px;">✨</div>
+                            <div style="font-weight: 600; color: #1c1e21; margin-bottom: 4px;">Générer avec IA</div>
+                            <div style="font-size: 13px; color: #65676b;">Créer avec imfin.it</div>
+                        </div>
                     </div>
                 </div>
                 
@@ -299,7 +309,85 @@
         document.getElementById('profile_picture').files = e.dataTransfer.files;
     });
 
-    // Update char count
+    // Modal dialog for AI image generation
+    const aiModal = document.getElementById('aiGenerateModal');
+    const promptInput = document.getElementById('genPrompt');
+    const modelSelect = document.getElementById('genModel');
+    const charCount = document.getElementById('charCount');
+    
+    // Open modal on generate zone click
+    document.getElementById('generate-zone')?.addEventListener('click', function() {
+        aiModal.style.display = 'flex';
+        promptInput.focus();
+    });
+    
+    // Close modal function
+    function closeAIModal() {
+        aiModal.style.display = 'none';
+    }
+    
+    // Close on background click
+    aiModal?.addEventListener('click', function(e) {
+        if (e.target === this) closeAIModal();
+    });
+    
+    // Close button
+    document.getElementById('aiModalClose')?.addEventListener('click', closeAIModal);
+    
+    // Update character count in modal
+    promptInput?.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+    });
+    
+    // Generate on button click in modal
+    document.getElementById('aiGenerateBtn')?.addEventListener('click', async function() {
+        const prompt = promptInput.value.trim();
+        const model = modelSelect.value;
+        const aspectRatio = document.getElementById('genAspectRatio').value;
+        
+        if (!prompt) {
+            alert('Veuillez entrer une description pour générer une image');
+            return;
+        }
+        
+        const generateBtn = this;
+        const originalHTML = generateBtn.innerHTML;
+        
+        try {
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '⏳ Génération...';
+            
+            const response = await fetch('{{ path("app_profile_generate_image") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    _csrf_token: document.querySelector('input[name="_csrf_token"]').value,
+                    prompt: prompt,
+                    model: model,
+                    ar: aspectRatio
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                generateBtn.innerHTML = '✅ Généré!';
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                throw new Error(data.error || 'Generation failed');
+            }
+        } catch (error) {
+            console.error('Generation error:', error);
+            generateBtn.innerHTML = originalHTML;
+            generateBtn.disabled = false;
+            alert('⚠️ Erreur: ' + error.message);
+        }
+    });
     document.getElementById('bio')?.addEventListener('input', function() {
         const count = this.value.length;
         const max = 500;
@@ -366,6 +454,124 @@
     </div>
 </div>
 
+<!-- AI Image Generation Modal -->
+<div id="aiGenerateModal" style="
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;">
+    
+    <div style="
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease-out;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 22px; color: #1c1e21;">✨ Générer avec IA</h2>
+            <button id="aiModalClose" style="
+                background: none;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                color: #999;">✕</button>
+        </div>
+        
+        <!-- Prompt Input -->
+        <div style="margin-bottom: 16px;">
+            <label for="genPrompt" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Description</label>
+            <textarea id="genPrompt" rows="4" placeholder="Ex: Portrait d'une personne avec des lunettes, style artistique et moderne..." maxlength="500" style="
+                width: 100%;
+                padding: 12px 16px;
+                border: 2px solid #e4e6eb;
+                border-radius: 8px;
+                font-size: 14px;
+                font-family: inherit;
+                resize: vertical;
+                transition: all 0.3s;
+                box-sizing: border-box;" onfocus="this.style.borderColor='#667eea'"></textarea>
+            <div style="font-size: 12px; color: #65676b; margin-top: 4px;">
+                <span id="charCount">0</span>/500 caractères
+            </div>
+        </div>
+        
+        <!-- Model Selection -->
+        <div style="margin-bottom: 20px;">
+            <label for="genModel" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Modèle d'IA</label>
+            <select id="genModel" style="
+                width: 100%;
+                padding: 10px 12px;
+                border: 2px solid #e4e6eb;
+                border-radius: 8px;
+                font-size: 14px;
+                cursor: pointer;
+                background-color: white;
+                transition: all 0.3s;" onfocus="this.style.borderColor='#667eea'">
+                <option value="gemini">Gemini (Rapide et de qualité)</option>
+                <option value="ultra">Ultra (Haute qualité)</option>
+                <option value="imagen4">Imagen 4 (Réaliste)</option>
+                <option value="seedream-4">Seedream 4 (Créatif)</option>
+                <option value="nano-banana-2">Nano Banana 2 (Très rapide)</option>
+            </select>
+        </div>
+        
+        <!-- Aspect Ratio -->
+        <div style="margin-bottom: 20px;">
+            <label for="genAspectRatio" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Ratio</label>
+            <select id="genAspectRatio" style="
+                width: 100%;
+                padding: 10px 12px;
+                border: 2px solid #e4e6eb;
+                border-radius: 8px;
+                font-size: 14px;
+                cursor: pointer;
+                background-color: white;
+                transition: all 0.3s;" onfocus="this.style.borderColor='#667eea'">
+                <option value="1:1">Carré (1:1) - Profil</option>
+                <option value="16:9">Large (16:9)</option>
+                <option value="9:16">Portrait (9:16)</option>
+                <option value="4:3">Standard (4:3)</option>
+                <option value="3:4">Vertical (3:4)</option>
+            </select>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 12px;">
+            <button type="button" onclick="closeAIModal()" style="
+                flex: 1;
+                padding: 12px;
+                background: #f0f2f5;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+                color: #1c1e21;" onmouseover="this.style.background='#e4e6eb'" onmouseout="this.style.background='#f0f2f5'">
+                Annuler
+            </button>
+            <button id="aiGenerateBtn" type="button" style="
+                flex: 1;
+                padding: 12px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='brightness(1)'">
+                🚀 Générer
+            </button>
+        </div>
+    </div>
+</div>
+
 <style>
     @keyframes slideUp {
         from {
@@ -375,6 +581,15 @@
         to {
             opacity: 1;
             transform: translateY(0);
+        }
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
         }
     }
 

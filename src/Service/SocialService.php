@@ -16,45 +16,68 @@ class SocialService
     {
     }
 
-    public function getFeedForUser(int $userId, int $page = 1, int $perPage = 20): array
+    public function getFeedForUser(int $userId, int $page = 1, int $perPage = 20, string $searchQuery = '', string $sort = 'recent'): array
     {
         $page = max(1, $page);
         $perPage = max(1, min(50, $perPage));
         $offset = ($page - 1) * $perPage;
 
-        $sql = "SELECT p.post_id, p.user_id, p.content, p.image_url, p.created_at,
+        $sql = "SELECT p.post_id, p.user_id, p.content, p.image_url, p.location, p.mood, p.hobby_tag, p.visibility, p.created_at, p.updated_at,
                        u.username, u.full_name, u.profile_picture,
                        (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) AS likes_count,
                        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comments_count,
                        EXISTS(SELECT 1 FROM post_likes pl2 WHERE pl2.post_id = p.post_id AND pl2.user_id = :uid) AS liked_by_me
                 FROM posts p
                 JOIN users u ON u.user_id = p.user_id
-                WHERE p.user_id = :uid
-                   OR p.user_id IN (
-                      SELECT user2_id FROM friendships WHERE user1_id = :uid AND status = 'ACCEPTED'
-                      UNION
-                      SELECT user1_id FROM friendships WHERE user2_id = :uid AND status = 'ACCEPTED'
-                   )
-                ORDER BY p.created_at DESC
-                LIMIT :limit OFFSET :offset";
+                WHERE (
+                    p.user_id = :uid
+                    OR p.visibility = 'public'
+                    OR (
+                        p.visibility = 'friends'
+                        AND p.user_id IN (
+                            SELECT user2_id FROM friendships WHERE user1_id = :uid AND status = 'ACCEPTED'
+                            UNION
+                            SELECT user1_id FROM friendships WHERE user2_id = :uid AND status = 'ACCEPTED'
+                        )
+                    )
+                )";
+        
+        $params = ['uid' => $userId];
+        
+        // Add search filter
+        if ($searchQuery !== '') {
+            $sql .= " AND (u.username LIKE :search OR u.full_name LIKE :search OR p.content LIKE :search)";
+            $params['search'] = '%' . $searchQuery . '%';
+        }
+        
+        // Add sort
+        if ($sort === 'popular') {
+            $sql .= " ORDER BY ((SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) + (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id)) DESC, p.created_at DESC";
+        } else {
+            $sql .= " ORDER BY p.created_at DESC";
+        }
+        
+        $sql .= " LIMIT :limit OFFSET :offset";
+        $params['limit'] = $perPage;
+        $params['offset'] = $offset;
 
-        return $this->em->getConnection()->fetchAllAssociative($sql, [
-            'uid' => $userId,
-            'limit' => $perPage,
-            'offset' => $offset,
-        ], [
+        return $this->em->getConnection()->fetchAllAssociative($sql, $params, [
             'limit' => ParameterType::INTEGER,
             'offset' => ParameterType::INTEGER,
         ]);
     }
 
-    public function createPost(int $userId, string $content, ?string $imageUrl = null): Post
+    public function createPost(int $userId, string $content, ?string $imageUrl = null, ?string $location = null, ?string $mood = null, ?string $hobbyTag = null, string $visibility = 'public'): Post
     {
         $user = $this->em->getRepository(User::class)->find($userId);
         $post = new Post();
         $post->user = $user;
         $post->content = $content;
         $post->imageUrl = $imageUrl;
+        $post->location = $location;
+        $post->mood = $mood;
+        $post->hobbyTag = $hobbyTag;
+        $post->visibility = $visibility;
         $post->createdAt = new \DateTime();
         $this->em->persist($post);
         $this->em->flush();
@@ -62,7 +85,7 @@ class SocialService
         return $post;
     }
 
-    public function addComment(int $postId, int $userId, string $content): Comment
+    public function addComment(int $postId, int $userId, ?string $content, ?string $imageUrl = null, ?string $mood = null): Comment
     {
         $post = $this->em->getRepository(Post::class)->find($postId);
         $user = $this->em->getRepository(User::class)->find($userId);
@@ -71,6 +94,8 @@ class SocialService
         $comment->post = $post;
         $comment->user = $user;
         $comment->content = $content;
+        $comment->imageUrl = $imageUrl;
+        $comment->mood = $mood;
         $comment->createdAt = new \DateTime();
         $this->em->persist($comment);
         $this->em->flush();
@@ -160,7 +185,7 @@ class SocialService
         }
 
         $rows = $this->em->getConnection()->fetchAllAssociative(
-            'SELECT c.comment_id, c.post_id, c.user_id, c.content, c.created_at, u.username, u.full_name, u.profile_picture
+            'SELECT c.comment_id, c.post_id, c.user_id, c.content, c.image_url, c.mood, c.created_at, c.updated_at, u.username, u.full_name, u.profile_picture
              FROM comments c
              JOIN users u ON u.user_id = c.user_id
              WHERE c.post_id IN (:postIds)
@@ -266,12 +291,13 @@ class SocialService
         }
 
         $post->content = $content;
+        $post->updatedAt = new \DateTime();
         $this->em->flush();
 
         return true;
     }
 
-    public function updateCommentContent(int $commentId, int $userId, string $content): bool
+    public function updateComment(int $commentId, int $userId, ?string $content, ?string $imageUrl = null, ?string $mood = null): bool
     {
         $comment = $this->em->getRepository(Comment::class)->find($commentId);
         if (!$comment instanceof Comment || (int) ($comment->user?->id ?? 0) !== $userId) {
@@ -279,6 +305,9 @@ class SocialService
         }
 
         $comment->content = $content;
+        $comment->imageUrl = $imageUrl;
+        $comment->mood = $mood;
+        $comment->updatedAt = new \DateTime();
         $this->em->flush();
 
         return true;
@@ -373,4 +402,3 @@ class SocialService
         );
     }
 }
-

@@ -79,9 +79,13 @@ class GoogleAuthService
      * @param string $code The authorization code from Google
      * @return array|null Array with 'access_token', 'id_token', etc., or null on failure
      */
-    public function handleAuthorizationCode(string $code): ?array
+    public function handleAuthorizationCode(string $code, ?string $redirectUri = null): ?array
     {
         try {
+            if ($redirectUri !== null && $redirectUri !== '') {
+                $this->client->setRedirectUri($redirectUri);
+            }
+
             $token = $this->client->fetchAccessTokenWithAuthCode($code);
             
             if (isset($token['error'])) {
@@ -93,6 +97,35 @@ class GoogleAuthService
             return $token;
         } catch (Exception $e) {
             error_log('Failed to exchange authorization code: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Exchanges a refresh token for a new access token.
+     */
+    public function refreshAccessTokenWithRefreshToken(string $refreshToken): ?array
+    {
+        if ($refreshToken === '') {
+            return null;
+        }
+
+        try {
+            $this->client->setAccessType('offline');
+            $token = $this->client->fetchAccessTokenWithRefreshToken($refreshToken);
+
+            if (!is_array($token) || isset($token['error']) || empty($token['access_token'])) {
+                return null;
+            }
+
+            if (empty($token['refresh_token'])) {
+                $token['refresh_token'] = $refreshToken;
+            }
+
+            $this->client->setAccessToken($token);
+            return $token;
+        } catch (Exception $e) {
+            error_log('Failed to refresh access token with refresh token: ' . $e->getMessage());
             return null;
         }
     }
@@ -196,6 +229,10 @@ class GoogleAuthService
      */
     public function buildLoginUrl(array $options = []): string
     {
+        if (isset($options['redirect_uri']) && is_string($options['redirect_uri']) && $options['redirect_uri'] !== '') {
+            $this->client->setRedirectUri($options['redirect_uri']);
+        }
+
         // Scopes are already set in constructor (openid email profile)
         // Add calendar scope if specified
         if (isset($options['calendar']) && $options['calendar']) {
@@ -210,6 +247,14 @@ class GoogleAuthService
         
         if (isset($options['access_type'])) {
             $this->client->setAccessType($options['access_type']);
+        }
+
+        if (isset($options['prompt']) && is_string($options['prompt']) && $options['prompt'] !== '') {
+            $this->client->setPrompt($options['prompt']);
+        }
+
+        if (isset($options['include_granted_scopes'])) {
+            $this->client->setIncludeGrantedScopes((bool) $options['include_granted_scopes']);
         }
         
         if (isset($options['approval_prompt'])) {

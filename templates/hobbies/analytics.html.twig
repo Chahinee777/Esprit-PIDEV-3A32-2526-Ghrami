@@ -3,6 +3,7 @@
 {% block title %}Statistiques des Loisirs - Ghrami{% endblock %}
 
 {% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <div style="display: grid; grid-template-columns: 1fr; gap: 24px; padding: 20px; max-width: 1400px; margin: 0 auto;">
     
     <!-- En-tête -->
@@ -11,85 +12,194 @@
         <a href="{{ path('app_hobbies_index') }}" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; text-decoration: none; font-weight: 600; cursor: pointer;">← Retour aux Loisirs</a>
     </div>
 
-    <!-- Aperçu des statistiques -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-            <div style="font-size: 32px; margin-bottom: 8px;">⏱️</div>
-            <p style="margin: 0; font-size: 14px; opacity: 0.9;">Total des Heures Suivies</p>
-            <h3 style="margin: 4px 0 0 0; font-size: 32px; font-weight: bold;">{{ total_hours }}</h3>
+    <!-- Aperçu des statistiques - KPIs Expanded -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+            <div style="font-size: 24px; margin-bottom: 6px;">⏱️</div>
+            <p style="margin: 0; font-size: 11px; opacity: 0.8; text-transform: uppercase; font-weight: 600;">Total</p>
+            <h3 style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold;">{{ total_hours|round(1) }}h</h3>
         </div>
 
-        <div style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);">
-            <div style="font-size: 32px; margin-bottom: 8px;">🎯</div>
-            <p style="margin: 0; font-size: 14px; opacity: 0.9;">Loisirs Actifs</p>
-            <h3 style="margin: 4px 0 0 0; font-size: 32px; font-weight: bold;">{{ hobby_stats|length }}</h3>
+        <div style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);">
+            <div style="font-size: 24px; margin-bottom: 6px;">🎯</div>
+            <p style="margin: 0; font-size: 11px; opacity: 0.8; text-transform: uppercase; font-weight: 600;\">Loisirs</p>
+            <h3 style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold;\">{{ hobby_stats|length }}</h3>
         </div>
 
-        <div style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); color: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);">
-            <div style="font-size: 32px; margin-bottom: 8px;">📈</div>
-            <p style="margin: 0; font-size: 14px; opacity: 0.9;">Moy. Heures/Loisir</p>
-            <h3 style="margin: 4px 0 0 0; font-size: 32px; font-weight: bold;">{% if hobby_stats|length > 0 %}{{ (total_hours / hobby_stats|length)|round(1) }}{% else %}0{% endif %}</h3>
+        <div style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); color: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);">
+            <div style="font-size: 24px; margin-bottom: 6px;\">📊</div>
+            <p style="margin: 0; font-size: 11px; opacity: 0.8; text-transform: uppercase; font-weight: 600;\">Moyenne</p>
+            <h3 style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold;\">{% if hobby_stats|length > 0 %}{{ (total_hours / hobby_stats|length)|round(1) }}{% else %}0{% endif %}h</h3>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #E91E63 0%, #C2185B 100%); color: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(233, 30, 99, 0.3);">
+            <div style="font-size: 24px; margin-bottom: 6px;\">🏆</div>
+            <p style="margin: 0; font-size: 11px; opacity: 0.8; text-transform: uppercase; font-weight: 600;\">Top Cat.</p>
+            {% set topCat = category_stats|keys|first %}
+            <h3 style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold; word-break: break-word;\">{{ topCat ?? '-' }}</h3>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #00BCD4 0%, #0097A7 100%); color: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0, 188, 212, 0.3);">
+            <div style="font-size: 24px; margin-bottom: 6px;\">📅</div>
+            <p style="margin: 0; font-size: 11px; opacity: 0.8; text-transform: uppercase; font-weight: 600;\">Jour +</p>
+            {% set maxIdx = 0 %}
+            {% set maxVal = day_of_week_stats[0] %}
+            {% for i, val in day_of_week_stats %}
+                {% if val > maxVal %}{% set maxIdx = i %}{% set maxVal = val %}{% endif %}
+            {% endfor %}
+            <h3 style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold;">{{ day_labels[maxIdx] }}</h3>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #8BC34A 0%, #7CB342 100%); color: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(139, 195, 74, 0.3);">
+            <div style="font-size: 24px; margin-bottom: 6px;\">⌛</div>
+            <p style="margin: 0; font-size: 11px; opacity: 0.8; text-transform: uppercase; font-weight: 600;\">Moy/Jour</p>
+            {% set daySum = 0 %}
+            {% for val in day_of_week_stats %}{% set daySum = daySum + val %}{% endfor %}
+            <h3 style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold;">{% if day_of_week_stats|length > 0 %}{{ (daySum / day_of_week_stats|length)|round(1) }}{% else %}0{% endif %}h</h3>
         </div>
     </div>
 
-    <!-- Grille des graphiques -->
+    <!-- Grille des graphiques Chart.js -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
         
-        <!-- Top Loisirs -->
+        <!-- Top Loisirs - Bar Chart -->
         <div style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: bold; color: #1c1e21;">🏆 Top Loisirs par Heures</h3>
-            <div style="display: flex; flex-direction: column; gap: 16px;">
-                {% if hobby_stats|length == 0 %}
-                    <p style="color: #65676b; margin: 0;">Aucun loisir suivi pour l'instant</p>
-                {% else %}
-                    {% for hobby in hobby_stats|slice(0, 5) %}
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="font-weight: 600; color: #1c1e21;">{{ hobby.name }}</span>
-                            <span style="background: #667eea; color: white; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">{{ hobby.hours|round(1) }}h</span>
-                        </div>
-                        <div style="width: 100%; height: 20px; background: #f0f2f5; border-radius: 10px; overflow: hidden;">
-                            <div style="height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: {{ (hobby.hours / (hobby_stats[0].hours|default(1)) * 100)|round }}%;">
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% endif %}
-            </div>
+            {% if hobby_stats|length == 0 %}
+                <p style="color: #65676b; margin: 0;">Aucun loisir suivi pour l'instant</p>
+            {% else %}
+                {% set hobby_labels = [] %}
+                {% set hobby_values = [] %}
+                {% for hobby in hobby_stats|slice(0, 5) %}
+                    {% set hobby_labels = hobby_labels|merge([hobby.name]) %}
+                    {% set hobby_values = hobby_values|merge([hobby.hours]) %}
+                {% endfor %}
+                <canvas 
+                    data-controller="chart" 
+                    data-type="bar"
+                    data-labels='{{ hobby_labels|json_encode }}'
+                    data-values='{{ hobby_values|json_encode }}'
+                    data-chart-config='{"indexAxis": "y", "responsive": true, "maintainAspectRatio": true}'
+                    style="height: 250px; display: block;"></canvas>
+            {% endif %}
         </div>
 
-        <!-- Répartition par Catégorie -->
+        <!-- Répartition par Catégorie - Pie Chart -->
         <div style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: bold; color: #1c1e21;">🎨 Heures par Catégorie</h3>
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                {% if category_stats|length == 0 %}
-                    <p style="color: #65676b; margin: 0;">Aucune catégorie suivie pour l'instant</p>
-                {% else %}
-                    {% set sorted_stats = category_stats|keys|sort %}
-                    {% for category in sorted_stats|reverse %}
-                    <div style="background: #f0f2f5; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 600; color: #1c1e21;">{{ category }}</span>
-                        <span style="background: #FF9800; color: white; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">{{ category_stats[category]|round(1) }}h</span>
-                    </div>
-                    {% endfor %}
-                {% endif %}
-            </div>
+            {% if category_stats|length == 0 %}
+                <p style="color: #65676b; margin: 0;">Aucune catégorie suivie pour l'instant</p>
+            {% else %}
+                {% set category_labels = [] %}
+                {% set category_values = [] %}
+                {% for cat, hours in category_stats %}
+                    {% set category_labels = category_labels|merge([cat]) %}
+                    {% set category_values = category_values|merge([hours]) %}
+                {% endfor %}
+                <canvas 
+                    data-controller="chart" 
+                    data-type="doughnut"
+                    data-labels='{{ category_labels|json_encode }}'
+                    data-values='{{ category_values|json_encode }}'
+                    data-chart-config='{"responsive": true, "maintainAspectRatio": true}'
+                    style="height: 250px; display: block;"></canvas>
+            {% endif %}
         </div>
 
     </div>
 
-    <!-- Activité par Jour de la Semaine -->
+    <!-- Activité par Jour de la Semaine - Line Chart -->
     <div style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: bold; color: #1c1e21;">📅 Activité par Jour de la Semaine</h3>
-        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px;">
-            {% for i, label in day_labels %}
-                {% set hours = day_of_week_stats[i] %}
-                <div style="background: #f0f2f5; padding: 16px; border-radius: 8px; text-align: center;">
-                    <div style="font-weight: bold; color: #1c1e21; margin-bottom: 8px;">{{ label }}</div>
-                    <div style="font-size: 24px; font-weight: bold; color: #667eea;">{{ hours|round(1) }}</div>
-                    <div style="font-size: 12px; color: #65676b; margin-top: 4px;">heures</div>
+        <canvas 
+            data-controller="chart" 
+            data-type="line"
+            data-labels='{{ day_labels|json_encode }}'
+            data-values='{{ day_of_week_stats|json_encode }}'
+            data-chart-config='{"responsive": true, "maintainAspectRatio": true, "tension": 0.4, "fill": true}'
+            style="height: 300px; display: block;"></canvas>
+    </div>
+
+    <!-- Advanced Charts Section -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px;">
+        
+        <!-- Category Breakdown Stats -->
+        <div style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: bold; color: #1c1e21;">📊 Répartition par Catégorie</h3>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% if category_stats|length == 0 %}
+                    <p style="color: #65676b; margin: 0;">Aucune catégorie</p>
+                {% else %}
+                    {% set total = 0 %}
+                    {% for cat, hours in category_stats %}{% set total = total + hours %}{% endfor %}
+                    {% for cat, hours in category_stats %}
+                    <div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-weight: 600; color: #1c1e21;\">{{ cat }}</span>
+                            <span style="background: #667eea; color: white; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;\">{{ hours|round(1) }}h</span>
+                        </div>
+                        <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
+                            <div style="height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: {{ ((hours / total) * 100)|round }}%;\"></div>
+                        </div>
+                        <div style="margin-top: 4px; font-size: 11px; color: #8a8d91; text-align: right;\">{{ ((hours / total) * 100)|round(1) }}%</div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Weekly Heatmap -->
+        <div style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: bold; color: #1c1e21;">📅 Heures par Jour</h3>
+            {% set maxHours = 0 %}
+            {% for val in day_of_week_stats %}{% if val > maxHours %}{% set maxHours = val %}{% endif %}{% endfor %}
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;">
+                {% for i, label in day_labels %}
+                    {% set hours = day_of_week_stats[i] %}
+                    {% set intensity = maxHours > 0 ? ((hours / maxHours) * 100)|round : 0 %}
+                    <div style="background: hsl(270, 50%, {{ 85 - (intensity * 0.5) }}%); color: #1c1e21; padding: 12px 8px; border-radius: 8px; text-align: center; border: 2px solid #e5e7eb;">
+                        <div style="font-weight: bold; font-size: 12px; margin-bottom: 4px;">{{ label }}</div>
+                        <div style="font-size: 16px; font-weight: bold;">{{ hours|round(1) }}</div>
+                        <div style="font-size: 10px; color: #65676b;">h</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- AI-Powered Insights & Recommendations Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px;">
+        
+        <!-- AI Habit Insights Card -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); min-height: 320px; display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                <span style="font-size: 28px; margin-right: 12px;">🤖</span>
+                <h3 style="margin: 0; font-size: 18px; font-weight: bold;">Habit Analysis</h3>
+            </div>
+            
+            <div id="insights-container" style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                <div id="insights-loading" style="text-align: center;">
+                    <div style="font-size: 12px; animation: pulse 2s infinite; opacity: 0.7;">Loading AI insights...</div>
                 </div>
-            {% endfor %}
+            </div>
+            
+            <div id="insights-error" style="display: none; background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; font-size: 12px; margin-top: 12px; border-left: 3px solid #ff9800;"></div>
+        </div>
+
+        <!-- AI Recommendations Card -->
+        <div style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3); min-height: 320px; display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                <span style="font-size: 28px; margin-right: 12px;">💡</span>
+                <h3 style="margin: 0; font-size: 18px; font-weight: bold;">Recommendations</h3>
+            </div>
+            
+            <div id="recommendations-container" style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                <div id="recommendations-loading" style="text-align: center;">
+                    <div style="font-size: 12px; animation: pulse 2s infinite; opacity: 0.7;">Loading recommendations...</div>
+                </div>
+            </div>
+            
+            <div id="recommendations-error" style="display: none; background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; font-size: 12px; margin-top: 12px; border-left: 3px solid #ff9800;"></div>
         </div>
     </div>
 
@@ -129,10 +239,165 @@
 </div>
 
 <style>
+    @keyframes pulse {
+        0%, 100% { opacity: 0.7; }
+        50% { opacity: 1; }
+    }
+
     @media (max-width: 768px) {
         [style*="grid-template-columns: repeat"] {
             grid-template-columns: 1fr !important;
         }
     }
 </style>
+
+<script type="module">
+    import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, PointElement, LineElement, BarElement, RadarController, RadialLinearScale, Title, Tooltip, Legend, Filler } from 'chart.js';
+    
+    ChartJS.register(ArcElement, CategoryScale, LinearScale, PointElement, LineElement, BarElement, RadarController, RadialLinearScale, Title, Tooltip, Legend, Filler);
+    
+    const chartElements = document.querySelectorAll('[data-controller="chart"]');
+    
+    chartElements.forEach((canvas, index) => {
+        const type = canvas.dataset.type;
+        const labels = JSON.parse(canvas.dataset.labels || '[]');
+        const values = JSON.parse(canvas.dataset.values || '[]');
+        const config = JSON.parse(canvas.dataset.chartConfig || '{}');
+        
+        const colors = [
+            '#667eea', '#764ba2', '#4CAF50', '#FF9800', '#E91E63', 
+            '#00BCD4', '#8BC34A', '#FFC107', '#FF5722', '#9C27B0'
+        ];
+        
+        const borderColors = colors;
+        const backgroundColors = colors.map(c => c + '40');
+        
+        let chartConfig = {
+            type: type,
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: type === 'doughnut' ? 'Heures par Catégorie' : type === 'bar' ? 'Heures' : type === 'radar' ? 'Heures par Loisir' : 'Heures',
+                        data: values,
+                        backgroundColor: type === 'line' ? borderColors[0] + '33' : type === 'radar' ? borderColors[0] + '40' : backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: type === 'radar' ? 3 : 2,
+                        fill: type === 'line' || type === 'radar' ? true : false,
+                        tension: type === 'line' ? 0.4 : undefined,
+                        borderRadius: type === 'bar' ? 8 : undefined,
+                        pointBackgroundColor: borderColors[0],
+                        pointBorderColor: 'white',
+                        pointBorderWidth: 2,
+                        pointRadius: type === 'radar' ? 5 : 4,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: type !== 'bar' && type !== 'radar',
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.parsed.y !== undefined ? context.parsed.y : context.raw;
+                                return val ? val.toFixed(1) + ' heures' : '0 heures';
+                            }
+                        }
+                    }
+                },
+                scales: type === 'doughnut' ? undefined : type === 'radar' ? {
+                    r: {
+                        beginAtZero: true,
+                        ticks: { callback: function(value) { return value + 'h'; } }
+                    }
+                } : {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: function(value) { return value + 'h'; } }
+                    },
+                    x: type === 'bar' ? {} : undefined
+                },
+                indexAxis: config.indexAxis || undefined,
+                ...config
+            }
+        };
+        
+        const ctx = canvas.getContext('2d');
+        new ChartJS(ctx, chartConfig);
+    });
+
+    // Load AI-Powered Insights & Recommendations
+    async function loadAiInsights() {
+        try {
+            const insightsRes = await fetch('{{ path('app_hobbies_api_insights') }}');
+            const insightsData = await insightsRes.json();
+            
+            if (insightsData.ok && insightsData.insights) {
+                const container = document.getElementById('insights-container');
+                document.getElementById('insights-loading').style.display = 'none';
+                
+                const content = insightsData.insights;
+                const formattedContent = content.split('\n').map(line => {
+                    if (line.trim()) {
+                        return `<div style="margin-bottom: 10px; line-height: 1.6; font-size: 13px;">${line.trim().replace(/^[-•]\s*/, '• ')}</div>`;
+                    }
+                    return '';
+                }).join('');
+                
+                container.innerHTML = `<div style="width: 100%;">${formattedContent}</div>`;
+            } else {
+                throw new Error(insightsData.error || 'Failed to load insights');
+            }
+        } catch (error) {
+            document.getElementById('insights-loading').style.display = 'none';
+            document.getElementById('insights-error').style.display = 'block';
+            document.getElementById('insights-error').textContent = '⚠️ ' + error.message;
+            console.error('Insights error:', error);
+        }
+    }
+
+    async function loadRecommendations() {
+        try {
+            const recsRes = await fetch('{{ path('app_hobbies_api_recommendations') }}');
+            const recsData = await recsRes.json();
+            
+            if (recsData.ok && recsData.insights) {
+                const container = document.getElementById('recommendations-container');
+                document.getElementById('recommendations-loading').style.display = 'none';
+                
+                const content = recsData.insights;
+                const formattedContent = content.split('\n').map(line => {
+                    if (line.trim()) {
+                        return `<div style="margin-bottom: 10px; line-height: 1.6; font-size: 13px;">${line.trim().replace(/^[-•]\s*/, '• ')}</div>`;
+                    }
+                    return '';
+                }).join('');
+                
+                container.innerHTML = `<div style="width: 100%;">${formattedContent}</div>`;
+            } else {
+                throw new Error(recsData.error || 'Failed to load recommendations');
+            }
+        } catch (error) {
+            document.getElementById('recommendations-loading').style.display = 'none';
+            document.getElementById('recommendations-error').style.display = 'block';
+            document.getElementById('recommendations-error').textContent = '⚠️ ' + error.message;
+            console.error('Recommendations error:', error);
+        }
+    }
+
+    // Load insights when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        loadAiInsights();
+        loadRecommendations();
+    });
+</script>
 {% endblock %}

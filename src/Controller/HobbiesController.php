@@ -7,6 +7,7 @@ use App\Entity\Hobby;
 use App\Entity\Progress;
 use App\Entity\ProgressLog;
 use App\Entity\Milestone;
+use App\Service\GroqAnalyticsService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -208,9 +209,9 @@ final class HobbiesController extends AbstractController
             $hours = (float) $hoursInput;
             $notes = trim((string) $request->request->get('notes', ''));
             $sessionDateInput = trim((string) $request->request->get('session_date', ''));
-            $sessionDate = $sessionDateInput === '' ? new \DateTimeImmutable('today') : \DateTimeImmutable::createFromFormat('Y-m-d', $sessionDateInput);
+            $sessionDateImmutable = $sessionDateInput === '' ? new \DateTimeImmutable('today') : \DateTimeImmutable::createFromFormat('Y-m-d', $sessionDateInput);
 
-            if ($sessionDateInput !== '' && !$sessionDate) {
+            if ($sessionDateInput !== '' && !$sessionDateImmutable) {
                 return new JsonResponse([
                     'ok' => false,
                     'error' => 'Validation failed.',
@@ -222,7 +223,7 @@ final class HobbiesController extends AbstractController
             $log->hobby = $hobby;
             $log->hoursSpent = $hours;
             $log->notes = $notes !== '' ? $notes : null;
-            $log->logDate = $sessionDate;
+            $log->logDate = $sessionDateImmutable;
 
             $violations = $validator->validate($log);
             if (count($violations) > 0) {
@@ -262,7 +263,7 @@ final class HobbiesController extends AbstractController
 
             return new JsonResponse([
                 'ok' => true,
-                'message' => sprintf('✅ Logged %.1f hrs on %s!', $hours, $sessionDate->format('M d, Y'))
+                'message' => sprintf('✅ Logged %.1f hrs on %s!', $hours, $sessionDateImmutable->format('M d, Y'))
             ]);
         } catch (\Exception $e) {
             return new JsonResponse(['ok' => false, 'error' => $e->getMessage()], 400);
@@ -570,11 +571,10 @@ final class HobbiesController extends AbstractController
 
     private function buildCoachSystemContext(Hobby $hobby, EntityManagerInterface $entityManager): string
     {
-        $context = "You are an enthusiastic AI hobby coach called 'Hobby Coach'. ";
-        $context .= "Help users improve in their hobbies with personalized tips, practice plans, and motivation. ";
-        $context .= "Be friendly, concise (under 120 words unless asked for more), and use emojis occasionally. ";
-        $context .= "Always reference the user's actual hobby data when it is relevant.\n\n";
-        $context .= "User's hobby data:\n";
+        $context = "You are an AI hobby coach called 'Hobby Coach'. YOUR ROLE: Help users improve specifically in the hobby they track with you. ";
+        $context .= "IMPORTANT BOUNDARY: You can ONLY provide coaching for the specific hobby below. ";
+        $context .= "If the user asks about something unrelated to their hobby (sports teams, general knowledge, politics, etc.), politely decline and refocus on their hobby.\n\n";
+        $context .= "Hobby you're coaching for:\n";
 
         $totalHours = 0;
         if ($hobby->progress && $hobby->progress->count() > 0) {
@@ -600,7 +600,8 @@ final class HobbiesController extends AbstractController
             count($milestones)
         );
 
-        $context .= "\nBe encouraging, realistic, and actionable in all your responses.";
+        $context .= "\n🚫 STRICT RULE: Only answer questions about " . $hobby->name . ". Decline politely for any off-topic requests.\n";
+        $context .= "Be encouraging, realistic, and actionable in all your responses about their hobby.";
         return $context;
     }
 
@@ -623,17 +624,17 @@ final class HobbiesController extends AbstractController
         }
 
         // Build context with ALL user's hobbies
-        $systemContext = "You are an enthusiastic AI hobby coach called 'Hobby Coach'. ";
-        $systemContext .= "Help users improve in their hobbies with personalized tips, practice plans, and motivation. ";
-        $systemContext .= "Be friendly, concise (under 120 words unless asked for more), and use emojis occasionally. ";
-        $systemContext .= "Always reference the user's actual hobby data when it is relevant.\n\n";
-        $systemContext .= "User's current hobby data:\n";
+        $systemContext = "You are an AI hobby coach called 'Hobby Coach'. YOUR ROLE: Help users improve in the hobbies they track with you. ";
+        $systemContext .= "CRITICAL BOUNDARY: You can ONLY provide coaching for the hobbies listed below. ";
+        $systemContext .= "If the user asks about something unrelated to their hobbies (sports teams, celebrities, general knowledge, politics, etc.), politely decline and ask them to focus on their hobbies.\n\n";
+        $systemContext .= "User's tracked hobbies:\n";
 
         $hobbyRepo = $entityManager->getRepository(Hobby::class);
         $hobbies = $hobbyRepo->findBy(['user' => $user]);
 
         if (empty($hobbies)) {
-            $systemContext .= "• No hobbies tracked yet — encourage the user to start tracking.\n";
+            $systemContext .= "• User has no hobbies tracked yet.\n";
+            $systemContext .= "If they start describing a hobby, enthusiastically encourage them to track it.\n";
         } else {
             $progressRepo = $entityManager->getRepository(Progress::class);
             $milestoneRepo = $entityManager->getRepository(Milestone::class);
@@ -659,7 +660,8 @@ final class HobbiesController extends AbstractController
             }
         }
 
-        $systemContext .= "\nBe encouraging, realistic, and actionable in all your responses.";
+        $systemContext .= "\n🚫 STRICT RULE: Only discuss the hobbies above. If asked about unrelated topics, respond with: 'I'm your hobby coach! I can only help with [hobby names]. Let's focus on improving your skills there!'\n";
+        $systemContext .= "Be encouraging, realistic, and actionable in all responses about their hobbies.";
 
         try {
             $response = $coachService->chat($message, $systemContext);
@@ -694,5 +696,238 @@ final class HobbiesController extends AbstractController
         }
 
         return $errors;
+    }
+
+    #[Route('/{id}/calendar/download', name: 'app_hobbies_calendar_download', methods: ['GET'])]
+    public function downloadCalendar(Hobby $hobby, \App\Service\CalendarService $calendarService): Response
+    {
+        $this->denyAccessUnlessGranted('HOBBY_VIEW', $hobby);
+
+        // Generate single hobby iCal feed
+        $ical = $calendarService->generateHobbyCalendarFeed([[
+            'hobby_id' => $hobby->id,
+            'hobby_name' => $hobby->name,
+            'hobby_category' => $hobby->category,
+            'log_date' => new \DateTimeImmutable(),
+            'hours_spent' => 0,
+            'notes' => '',
+        ]], $hobby->name);
+
+        return new Response($ical, 200, [
+            'Content-Type' => 'text/calendar; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="' . str_replace(' ', '_', $hobby->name) . '_hobby.ics"',
+        ]);
+    }
+
+    #[Route('/calendar/google-link', name: 'app_hobbies_calendar_google_link', methods: ['POST'])]
+    public function getGoogleCalendarLink(
+        Request $request,
+        \App\Service\CalendarService $calendarService,
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return new JsonResponse(['ok' => false, 'error' => 'Unauthorized'], 401);
+        }
+
+        try {
+            $hobbyId = (int)$request->request->get('hobby_id');
+            $date = \DateTimeImmutable::createFromFormat('Y-m-d', $request->request->get('date', date('Y-m-d')));
+            $hours = (float)$request->request->get('hours', 1);
+
+            $hobby = $entityManager->getRepository(Hobby::class)->find($hobbyId);
+            if (!$hobby || $hobby->user->id !== $user->id) {
+                return new JsonResponse(['ok' => false, 'error' => 'Hobby not found'], 404);
+            }
+
+            $link = $calendarService->generateGoogleCalendarLink(
+                $hobby->name,
+                $date,
+                $hours,
+                "Category: {$hobby->category}"
+            );
+
+            return new JsonResponse(['ok' => true, 'link' => $link]);
+        } catch (\Exception $e) {
+            return new JsonResponse(['ok' => false, 'error' => $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/weather/for-activity', name: 'app_hobbies_weather_activity', methods: ['GET'])]
+    public function getWeatherForActivity(
+        Request $request,
+        \App\Service\WeatherService $weatherService
+    ): JsonResponse {
+        try {
+            $latitude = (float)$request->query->get('lat', 48.8566); // Default: Paris
+            $longitude = (float)$request->query->get('lon', 2.3522);
+            $date = $request->query->get('date');
+
+            if ($date) {
+                $dateObj = \DateTimeImmutable::createFromFormat('Y-m-d', $date);
+                if (!$dateObj) {
+                    return new JsonResponse([
+                        'ok' => false,
+                        'error' => 'Invalid date format. Expected YYYY-MM-DD',
+                    ], 400);
+                }
+            } else {
+                $dateObj = new \DateTimeImmutable('today');
+            }
+
+            $today = new \DateTimeImmutable('today');
+            $weather = null;
+
+            // Open-Meteo archive endpoint does not support future dates.
+            if ($dateObj > $today) {
+                $daysAhead = (int)$today->diff($dateObj)->days + 1;
+                $forecast = $weatherService->getWeatherForecast($latitude, $longitude, min($daysAhead, 16));
+
+                if (is_array($forecast)) {
+                    $targetDate = $dateObj->format('Y-m-d');
+                    foreach ($forecast as $item) {
+                        if (($item['date'] ?? null) === $targetDate) {
+                            $weather = $item;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                $weather = $weatherService->getWeather($latitude, $longitude, $dateObj);
+            }
+
+            if (!$weather) {
+                return new JsonResponse([
+                    'ok' => false,
+                    'error' => 'Could not fetch weather data',
+                ], 400);
+            }
+
+            return new JsonResponse([
+                'ok' => true,
+                'weather' => $weather,
+                'tip' => $weather['good_for_activity'] 
+                    ? "✅ Great day for outdoor activities!" 
+                    : "⚠️ Weather might not be ideal, consider indoor activities.",
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse(['ok' => false, 'error' => $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/weather/forecast', name: 'app_hobbies_weather_forecast', methods: ['GET'])]
+    public function getWeatherForecast(
+        Request $request,
+        \App\Service\WeatherService $weatherService
+    ): JsonResponse {
+        try {
+            $latitude = (float)$request->query->get('lat', 48.8566); // Default: Paris
+            $longitude = (float)$request->query->get('lon', 2.3522);
+            $days = (int)$request->query->get('days', 7);
+
+            $forecast = $weatherService->getWeatherForecast($latitude, $longitude, min($days, 16));
+
+            if (!$forecast) {
+                return new JsonResponse([
+                    'ok' => false,
+                    'error' => 'Could not fetch weather forecast',
+                ], 400);
+            }
+
+            return new JsonResponse([
+                'ok' => true,
+                'forecast' => $forecast,
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse(['ok' => false, 'error' => $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/weather/current', name: 'app_hobbies_weather_current', methods: ['GET'])]
+    public function getCurrentWeather(
+        Request $request,
+        \App\Service\WeatherService $weatherService
+    ): JsonResponse {
+        try {
+            $latitude = (float)$request->query->get('lat', 48.8566); // Default: Paris
+            $longitude = (float)$request->query->get('lon', 2.3522);
+
+            $weather = $weatherService->getCurrentWeather($latitude, $longitude);
+
+            if (!$weather) {
+                return new JsonResponse([
+                    'ok' => false,
+                    'error' => 'Could not fetch current weather',
+                ], 400);
+            }
+
+            return new JsonResponse([
+                'ok' => true,
+                'weather' => $weather,
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse(['ok' => false, 'error' => $e->getMessage()], 400);
+        }
+    }
+
+    #[Route('/{id}/music-recommendations', name: 'app_hobbies_music_recommendations', methods: ['GET'])]
+    public function getMusicRecommendations(
+        Hobby $hobby,
+        \App\Service\MusicBrainzService $musicBrainzService
+    ): JsonResponse {
+        $this->denyAccessUnlessGranted('HOBBY_VIEW', $hobby);
+
+        try {
+            $recommendations = $musicBrainzService->getRecommendations(
+                $hobby->name,
+                $hobby->category ?? ''
+            );
+
+            return new JsonResponse([
+                'ok' => $recommendations['success'],
+                'data' => $recommendations,
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'ok' => false,
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    #[Route('/api/insights', name: 'app_hobbies_api_insights', methods: ['GET'])]
+    public function apiHobbyInsights(GroqAnalyticsService $groqAnalytics): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['ok' => false, 'error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $insights = $groqAnalytics->getUserHobbyInsights((int) $user->id);
+        return $this->json(['ok' => true, 'insights' => $insights['insights']]);
+    }
+
+    #[Route('/api/engagement-insights', name: 'app_hobbies_api_engagement', methods: ['GET'])]
+    public function apiEngagementInsights(GroqAnalyticsService $groqAnalytics): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['ok' => false, 'error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $insights = $groqAnalytics->getUserEngagementInsights((int) $user->id);
+        return $this->json(['ok' => true, 'insights' => $insights['insights']]);
+    }
+
+    #[Route('/api/recommendations', name: 'app_hobbies_api_recommendations', methods: ['GET'])]
+    public function apiHobbyRecommendations(GroqAnalyticsService $groqAnalytics): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['ok' => false, 'error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $insights = $groqAnalytics->getHobbyRecommendations((int) $user->id);
+        return $this->json(['ok' => true, 'insights' => $insights['insights']]);
     }
 }

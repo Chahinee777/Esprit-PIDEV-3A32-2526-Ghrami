@@ -25,10 +25,18 @@ class ProgressLog
     public float $hoursSpent = 0;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    #[Assert\Length(max: 1500, maxMessage: 'Notes cannot exceed {{ limit }} characters.')]
+    #[Assert\Length(max: 500, maxMessage: 'Notes cannot exceed {{ limit }} characters.')]
     public ?string $notes = null;
 
-    #[ORM\Column(name: 'log_date', type: Types::DATE_MUTABLE)]
+    #[ORM\Column(name: 'log_date', type: Types::DATE_IMMUTABLE)]
     #[Assert\NotNull(message: 'Session date is required.')]
-    public ?\DateTimeInterface $logDate = null;
+    public ?\DateTimeImmutable $logDate = null;
+
+    #[ORM\PrePersist]
+    public function ensureImmutableDates(): void
+    {
+        if ($this->logDate && !$this->logDate instanceof \DateTimeImmutable) {
+            $this->logDate = \DateTimeImmutable::createFromMutable($this->logDate);
+        }
+    }
 }

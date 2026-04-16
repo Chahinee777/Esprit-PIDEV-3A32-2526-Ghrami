@@ -41,11 +41,25 @@ class ChatServer
             return;
         }
 
-        // Parse protocol: REGISTER:userId or MSG:fromId:toId:content
+        // Parse protocol: REGISTER:userId or MSG:fromId:toId:content or CALL_*
         if (strpos($message, 'REGISTER:') === 0) {
             $this->handleRegister($connection, $message);
         } elseif (strpos($message, 'MSG:') === 0) {
             $this->handleMessage($connection, $message);
+        } elseif (strpos($message, 'CALL_INIT:') === 0) {
+            $this->handleCallInit($connection, $message);
+        } elseif (strpos($message, 'CALL_ANSWER:') === 0) {
+            $this->handleCallAnswer($connection, $message);
+        } elseif (strpos($message, 'CALL_REJECT:') === 0) {
+            $this->handleCallReject($connection, $message);
+        } elseif (strpos($message, 'CALL_OFFER:') === 0) {
+            $this->handleCallOffer($connection, $message);
+        } elseif (strpos($message, 'CALL_ANSWER_OFFER:') === 0) {
+            $this->handleCallAnswerOffer($connection, $message);
+        } elseif (strpos($message, 'CALL_ICE:') === 0) {
+            $this->handleCallIce($connection, $message);
+        } elseif (strpos($message, 'CALL_END:') === 0) {
+            $this->handleCallEnd($connection, $message);
         } else {
             echo "[ChatServer] Unknown message format: {$message}\n";
         }
@@ -141,18 +155,181 @@ class ChatServer
             }
 
             $messageEntity = new Message();
-            $messageEntity->setSender($sender);
-            $messageEntity->setReceiver($receiver);
-            $messageEntity->setContent($content);
-            $messageEntity->setSentAt(new \DateTime());
-            $messageEntity->setIsRead(false);
+            $messageEntity->sender = $sender;
+            $messageEntity->receiver = $receiver;
+            $messageEntity->content = $content;
+            $messageEntity->sentAt = new \DateTime();
+            $messageEntity->isRead = false;
 
             $this->em->persist($messageEntity);
             $this->em->flush();
             
-            echo "[ChatServer] Message saved to DB: ID {$messageEntity->getId()}\n";
+            echo "[ChatServer] Message saved to DB: ID {$messageEntity->id}\n";
         } catch (\Exception $e) {
             echo "[ChatServer] Database error: {$e->getMessage()}\n";
+        }
+    }
+
+    /**
+     * Handle CALL_INIT:fromId:toId (initiate incoming call)
+     * Route to recipient with ringing notification
+     */
+    private function handleCallInit(TcpConnection $from, string $message): void
+    {
+        // Parse: CALL_INIT:fromId:toId
+        $parts = explode(':', $message, 3);
+        if (count($parts) < 3) {
+            echo "[ChatServer] Invalid CALL_INIT format: {$message}\n";
+            return;
+        }
+
+        $fromId = (int) $parts[1];
+        $toId = (int) $parts[2];
+
+        // Route ringing notification to recipient if connected
+        if (isset($this->userConnections[$toId])) {
+            $this->userConnections[$toId]->send("CALL_INIT:{$fromId}:{$toId}");
+            echo "[ChatServer] Call initiated: {$fromId} -> {$toId}\n";
+        } else {
+            echo "[ChatServer] Recipient {$toId} not connected for call\n";
+        }
+    }
+
+    /**
+     * Handle CALL_ANSWER:fromId:toId (accept call)
+     * Send to caller that recipient accepted
+     */
+    private function handleCallAnswer(TcpConnection $from, string $message): void
+    {
+        $parts = explode(':', $message, 3);
+        if (count($parts) < 3) {
+            echo "[ChatServer] Invalid CALL_ANSWER format: {$message}\n";
+            return;
+        }
+
+        $fromId = (int) $parts[1];
+        $toId = (int) $parts[2];
+
+        // Send acceptance to caller
+        if (isset($this->userConnections[$toId])) {
+            $this->userConnections[$toId]->send("CALL_ANSWER:{$fromId}:{$toId}");
+            echo "[ChatServer] Call accepted: {$toId} accepted call from {$fromId}\n";
+        }
+    }
+
+    /**
+     * Handle CALL_REJECT:fromId:toId (decline call)
+     * Send rejection to caller
+     */
+    private function handleCallReject(TcpConnection $from, string $message): void
+    {
+        $parts = explode(':', $message, 3);
+        if (count($parts) < 3) {
+            echo "[ChatServer] Invalid CALL_REJECT format: {$message}\n";
+            return;
+        }
+
+        $fromId = (int) $parts[1];
+        $toId = (int) $parts[2];
+
+        // Send rejection to caller
+        if (isset($this->userConnections[$toId])) {
+            $this->userConnections[$toId]->send("CALL_REJECT:{$fromId}:{$toId}");
+            echo "[ChatServer] Call rejected: {$toId} rejected call from {$fromId}\n";
+        }
+    }
+
+    /**
+     * Handle CALL_OFFER:fromId:toId:sdpOffer (WebRTC offer)
+     * Route SDP offer to recipient for peer connection
+     */
+    private function handleCallOffer(TcpConnection $from, string $message): void
+    {
+        // Parse: CALL_OFFER:fromId:toId:sdpData
+        // Use regex to properly extract JSON without breaking on colons it contains
+        if (!preg_match('/^CALL_OFFER:(\d+):(\d+):(.+)$/s', $message, $matches)) {
+            echo "[ChatServer] Invalid CALL_OFFER format: {$message}\n";
+            return;
+        }
+
+        $fromId = (int) $matches[1];
+        $toId = (int) $matches[2];
+        $sdpOffer = $matches[3];
+
+        // Route offer to recipient
+        if (isset($this->userConnections[$toId])) {
+            $this->userConnections[$toId]->send("CALL_OFFER:{$fromId}:{$toId}:{$sdpOffer}");
+            echo "[ChatServer] WebRTC offer routed: {$fromId} -> {$toId}\n";
+        }
+    }
+
+    /**
+     * Handle CALL_ANSWER_OFFER:fromId:toId:sdpAnswer (WebRTC answer)
+     * Route SDP answer to caller
+     */
+    private function handleCallAnswerOffer(TcpConnection $from, string $message): void
+    {
+        // Parse: CALL_ANSWER_OFFER:fromId:toId:sdpData
+        // Use regex to properly extract JSON without breaking on colons it contains
+        if (!preg_match('/^CALL_ANSWER_OFFER:(\d+):(\d+):(.+)$/s', $message, $matches)) {
+            echo "[ChatServer] Invalid CALL_ANSWER_OFFER format: {$message}\n";
+            return;
+        }
+
+        $fromId = (int) $matches[1];
+        $toId = (int) $matches[2];
+        $sdpAnswer = $matches[3];
+
+        // Route answer to caller
+        if (isset($this->userConnections[$toId])) {
+            $this->userConnections[$toId]->send("CALL_ANSWER_OFFER:{$fromId}:{$toId}:{$sdpAnswer}");
+            echo "[ChatServer] WebRTC answer routed: {$fromId} -> {$toId}\n";
+        }
+    }
+
+    /**
+     * Handle CALL_ICE:fromId:toId:candidate (ICE candidate for NAT traversal)
+     * Route ICE candidate to peer
+     */
+    private function handleCallIce(TcpConnection $from, string $message): void
+    {
+        // Parse: CALL_ICE:fromId:toId:candidateData
+        // Use regex to properly extract JSON without breaking on colons it contains
+        if (!preg_match('/^CALL_ICE:(\d+):(\d+):(.+)$/s', $message, $matches)) {
+            echo "[ChatServer] Invalid CALL_ICE format: {$message}\n";
+            return;
+        }
+
+        $fromId = (int) $matches[1];
+        $toId = (int) $matches[2];
+        $candidate = $matches[3];
+
+        // Route ICE candidate to peer
+        if (isset($this->userConnections[$toId])) {
+            $this->userConnections[$toId]->send("CALL_ICE:{$fromId}:{$toId}:{$candidate}");
+            // Don't spam logs for ICE candidates
+        }
+    }
+
+    /**
+     * Handle CALL_END:fromId:toId (end call)
+     * Notify peer that call has ended
+     */
+    private function handleCallEnd(TcpConnection $from, string $message): void
+    {
+        $parts = explode(':', $message, 3);
+        if (count($parts) < 3) {
+            echo "[ChatServer] Invalid CALL_END format: {$message}\n";
+            return;
+        }
+
+        $fromId = (int) $parts[1];
+        $toId = (int) $parts[2];
+
+        // Notify peer of call end
+        if (isset($this->userConnections[$toId])) {
+            $this->userConnections[$toId]->send("CALL_END:{$fromId}:{$toId}");
+            echo "[ChatServer] Call ended: {$fromId} ended call with {$toId}\n";
         }
     }
 }

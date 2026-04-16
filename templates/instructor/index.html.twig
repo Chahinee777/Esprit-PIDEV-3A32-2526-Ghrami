@@ -2,6 +2,131 @@
 
 {% block title %}Instructor Dashboard | Ghrami{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <style>
+        #cropperModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        #cropperModal.active {
+            display: flex;
+        }
+        
+        .cropper-container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        #cropperImage {
+            max-width: 100%;
+            max-height: 500px;
+        }
+        
+        .cropper-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .cropper-controls button {
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        
+        .cropper-controls .btn-confirm {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            grid-column: 1 / -1;
+        }
+        
+        .cropper-controls .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .cropper-controls .btn-cancel {
+            background: #f3f4f6;
+            color: #1c1e21;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .cropper-controls .btn-cancel:hover {
+            background: #e5e7eb;
+        }
+        
+        .cropper-controls .btn-rotate {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+        }
+        
+        .cropper-controls .btn-rotate:hover {
+            background: #bae6fd;
+        }
+        
+        .cropper-controls .btn-reset {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        
+        .cropper-controls .btn-reset:hover {
+            background: #fecaca;
+        }
+        
+        .thumbnail-preview {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .thumbnail-preview.active {
+            display: block;
+        }
+        
+        .thumbnail-preview img {
+            width: 100%;
+            max-width: 200px;
+            border-radius: 6px;
+        }
+        
+        .thumbnail-preview p {
+            margin: 8px 0 0 0;
+            font-size: 12px;
+            color: #65676b;
+        }
+    </style>
+{% endblock %}
+
 {% block body %}
 <div style="max-width: 1400px; margin: 0 auto; padding: 0 20px; padding-top: 20px; padding-bottom: 40px;">
     {% if provider is null %}
@@ -139,9 +264,20 @@
                         <label style="display: block; font-size: 12px; font-weight: 600; color: #65676b; margin-bottom: 4px;">
                             🖼️ Thumbnail Image (JPG/PNG) <span style="color:#dc2626;">*</span>
                         </label>
-                        <input type="file" name="thumbnail" accept="image/jpeg,image/png,image/webp" required
-                               style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box;">
-                        <p style="margin: 4px 0 0 0; font-size: 12px; color: #8a8d91;">Max 5 MB</p>
+                        <input type="file" id="thumbnailInput" accept="image/jpeg,image/png,image/webp" required hidden>
+                        <button type="button" id="thumbnailButton" onclick="document.getElementById('thumbnailInput').click()"
+                                style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; background: white; cursor: pointer; font-family: inherit; font-weight: 500; transition: all 0.2s;"
+                                onmouseover="this.style.borderColor='#667eea'; this.style.background='#f9fafb'"
+                                onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'">
+                            📁 Choose & Crop Image
+                        </button>
+                        <input type="hidden" id="croppedImageData" name="thumbnail_data">
+                        <input type="hidden" id="croppedImageFile" name="thumbnail">
+                        <p style="margin: 4px 0 0 0; font-size: 12px; color: #8a8d91;">Max 5 MB • JPG, PNG or WebP</p>
+                        <div id="thumbnailPreview" class="thumbnail-preview">
+                            <img id="previewImg" src="" alt="Preview">
+                            <p>✓ Thumbnail ready to upload</p>
+                        </div>
                     </div>
                 </div>
 
@@ -543,5 +679,156 @@
         }, 100);
     });
     {% endif %}
+
+    // ─── Image Cropper Logic ────────────────────────────────────────────
+    let cropper = null;
+    let originalFile = null;
+
+    document.getElementById('thumbnailInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Validate file size (5 MB max)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size exceeds 5 MB limit');
+            e.target.value = '';
+            return;
+        }
+
+        originalFile = file;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            // Show cropper modal
+            const modal = document.getElementById('cropperModal');
+            modal.classList.add('active');
+
+            const img = document.getElementById('cropperImage');
+            img.src = event.target.result;
+
+            // Destroy existing cropper if any
+            if (cropper) {
+                cropper.destroy();
+            }
+
+            // Initialize new cropper
+            cropper = new Cropper(img, {
+                aspectRatio: 16 / 10,
+                viewMode: 1,
+                autoCropArea: 0.8,
+                responsive: true,
+                guides: true,
+                center: true,
+                highlight: true,
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                toggleDragModeOnDblclick: true,
+                modal: true,
+                background: true,
+                preview: '.img-preview',
+                minContainerHeight: 400,
+                minCanvasHeight: 300,
+                minCropBoxHeight: 100,
+                minCropBoxWidth: 150,
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+
+    function rotateCropper() {
+        if (cropper) {
+            cropper.rotate(45);
+        }
+    }
+
+    function resetCropper() {
+        if (cropper) {
+            cropper.reset();
+        }
+    }
+
+    function confirmCrop() {
+        if (!cropper) return;
+
+        const canvas = cropper.getCroppedCanvas({
+            maxWidth: 800,
+            maxHeight: 500,
+            fillColor: '#fff',
+            imageSmoothingEnabled: true,
+            imageSmoothingQuality: 'high',
+        });
+
+        // Convert canvas to blob and create file
+        canvas.toBlob(function(blob) {
+            // Create a data transfer object to set the file
+            const dataTransfer = new DataTransfer();
+            const croppedFile = new File([blob], originalFile.name, { type: 'image/jpeg' });
+            dataTransfer.items.add(croppedFile);
+
+            // Set the input file
+            document.getElementById('thumbnailInput').files = dataTransfer.files;
+
+            // Show preview
+            const preview = document.getElementById('thumbnailPreview');
+            const previewImg = document.getElementById('previewImg');
+            previewImg.src = canvas.toDataURL();
+            preview.classList.add('active');
+
+            // Update button text
+            document.getElementById('thumbnailButton').textContent = '✓ Image Ready';
+            document.getElementById('thumbnailButton').style.color = '#059669';
+            document.getElementById('thumbnailButton').style.borderColor = '#86efac';
+            document.getElementById('thumbnailButton').style.background = '#f0fdf4';
+
+            // Close modal
+            closeCropperModal();
+
+            // Log file size
+            console.log('Cropped image size:', (blob.size / 1024).toFixed(2), 'KB');
+        }, 'image/jpeg', 0.9);
+    }
+
+    function closeCropperModal() {
+        const modal = document.getElementById('cropperModal');
+        modal.classList.remove('active');
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+        }
+    }
+
+    // Close modal when clicking backdrop
+    document.getElementById('cropperModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeCropperModal();
+        }
+    });
 </script>
+
+{# ════════════════════════════════════════════════════════════════════ #}
+{# Image Cropper Modal #}
+{# ════════════════════════════════════════════════════════════════════ #}
+<div id="cropperModal">
+    <div class="cropper-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #1c1e21;">🖼️ Crop Your Thumbnail</h3>
+            <button type="button" onclick="closeCropperModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <p style="margin: 0 0 16px 0; font-size: 13px; color: #65676b;">
+            Drag to move, scroll to zoom, or drag the crop box to adjust the area
+        </p>
+
+        <img id="cropperImage" src="" alt="Crop Image" style="max-width: 100%; max-height: 400px;">
+
+        <div class="cropper-controls">
+            <button type="button" class="btn-rotate" onclick="rotateCropper()">🔄 Rotate +45°</button>
+            <button type="button" class="btn-reset" onclick="resetCropper()">↻ Reset</button>
+            <button type="button" class="btn-cancel" onclick="closeCropperModal()">Cancel</button>
+            <button type="button" class="btn-confirm" onclick="confirmCrop()">✓ Crop & Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+</div>
 {% endblock %}

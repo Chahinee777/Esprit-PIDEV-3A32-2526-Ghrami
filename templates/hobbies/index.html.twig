@@ -124,6 +124,7 @@
             <div style="display: flex; gap: 8px;">
                 <button onclick="openDetailsModal({{ hobby.id }})" class="btn-action" style="flex: 1; padding: 10px; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">📊 Détails</button>
                 <button onclick="openLogProgressModal({{ hobby.id }}, '{{ hobby.name }}')" class="btn-action" style="flex: 1; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">➕ Temps</button>
+                <button onclick="openMusicModal({{ hobby.id }}, '{{ hobby.name }}')" class="btn-action" style="flex: 1; padding: 10px; background: #E91E63; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">🎵 Musique</button>
                 <button onclick="openEditHobbyModal({{ hobby.id }}, '{{ hobby.name }}', '{{ hobby.category }}', '{{ hobby.description }}')" style="padding: 10px 12px; background: #FF9800; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">✏️</button>
                 <button onclick="deleteHobby({{ hobby.id }})" style="padding: 10px 12px; background: #f44336; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">🗑️</button>
             </div>
@@ -148,6 +149,11 @@
             <div>
                 <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Nom du Loisir *</label>
                 <input type="text" name="name" id="hobbyName" placeholder="ex. : Guitare, Course à pied" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px;">
+                    <span id="hobbyNameStatus" style="color: #65676b;"></span>
+                    <span id="hobbyNameCounter" style="color: #65676b;">0 / 100</span>
+                </div>
+                <div id="hobbyNameError" style="color: #e74c3c; font-size: 12px; margin-top: 6px; display: none;"></div>
             </div>
 
             <div>
@@ -158,11 +164,16 @@
                     <option value="{{ category }}">{{ category }}</option>
                     {% endfor %}
                 </select>
+                <div id="hobbyCategoryError" style="color: #e74c3c; font-size: 12px; margin-top: 6px; display: none;"></div>
             </div>
 
             <div>
                 <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Description (facultatif)</label>
                 <textarea name="description" id="hobbyDescription" placeholder="Ajouter une description..." style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 80px; box-sizing: border-box;"></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px;">
+                    <span id="hobbyDescStatus" style="color: #65676b;"></span>
+                    <span id="hobbyDescCounter" style="color: #65676b;">0 / 500</span>
+                </div>
             </div>
 
             <div style="display: flex; gap: 12px; margin-top: 16px;">
@@ -194,12 +205,20 @@
 
             <div>
                 <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">⏱️ Heures passées *</label>
-                <input type="number" name="hours" id="hoursSpent" placeholder="ex. 1.5" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                <input type="number" name="hours" id="hoursSpent" placeholder="ex. 1.5" min="0.1" step="0.5" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                <div id="hoursError" style="color: #e74c3c; font-size: 12px; margin-top: 6px; display: none;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px;">
+                    <span id="hoursStatus" style="color: #65676b;"></span>
+                </div>
             </div>
 
             <div>
                 <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">📝 Notes (facultatif)</label>
                 <textarea name="notes" id="sessionNotes" placeholder="Qu'avez-vous pratiqué aujourd'hui ?" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 80px; box-sizing: border-box;"></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px;">
+                    <span id="notesStatus" style="color: #65676b;"></span>
+                    <span id="notesCounter" style="color: #65676b;">0 / 500</span>
+                </div>
             </div>
 
             <div style="display: flex; gap: 12px; margin-top: 16px;">
@@ -226,11 +245,17 @@
             <div>
                 <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Titre du Jalon *</label>
                 <input type="text" name="title" id="milestoneTitle" placeholder="ex. : Apprendre 10 chansons" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px;">
+                    <span id="milestoneStatus" style="color: #65676b;"></span>
+                    <span id="milestoneCounter" style="color: #65676b;">0 / 150</span>
+                </div>
+                <div id="milestoneError" style="color: #e74c3c; font-size: 12px; margin-top: 6px; display: none;"></div>
             </div>
 
             <div>
                 <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Date cible (facultatif)</label>
                 <input type="date" name="target_date" id="milestoneDate" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                <div id="milestoneeDateError" style="color: #e74c3c; font-size: 12px; margin-top: 6px; display: none;"></div>
             </div>
 
             <div style="display: flex; gap: 12px; margin-top: 16px;">
@@ -255,6 +280,30 @@
 
         <div style="display: flex; gap: 12px; margin-top: 24px; border-top: 1px solid #e4e6eb; padding-top: 16px;">
             <button type="button" onclick="closeDetailsModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Fermer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Recommandations Musicales -->
+<div id="musicModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1001; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 600px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20px; font-weight: bold;">🎵 Recommandations Musicales</h2>
+            <button onclick="closeMusicModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <div style="background: #f0f2f5; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+            <p style="margin: 0; font-size: 14px; color: #1c1e21;"><strong>Loisir:</strong> <span id="musicHobbyName"></span></p>
+        </div>
+
+        <div id="musicResults" style="display: flex; flex-direction: column; gap: 12px; min-height: 200px;">
+            <div style="text-align: center; padding: 40px; color: #65676b;">⏳ Chargement...</div>
+        </div>
+
+        <input type="hidden" id="musicHobbyId">
+
+        <div style="display: flex; gap: 12px; margin-top: 16px; border-top: 1px solid #e4e6eb; padding-top: 16px;">
+            <button onclick="closeMusicModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Fermer</button>
         </div>
     </div>
 </div>
@@ -424,11 +473,40 @@
             const logs = data.recent_logs;
             const streak = data.streak;
             const dayHours = data.day_hours;
+            
+            // Load weather data if hobby has a location-based category
+            let weatherHtml = '';
+            const weatherCategories = ['sports', 'outdoor', 'hiking', 'cycling', 'running', 'camping', 'nature'];
+            const isOutdoor = weatherCategories.some(cat => hobby.category?.toLowerCase().includes(cat));
+            
+            if (isOutdoor) {
+                try {
+                    const weatherResponse = await fetch(`/hobbies/weather/current?lat=48.8566&lon=2.3522`);
+                    const weatherData = await weatherResponse.json();
+                    if (weatherData.ok && weatherData.weather) {
+                        const w = weatherData.weather;
+                        weatherHtml = `
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                                <h4 style="margin: 0 0 12px 0; font-weight: bold;">🌤️ Météo Actuelle</h4>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+                                    <div><strong>Température:</strong> ${w.temperature || 'N/A'}°C</div>
+                                    <div><strong>Humidité:</strong> ${w.humidity || 'N/A'}%</div>
+                                    <div><strong>Condition:</strong> ${w.emoji} ${w.condition || 'N/A'}</div>
+                                    <div><strong>Pour l'activité:</strong> ${w.good_for_activity ? '✅ Idéal' : '⚠️ Pas idéal'}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } catch (err) {
+                    console.error('Erreur lors du chargement de la météo:', err);
+                }
+            }
 
             let html = `
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <!-- Gauche : Statistiques et infos -->
                     <div>
+                        ${weatherHtml}
                         <div style="background: #f0f2f5; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
                             <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: bold;">${hobby.name}</h3>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -470,7 +548,10 @@
                         <div>
                             <h4 style="margin: 0 0 12px 0; font-weight: bold; color: #1c1e21;">📅 Ce Mois-ci</h4>
                             <div id="calendarWidget" style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e4e6eb;">
-                                ${buildCalendar(dayHours, milestones)}
+                                ${buildCalendar(dayHours, milestones, hobby.id)}
+                            </div>
+                            <div id="calendarWeatherBox" style="margin-top: 12px; background: #f5f7ff; border: 1px solid #dbe3ff; padding: 12px; border-radius: 8px; font-size: 13px; color: #2b3a67;">
+                                Cliquez sur un jour du calendrier pour voir la météo de cette date.
                             </div>
                         </div>
 
@@ -497,16 +578,30 @@
             
             document.getElementById('detailsTitle').textContent = hobby.name;
             document.getElementById('detailsContent').innerHTML = html;
+
+            const now = new Date();
+            const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const todayCell = document.querySelector(`#calendarWidget [data-calendar-day="${todayKey}"]`);
+            if (todayCell) {
+                onCalendarDayClick(todayKey, hobby.id, todayCell);
+            }
         } catch (e) {
             console.error(e);
             document.getElementById('detailsContent').innerHTML = '<p style="color: #f44336;">Erreur lors du chargement des détails</p>';
         }
     }
 
-    function buildCalendar(dayHours, milestones = []) {
+    function buildCalendar(dayHours, milestones = [], hobbyId = null) {
         const now = new Date();
         const year = now.getFullYear();
         const month = now.getMonth();
+
+        const toLocalDateKey = (date) => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
         
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
@@ -523,12 +618,12 @@
             html += `<div style="text-align: center; font-weight: bold; color: #65676b; padding: 4px;">${day}</div>`;
         });
         
-        // Jours du calendrier
+        // Render a stable 6x7 grid so previous/next month leading days always appear.
         let current = new Date(startDate);
-        while (current.getMonth() === month || (current.getMonth() !== month && current.getDay() !== 0)) {
-            const dateStr = current.toISOString().split('T')[0];
-            const hasEntry = dayHours[dateStr];
-            const hasMilestone = milestones.find(m => m.targetDate === dateStr);
+        for (let i = 0; i < 42; i++) {
+            const dateStr = toLocalDateKey(current);
+            const hasEntry = dayHours && dayHours[dateStr];
+            const hasMilestone = milestones && milestones.find(m => m && m.targetDate === dateStr);
             const isToday = current.toDateString() === now.toDateString();
             const isCurrentMonth = current.getMonth() === month;
             
@@ -538,25 +633,34 @@
                 let bgColor = '#f7f8fc';
                 let textColor = '#999';
                 let content = `${current.getDate()}`;
+                let borderStyle = '1px solid #e4e6eb';
                 
                 if (hasMilestone) {
-                    bgColor = hasMilestone.isAchieved ? '#d4edda' : '#fff3cd';
-                    textColor = hasMilestone.isAchieved ? '#155724' : '#856404';
-                    content = `${current.getDate()} 🎯`;
-                } else if (hasEntry) {
-                    bgColor = '#667eea';
-                    textColor = '#667eea';
-                } else if (isToday) {
-                    bgColor = '#e8eaff';
-                    textColor = '#667eea';
+                    bgColor = hasMilestone.isAchieved ? '#c8e6c9' : '#ffe0b2';
+                    textColor = hasMilestone.isAchieved ? '#1b5e20' : '#e65100';
+                    borderStyle = '2px solid ' + (hasMilestone.isAchieved ? '#4caf50' : '#ff9800');
+                    content = `<strong>${current.getDate()}</strong><br>🎯`;
+                }
+                
+                if (hasEntry && !hasMilestone) {
+                    bgColor = '#e3f2fd';
+                    textColor = '#1976d2';
+                    borderStyle = '2px solid #1976d2';
+                    content = `<strong>${current.getDate()}</strong><br>${(dayHours[dateStr] || 0).toFixed(1)}h`;
+                }
+                
+                if (isToday && !hasMilestone && !hasEntry) {
+                    bgColor = '#fff9c4';
+                    textColor = '#f57f17';
+                    borderStyle = '2px solid #fbc02d';
                 }
                 
                 let title = '';
-                if (hasEntry) title += `${dayHours[dateStr].toFixed(1)}h`;
+                if (hasEntry) title += `${(dayHours[dateStr] || 0).toFixed(1)}h`;
                 if (hasMilestone) title += (title ? ' - ' : '') + `Jalon: ${hasMilestone.title}`;
                 if (!title) title = 'Aucune entrée';
                 
-                html += `<div style="padding: 6px; text-align: center; background: ${bgColor}; border-radius: 4px; font-weight: ${hasEntry || isToday || hasMilestone ? 'bold' : 'normal'}; color: ${textColor}; cursor: pointer;" title="${title}">${content}</div>`;
+                html += `<div data-calendar-day="${dateStr}" onclick="onCalendarDayClick('${dateStr}', ${hobbyId ?? 'null'}, this)" style="padding: 8px 4px; text-align: center; background: ${bgColor}; border: ${borderStyle}; border-radius: 6px; font-weight: bold; color: ${textColor}; cursor: pointer; line-height: 1.2; font-size: 10px; min-height: 40px; display: flex; align-items: center; justify-content: center;" title="${title}">${content}</div>`;
             }
             
             current.setDate(current.getDate() + 1);
@@ -564,6 +668,65 @@
         
         html += '</div>';
         return html;
+    }
+
+    async function onCalendarDayClick(dateStr, hobbyId, cellEl) {
+        document.querySelectorAll('#calendarWidget [data-calendar-day]').forEach(el => {
+            el.style.boxShadow = 'none';
+        });
+
+        if (cellEl) {
+            cellEl.style.boxShadow = '0 0 0 2px #111827 inset';
+        }
+
+        await loadWeatherForDate(dateStr);
+    }
+
+    async function loadWeatherForDate(dateStr) {
+        const weatherBox = document.getElementById('calendarWeatherBox');
+        if (!weatherBox) return;
+
+        weatherBox.innerHTML = `<span style="color: #667eea; font-weight: 600;">Chargement météo pour ${dateStr}...</span>`;
+
+        try {
+            const response = await fetch(`/hobbies/weather/for-activity?lat=48.8566&lon=2.3522&date=${encodeURIComponent(dateStr)}`);
+            const data = await response.json();
+
+            if (!response.ok || !data.ok || !data.weather) {
+                weatherBox.innerHTML = `<span style="color: #d32f2f; font-weight: 600;">Impossible de charger la météo pour ${dateStr}.</span>`;
+                return;
+            }
+
+            const weather = data.weather;
+            const tMin = weather.temperature_min !== null && weather.temperature_min !== undefined
+                ? `${Number(weather.temperature_min).toFixed(1)}°C`
+                : 'N/A';
+            const tMax = weather.temperature_max !== null && weather.temperature_max !== undefined
+                ? `${Number(weather.temperature_max).toFixed(1)}°C`
+                : 'N/A';
+            const rain = weather.precipitation !== null && weather.precipitation !== undefined
+                ? `${Number(weather.precipitation).toFixed(1)} mm`
+                : 'N/A';
+
+            weatherBox.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <strong style="color: #1c1e21;">🌤️ Météo du ${dateStr}</strong>
+                    <span style="font-size: 18px;">${weather.emoji || '🌤️'}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; color: #374151;">
+                    <div><strong>Min:</strong> ${tMin}</div>
+                    <div><strong>Max:</strong> ${tMax}</div>
+                    <div><strong>Pluie:</strong> ${rain}</div>
+                    <div><strong>Condition:</strong> ${weather.weather_description || 'N/A'}</div>
+                </div>
+                <div style="margin-top: 8px; font-weight: 600; color: ${weather.good_for_activity ? '#2e7d32' : '#ef6c00'};">
+                    ${weather.good_for_activity ? '✅ Bonne journée pour l\'activité' : '⚠️ Météo moins favorable'}
+                </div>
+            `;
+        } catch (e) {
+            console.error('Erreur météo:', e);
+            weatherBox.innerHTML = `<span style="color: #d32f2f; font-weight: 600;">Erreur réseau lors du chargement météo.</span>`;
+        }
     }
 
     function toggleMilestone(id, checkbox, hobbyId) {
@@ -654,12 +817,124 @@
         return Object.values(data.errors).join('\n');
     }
 
+    // Real-time validation for hobby form
+    document.getElementById('hobbyName')?.addEventListener('input', () => {
+        const name = document.getElementById('hobbyName').value.trim();
+        const counter = document.getElementById('hobbyNameCounter');
+        const status = document.getElementById('hobbyNameStatus');
+        const error = document.getElementById('hobbyNameError');
+        const MAX_CHARS = 100;
+        const len = name.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        error.style.display = 'none';
+        
+        if (len === 0) {
+            counter.style.color = '#e4e6eb';
+            status.textContent = '';
+            document.getElementById('hobbyName').style.borderColor = '#e4e6eb';
+        } else if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            status.textContent = '❌ Trop long';
+            status.style.color = '#e74c3c';
+            document.getElementById('hobbyName').style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            status.textContent = '✅ OK';
+            status.style.color = '#27ae60';
+            document.getElementById('hobbyName').style.borderColor = '#e4e6eb';
+        }
+    });
+
+    document.getElementById('hobbyDescription')?.addEventListener('input', () => {
+        const desc = document.getElementById('hobbyDescription').value.trim();
+        const counter = document.getElementById('hobbyDescCounter');
+        const status = document.getElementById('hobbyDescStatus');
+        const MAX_CHARS = 500;
+        const len = desc.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        
+        if (len === 0) {
+            counter.style.color = '#e4e6eb';
+            status.textContent = '';
+            document.getElementById('hobbyDescription').style.borderColor = '#e4e6eb';
+        } else if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            status.textContent = '❌ Trop long';
+            status.style.color = '#e74c3c';
+            document.getElementById('hobbyDescription').style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            status.textContent = '✅ OK';
+            status.style.color = '#27ae60';
+            document.getElementById('hobbyDescription').style.borderColor = '#e4e6eb';
+        }
+    });
+
+    document.getElementById('hobbyCategory')?.addEventListener('change', () => {
+        const category = document.getElementById('hobbyCategory').value;
+        const error = document.getElementById('hobbyCategoryError');
+        error.style.display = 'none';
+        document.getElementById('hobbyCategory').style.borderColor = '#e4e6eb';
+    });
+
     // Gestion des soumissions de formulaires
     document.getElementById('hobbyForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Validation
+        const name = document.getElementById('hobbyName').value.trim();
+        const category = document.getElementById('hobbyCategory').value;
+        const description = document.getElementById('hobbyDescription').value.trim();
+        const nameError = document.getElementById('hobbyNameError');
+        const categoryError = document.getElementById('hobbyCategoryError');
+        
+        let hasError = false;
+        
+        if (!name) {
+            nameError.textContent = '❌ Le nom du loisir est requis';
+            nameError.style.display = 'block';
+            document.getElementById('hobbyName').style.borderColor = '#e74c3c';
+            hasError = true;
+        }
+        
+        if (name.length > 100) {
+            nameError.textContent = '❌ Le nom ne peut pas dépasser 100 caractères';
+            nameError.style.display = 'block';
+            document.getElementById('hobbyName').style.borderColor = '#e74c3c';
+            hasError = true;
+        }
+        
+        if (!category) {
+            categoryError.textContent = '❌ Choisissez une catégorie';
+            categoryError.style.display = 'block';
+            document.getElementById('hobbyCategory').style.borderColor = '#e74c3c';
+            hasError = true;
+        }
+        
+        if (description.length > 500) {
+            const descError = document.getElementById('hobbyDescError') || document.createElement('div');
+            descError.id = 'hobbyDescError';
+            descError.textContent = '❌ La description ne peut pas dépasser 500 caractères';
+            descError.style.cssText = 'color: #e74c3c; font-size: 12px; margin-top: 6px;';
+            document.getElementById('hobbyDescription').parentElement.appendChild(descError);
+            document.getElementById('hobbyDescription').style.borderColor = '#e74c3c';
+            hasError = true;
+        }
+        
+        if (hasError) return;
+        
         const form = e.target;
         const formData = new FormData(form);
         const action = form.action;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Enregistrement...';
         
         try {
             const response = await fetch(action, {
@@ -669,21 +944,114 @@
             
             const data = await response.json();
             if (data.ok) {
-                alert(data.message || 'Succès!');
                 window.location.href = '{{ path("app_hobbies_index") }}';
             } else {
-                alert('Erreur : ' + formatServerErrors(data));
+                alert('❌ Erreur : ' + formatServerErrors(data));
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✨ Créer';
             }
         } catch (error) {
             console.error('Erreur :', error);
-            alert('Erreur : ' + error.message);
+            alert('❌ Erreur : ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✨ Créer';
+        }
+    });
+
+    // Real-time validation for progress form
+    document.getElementById('hoursSpent')?.addEventListener('input', () => {
+        const hours = parseFloat(document.getElementById('hoursSpent').value);
+        const status = document.getElementById('hoursStatus');
+        const error = document.getElementById('hoursError');
+        error.style.display = 'none';
+        document.getElementById('hoursSpent').style.borderColor = '#e4e6eb';
+        
+        if (isNaN(hours) || hours === '') {
+            status.textContent = '';
+        } else if (hours <= 0) {
+            status.textContent = '❌ Doit être > 0';
+            status.style.color = '#e74c3c';
+        } else if (hours > 24) {
+            status.textContent = '⚠️ Plus de 24h?';
+            status.style.color = '#FF9800';
+        } else {
+            status.textContent = '✅ OK';
+            status.style.color = '#27ae60';
+        }
+    });
+
+    document.getElementById('sessionNotes')?.addEventListener('input', () => {
+        const notes = document.getElementById('sessionNotes').value.trim();
+        const counter = document.getElementById('notesCounter');
+        const status = document.getElementById('notesStatus');
+        const MAX_CHARS = 500;
+        const len = notes.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        
+        if (len === 0) {
+            counter.style.color = '#e4e6eb';
+            status.textContent = '';
+        } else if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            status.textContent = '❌ Trop long';
+            status.style.color = '#e74c3c';
+            document.getElementById('sessionNotes').style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            status.textContent = '✅ OK';
+            status.style.color = '#27ae60';
+            document.getElementById('sessionNotes').style.borderColor = '#e4e6eb';
         }
     });
 
     document.getElementById('progressForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Validation
+        const hours = parseFloat(document.getElementById('hoursSpent').value);
+        const date = document.getElementById('sessionDate').value;
+        const error = document.getElementById('hoursError');
+        
+        if (!date) {
+            alert('❌ Veuillez sélectionner une date');
+            return;
+        }
+        
+        if (isNaN(hours) || hours === '') {
+            error.textContent = '❌ Entrez le nombre d\'heures';
+            error.style.display = 'block';
+            document.getElementById('hoursSpent').style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        if (hours <= 0) {
+            error.textContent = '❌ Les heures doivent être supérieures à 0';
+            error.style.display = 'block';
+            document.getElementById('hoursSpent').style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        if (hours > 24) {
+            if (!confirm('⚠️ ' + hours + ' heures en une seule séance ? Continuer ?')) {
+                return;
+            }
+        }
+        
+        const notes = document.getElementById('sessionNotes').value.trim();
+        if (notes.length > 500) {
+            error.textContent = '❌ Les notes ne peuvent pas dépasser 500 caractères';
+            error.style.display = 'block';
+            return;
+        }
+        
         const hobbyId = document.getElementById('progressHobbyId').value;
         const formData = new FormData(e.target);
+        const submitBtn = document.querySelector('#logProgressModal button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Enregistrement...';
         
         try {
             const response = await fetch(`{{ path('app_hobbies_log_progress', {'id': 999}) }}`.replace('999', hobbyId), {
@@ -693,22 +1061,96 @@
             
             const data = await response.json();
             if (data.ok) {
-                alert('Succès : ' + (data.message || 'Progression enregistrée'));
                 closeLogProgressModal();
                 window.location.reload();
             } else {
-                alert('Erreur : ' + formatServerErrors(data));
+                alert('❌ Erreur : ' + formatServerErrors(data));
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✅ Enregistrer';
             }
         } catch (error) {
-            alert('Erreur : ' + error.message);
+            alert('❌ Erreur : ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✅ Enregistrer';
+        }
+    });
+
+    // Real-time validation for milestone form
+    document.getElementById('milestoneTitle')?.addEventListener('input', () => {
+        const title = document.getElementById('milestoneTitle').value.trim();
+        const counter = document.getElementById('milestoneCounter');
+        const status = document.getElementById('milestoneStatus');
+        const error = document.getElementById('milestoneError');
+        const MAX_CHARS = 150;
+        const len = title.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        error.style.display = 'none';
+        
+        if (len === 0) {
+            counter.style.color = '#e4e6eb';
+            status.textContent = '';
+            document.getElementById('milestoneTitle').style.borderColor = '#e4e6eb';
+        } else if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            status.textContent = '❌ Trop long';
+            status.style.color = '#e74c3c';
+            document.getElementById('milestoneTitle').style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            status.textContent = '✅ OK';
+            status.style.color = '#27ae60';
+            document.getElementById('milestoneTitle').style.borderColor = '#e4e6eb';
+        }
+    });
+
+    document.getElementById('milestoneDate')?.addEventListener('change', () => {
+        const dateInput = document.getElementById('milestoneDate').value;
+        const error = document.getElementById('milestoneeDateError');
+        error.style.display = 'none';
+        
+        if (dateInput) {
+            const selectedDate = new Date(dateInput);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (selectedDate < today) {
+                error.textContent = '⚠️ La date cible est dans le passé';
+                error.style.display = 'block';
+                error.style.color = '#FF9800';
+            }
         }
     });
 
     document.getElementById('milestoneForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Validation
+        const title = document.getElementById('milestoneTitle').value.trim();
+        const error = document.getElementById('milestoneError');
+        
+        if (!title) {
+            error.textContent = '❌ Le titre du jalon est requis';
+            error.style.display = 'block';
+            document.getElementById('milestoneTitle').style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        if (title.length > 150) {
+            error.textContent = '❌ Le titre ne peut pas dépasser 150 caractères';
+            error.style.display = 'block';
+            document.getElementById('milestoneTitle').style.borderColor = '#e74c3c';
+            return;
+        }
+        
         const hobbyId = document.getElementById('milestoneHobbyId').value;
         const milestoneId = document.getElementById('milestoneId').value;
         const formData = new FormData(e.target);
+        const submitBtn = document.querySelector('#milestoneModal button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Enregistrement...';
         
         let endpoint, method;
         if (milestoneId) {
@@ -730,12 +1172,88 @@
                 closeMilestoneModal();
                 loadHobbyDetails(hobbyId);
             } else {
-                alert('Erreur : ' + formatServerErrors(data));
+                alert('❌ Erreur : ' + formatServerErrors(data));
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✨ Enregistrer';
             }
         } catch (error) {
-            alert('Erreur : ' + error.message);
+            alert('❌ Erreur : ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✨ Enregistrer';
         }
     });
+
+    // Music Recommendations Functions
+    function openMusicModal(hobbyId, hobbyName) {
+        const modal = document.getElementById('musicModal');
+        modal.style.display = 'flex';
+        document.getElementById('musicHobbyId').value = hobbyId;
+        document.getElementById('musicHobbyName').textContent = hobbyName;
+        document.getElementById('musicResults').innerHTML = '<div style="text-align: center; padding: 40px; color: #65676b;">⏳ Chargement des recommandations musicales...</div>';
+        
+        fetchMusicRecommendations(hobbyId);
+    }
+
+    function closeMusicModal() {
+        document.getElementById('musicModal').style.display = 'none';
+    }
+
+    async function fetchMusicRecommendations(hobbyId) {
+        try {
+            const response = await fetch(`/hobbies/${hobbyId}/music-recommendations`);
+            const json = await response.json();
+            
+            if (json.ok && json.data.recommendations && json.data.recommendations.length > 0) {
+                displayMusicRecommendations(json.data.recommendations);
+            } else {
+                document.getElementById('musicResults').innerHTML = '<div style="text-align: center; padding: 40px; color: #65676b;">😢 Pas de recommandations trouvées. Veuillez réessayer.</div>';
+            }
+        } catch (error) {
+            console.error('Music fetch error:', error);
+            document.getElementById('musicResults').innerHTML = '<div style="text-align: center; padding: 40px; color: #e74c3c;">❌ Erreur lors du chargement: ' + error.message + '</div>';
+        }
+    }
+
+    function displayMusicRecommendations(tracks) {
+        let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+        
+        tracks.forEach((track, index) => {
+            const youtubeQuery = encodeURIComponent(track.title + ' ' + track.artists);
+            const youtubeUrl = `https://www.youtube.com/results?search_query=${youtubeQuery}`;
+            
+            html += `
+                <div style="background: #f8f8f8; padding: 12px; border-radius: 8px; border-left: 4px solid #E91E63;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #1c1e21; margin-bottom: 4px;">${index + 1}. ${escapeHtml(track.title)}</div>
+                            <div style="font-size: 13px; color: #65676b; margin-bottom: 4px;">🎤 ${escapeHtml(track.artists)}</div>
+                            <div style="font-size: 12px; color: #999;">📅 ${escapeHtml(track.date)}</div>
+                        </div>
+                        <a href="${youtubeUrl}" target="_blank" style="padding: 6px 12px; background: #E91E63; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; text-decoration: none; font-size: 12px; white-space: nowrap;">
+                            ▶️ YouTube
+                        </a>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        document.getElementById('musicResults').innerHTML = html;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Close modal on outside click
+    window.onclick = function(event) {
+        const musicModal = document.getElementById('musicModal');
+        if (event.target === musicModal) {
+            closeMusicModal();
+        }
+    }
 
     // Fermer les modals en cliquant en dehors
     document.getElementById('createHobbyModal')?.addEventListener('click', (e) => {
