@@ -26,6 +26,8 @@ final class ConnectionsListApiController extends AbstractController
             return $this->json(['ok' => false], Response::HTTP_UNAUTHORIZED);
         }
 
+
+
         try {
             $connections = $this->connectionService->getConnections((int) $user->id);
             $pending = $this->connectionService->getIncomingPendingConnections((int) $user->id);

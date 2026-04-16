@@ -15,9 +15,6 @@ final class MeetingsListApiController extends AbstractController
 {
     public function __construct(private readonly MeetingsService $meetingsService) {}
 
-    /**
-     * GET /api/meetings/list?filter=upcoming|past|scheduled|completed|cancelled|physical|virtual
-     */
     #[Route('', name: 'api_meetings_list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
