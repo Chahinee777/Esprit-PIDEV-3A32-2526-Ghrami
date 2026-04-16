@@ -86,7 +86,7 @@ final class MeetingsApiController extends AbstractController
         $meetLinkCreated = false;
 
         try {
-            // For virtual meetings attempt to create a real Google Meet link.
+
             if ($meetingType === 'virtual' && $location === null) {
                 $googleToken = $data['google_access_token'] ?? null;
                 if ($googleToken) {
@@ -94,6 +94,8 @@ final class MeetingsApiController extends AbstractController
                         (string) $googleToken, $scheduledAt, $duration, $title
                     );
                 }
+
+
 
                 if ($location === null) {
                     // Try service-account fallback

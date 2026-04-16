@@ -20,6 +20,7 @@ final class ConnectionsListApiController extends AbstractController
     #[Route('', name: 'api_connections_list', methods: ['GET'])]
     public function list(): JsonResponse
     {
+
         $user = $this->getUser();
         if (!$user instanceof User) {
             return $this->json(['ok' => false], Response::HTTP_UNAUTHORIZED);

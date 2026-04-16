@@ -77,6 +77,7 @@ final class DiscoveryApiController extends AbstractController
         });
 
         return $this->json(['ok' => true, 'matches' => $data]);
+
     }
 
     #[Route('/user/{userId}', name: 'api_discovery_user_profile', methods: ['GET'])]
