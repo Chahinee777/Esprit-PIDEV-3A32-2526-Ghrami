@@ -117,10 +117,6 @@ class ConnectionService
         );
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // READ – pending incoming (for the notification badge + pending list)
-    // ─────────────────────────────────────────────────────────────────────────
-
     public function getPendingConnections(int $userId): array
     {
         return $this->getIncomingPendingConnections($userId);
@@ -172,9 +168,6 @@ class ConnectionService
         );
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ACCEPT / REJECT / CANCEL
-    // ─────────────────────────────────────────────────────────────────────────
 
     public function acceptConnection(string $connectionId, int $userId): void
     {
