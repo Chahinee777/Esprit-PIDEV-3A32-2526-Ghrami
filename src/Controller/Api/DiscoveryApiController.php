@@ -24,11 +24,7 @@ final class DiscoveryApiController extends AbstractController
         private readonly CacheInterface $cache,
     ) {}
 
-    /**
-     * Get matched user cards with smart matching algorithm.
-     * Uses Groq AI-powered matching if API key is configured,
-     * otherwise falls back to rule-based matching.
-     */
+
     #[Route('/matches', name: 'api_discovery_matches', methods: ['GET'])]
     public function getMatches(Request $request): JsonResponse
     {
@@ -49,7 +45,7 @@ final class DiscoveryApiController extends AbstractController
             $item->expiresAfter(90);
 
             try {
-                // Try Groq AI-powered matching first
+
                 $matches = $this->groqSmartMatchingService->calculateMatchScores($userId);
             } catch (\RuntimeException $e) {
                 // Fallback to rule-based matching if Groq not configured
@@ -60,7 +56,7 @@ final class DiscoveryApiController extends AbstractController
                 }
             }
 
-            // Convert to JSON-serializable array
+
             return array_map(fn($match) => [
                 'id' => $match->id,
                 'username' => $match->username,
@@ -104,7 +100,7 @@ final class DiscoveryApiController extends AbstractController
                 ['uid' => $userId]
             );
         } catch (\Throwable) {
-            // Keep profile payload available even if hobbies query fails.
+
             $hobbies = [];
         }
 
