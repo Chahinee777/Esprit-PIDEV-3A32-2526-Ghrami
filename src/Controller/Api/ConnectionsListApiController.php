@@ -14,9 +14,6 @@ final class ConnectionsListApiController extends AbstractController
 {
     public function __construct(private readonly ConnectionService $connectionService) {}
 
-    /**
-     * Get all connections for current user.
-     */
     #[Route('', name: 'api_connections_list', methods: ['GET'])]
     public function list(): JsonResponse
     {

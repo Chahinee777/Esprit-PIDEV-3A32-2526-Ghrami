@@ -48,7 +48,7 @@ final class DiscoveryApiController extends AbstractController
 
                 $matches = $this->groqSmartMatchingService->calculateMatchScores($userId);
             } catch (\RuntimeException $e) {
-                // Fallback to rule-based matching if Groq not configured
+
                 if (str_contains($e->getMessage(), 'GROQ_API_KEY')) {
                     $matches = $this->smartMatchingService->calculateMatchScores($userId);
                 } else {
