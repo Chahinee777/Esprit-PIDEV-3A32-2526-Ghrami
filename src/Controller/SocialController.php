@@ -11,15 +11,19 @@ use App\Service\SocialService;
 use App\Service\BadgeService;
 use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
+use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[Route('/social')]
 final class SocialController extends AbstractController
@@ -58,7 +62,7 @@ final class SocialController extends AbstractController
     {
     }
     #[Route('', name: 'app_social_index', methods: ['GET'])]
-    public function index(Request $request, SocialService $socialService): Response
+    public function index(Request $request, SocialService $socialService, PaginatorInterface $paginator): Response
     {
         $currentUser = $this->getUser();
         $userId = $currentUser instanceof User ? (int) $currentUser->id : (int) $request->query->get('user', 8);
@@ -72,14 +76,36 @@ final class SocialController extends AbstractController
             $sort = 'recent';
         }
 
-        $feed = $socialService->getFeedForUser($userId, $page, $perPage, $searchQuery, $sort);
+        $feed = $paginator->paginate(
+            $socialService->createFeedQueryBuilder($userId, $searchQuery, $sort),
+            $page,
+            $perPage,
+            [
+                'defaultSortFieldName' => 'p.created_at',
+                'defaultSortDirection' => 'desc',
+                'distinct' => false,
+            ]
+        );
         $stories = $socialService->getActiveStoriesForUser($userId);
-        $postIds = array_map(static fn(array $row): int => (int) $row['post_id'], $feed);
+        $feedItems = $feed->getItems();
+        $postIds = array_map(static fn(array $row): int => (int) $row['post_id'], $feedItems);
         $commentsByPost = $socialService->getCommentsForPosts($postIds);
-        
-        // Build comment threads (P2 Fix 9: Comment threading)
-        foreach ($commentsByPost as &$comments) {
-            $comments = $socialService->buildCommentThreads($comments);
+
+        $commentPageMap = $request->query->all('commentsPage');
+        $commentPaginationsByPost = [];
+
+        foreach ($commentsByPost as $postId => $comments) {
+            $threads = $socialService->buildCommentThreads($comments);
+            $commentPage = max(1, (int) ($commentPageMap[(string) $postId] ?? 1));
+            $commentPaginationsByPost[$postId] = $paginator->paginate(
+                $threads,
+                $commentPage,
+                5,
+                [
+                    'pageParameterName' => sprintf('commentsPage[%d]', $postId),
+                    'distinct' => false,
+                ]
+            );
         }
 
         // Get user stats
@@ -102,7 +128,7 @@ final class SocialController extends AbstractController
             'userId' => $userId,
             'feed' => $feed,
             'stories' => $stories,
-            'commentsByPost' => $commentsByPost,
+            'commentsByPost' => $commentPaginationsByPost,
             'page' => $page,
             'perPage' => $perPage,
             'userPostCount' => $postCount,
@@ -196,7 +222,13 @@ final class SocialController extends AbstractController
     }
 
     #[Route('/comment', name: 'app_social_comment', methods: ['POST'])]
-    public function addComment(Request $request, SocialService $socialService, SluggerInterface $slugger, ValidatorInterface $validator): Response
+    public function addComment(
+        Request $request,
+        SocialService $socialService,
+        SluggerInterface $slugger,
+        ValidatorInterface $validator,
+        #[Autowire(service: 'limiter.social_comment')] RateLimiterFactory $commentLimiter
+    ): Response
     {
         if (!$this->isCsrfTokenValid('social_comment', (string) $request->request->get('_csrf_token'))) {
             $this->addFlash('error', 'Invalid CSRF token.');
@@ -208,6 +240,7 @@ final class SocialController extends AbstractController
 
         $content = trim((string) $request->request->get('content', ''));
         $mood = trim((string) $request->request->get('mood', '')) ?: null;
+        $gifUrl = trim((string) $request->request->get('gif_url', '')) ?: null;
         /** @var UploadedFile|null $imageFile */
         $imageFile = $request->files->get('image_file');
 
@@ -221,6 +254,8 @@ final class SocialController extends AbstractController
             if ($imageUrl === null) {
                 return $this->validationFailure($request, ['image_file' => 'Comment image must be JPG, PNG or WEBP.']);
             }
+        } elseif ($gifUrl !== null) {
+            $imageUrl = filter_var($gifUrl, FILTER_VALIDATE_URL) ? $gifUrl : null;
         }
 
         if ($content === '' && $imageUrl === null) {
@@ -238,6 +273,32 @@ final class SocialController extends AbstractController
             return $this->validationFailure($request, $this->normalizeValidationErrors($violations));
         }
 
+        $limiter = $commentLimiter->create($this->buildCommentLimiterKey($request, $userId));
+        $limit = $limiter->consume(1);
+
+        if (!$limit->isAccepted()) {
+            $retryAfter = $limit->getRetryAfter();
+            $message = 'Trop de commentaires envoyes en peu de temps. Merci d\'attendre un instant avant de reessayer.';
+
+            if ($request->isXmlHttpRequest() || str_contains((string) $request->headers->get('Accept'), 'application/json')) {
+                $payload = [
+                    'ok' => false,
+                    'error' => $message,
+                    'retryAfter' => $retryAfter?->getTimestamp(),
+                ];
+
+                $response = $this->json($payload, Response::HTTP_TOO_MANY_REQUESTS);
+                if ($retryAfter !== null) {
+                    $response->headers->set('Retry-After', (string) max(1, $retryAfter->getTimestamp() - time()));
+                }
+
+                return $response;
+            }
+
+            $this->addFlash('error', $message);
+            return $this->redirectToRoute('app_social_index');
+        }
+
         $comment = $socialService->addComment(
             (int) $request->request->get('post_id'),
             $userId,
@@ -251,6 +312,53 @@ final class SocialController extends AbstractController
         }
 
         return $this->redirectToRoute('app_social_index');
+    }
+
+    #[Route('/comment/gif-search', name: 'app_social_comment_gif_search', methods: ['GET'])]
+    public function searchCommentGifs(Request $request, HttpClientInterface $httpClient): JsonResponse
+    {
+        $query = trim((string) $request->query->get('q', ''));
+        if ($query === '') {
+            return $this->json(['ok' => false, 'error' => 'Recherche requise.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $apiKey = trim((string) ($_ENV['GIF_API_KEY'] ?? $_ENV['GIPHY_API_KEY'] ?? ''));
+        if ($apiKey === '') {
+            return $this->json(['ok' => false, 'error' => 'GIF API key not configured.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        try {
+            $response = $httpClient->request('GET', 'https://api.giphy.com/v1/gifs/search', [
+                'query' => [
+                    'api_key' => $apiKey,
+                    'q' => $query,
+                    'limit' => 12,
+                    'rating' => 'g',
+                    'lang' => 'fr',
+                ],
+                'timeout' => 10,
+            ]);
+
+            $result = $response->toArray(false);
+            $gifs = [];
+            foreach ($result['data'] ?? [] as $gif) {
+                $images = $gif['images'] ?? [];
+                $preview = $images['fixed_width_small_still']['url'] ?? $images['fixed_width_small']['url'] ?? $images['downsized_medium']['url'] ?? null;
+                $url = $images['downsized_medium']['url'] ?? $images['original']['url'] ?? null;
+                if ($url !== null && $preview !== null) {
+                    $gifs[] = [
+                        'id' => $gif['id'] ?? '',
+                        'url' => $url,
+                        'preview' => $preview,
+                        'title' => $gif['title'] ?? '',
+                    ];
+                }
+            }
+
+            return $this->json(['ok' => true, 'data' => $gifs]);
+        } catch (\Throwable $e) {
+            return $this->json(['ok' => false, 'error' => 'Impossible de récupérer les GIFs.'], Response::HTTP_BAD_GATEWAY);
+        }
     }
 
     #[Route('/like', name: 'app_social_like', methods: ['POST'])]
@@ -413,6 +521,7 @@ final class SocialController extends AbstractController
         $commentId = (int) $request->request->get('comment_id');
         $content = trim((string) $request->request->get('content', ''));
         $mood = trim((string) $request->request->get('mood', '')) ?: null;
+        $gifUrl = trim((string) $request->request->get('gif_url', '')) ?: null;
         $removeImage = (bool) $request->request->get('remove_image', false);
         /** @var UploadedFile|null $imageFile */
         $imageFile = $request->files->get('image_file');
@@ -433,6 +542,8 @@ final class SocialController extends AbstractController
             if ($imageUrl === null) {
                 return $this->validationFailure($request, ['image_file' => 'Comment image must be JPG, PNG or WEBP.']);
             }
+        } elseif ($gifUrl !== null) {
+            $imageUrl = filter_var($gifUrl, FILTER_VALIDATE_URL) ? $gifUrl : $imageUrl;
         }
 
         if ($content === '' && $imageUrl === null) {
@@ -615,11 +726,45 @@ final class SocialController extends AbstractController
         return $this->json(['ok' => true, 'deletedCount' => $deleted]);
     }
 
+    #[Route('/post/hide', name: 'app_social_post_hide', methods: ['POST'])]
+    public function hidePost(Request $request, SocialService $socialService): Response
+    {
+        if (!$this->isCsrfTokenValid('social_post_hide', (string) $request->request->get('_csrf_token'))) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('app_social_index');
+        }
+
+        $currentUser = $this->getUser();
+        $userId = $currentUser instanceof User ? (int) $currentUser->id : 0;
+        $postId = (int) $request->request->get('post_id');
+
+        $existingPost = $this->em->getRepository(Post::class)->find($postId);
+        if (!$existingPost instanceof Post || (int) ($existingPost->user?->id ?? 0) === $userId) {
+            $this->addFlash('error', 'Unable to hide this post.');
+            return $this->redirectToRoute('app_social_index');
+        }
+
+        $hidden = $socialService->hidePost($postId, $userId);
+
+        if ($hidden === null) {
+            $this->addFlash('error', 'Unable to hide this post from your feed.');
+        } elseif ($hidden) {
+            $this->addFlash('success', 'This post has been hidden from your feed only.');
+        } else {
+            $this->addFlash('success', 'This post is visible again in your feed.');
+        }
+
+        if ($request->isXmlHttpRequest() || str_contains((string) $request->headers->get('Accept'), 'application/json')) {
+            return $this->json(['hidden' => $hidden === true, 'ok' => $hidden !== null]);
+        }
+
+        return $this->redirectToRoute('app_social_index');
+    }
+
     private function validationFailure(Request $request, array $errors): Response
     {
-        
-if ($request->isXmlHttpRequest()) {
-                return $this->json([
+        if ($request->isXmlHttpRequest()) {
+            return $this->json([
                 'ok' => false,
                 'error' => 'Validation failed.',
                 'errors' => $errors,
@@ -644,5 +789,14 @@ if ($request->isXmlHttpRequest()) {
         }
 
         return $errors;
+    }
+
+    private function buildCommentLimiterKey(Request $request, int $userId): string
+    {
+        if ($userId > 0) {
+            return 'user:' . $userId;
+        }
+
+        return 'ip:' . ($request->getClientIp() ?? 'unknown');
     }
 }

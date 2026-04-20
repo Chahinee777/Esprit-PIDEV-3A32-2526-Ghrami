@@ -225,7 +225,7 @@
         
         <!-- Feed Posts -->
         {% for p in feed %}
-        <div class="post-card">
+        <div class="post-card" id="post-card-{{ p.post_id }}" data-post-id="{{ p.post_id }}">
             <!-- Post Header -->
             <div class="post-header">
                 <div class="post-author-info">
@@ -285,17 +285,27 @@
                         {{ p.liked_by_me ? '❤️' : '👍' }} J'aime
                     </button>
                 </form>
-                <button class="action-item">
+                <button type="button" class="action-item comment-toggle-btn" data-post-id="{{ p.post_id }}" aria-expanded="false" onclick="toggleComments({{ p.post_id }}, this)">
                     💬 Commenter
                 </button>
                 <button class="action-item" onclick="openShareDialog({post_id: {{ p.post_id }}, content: `{{ p.content | escape('js') }}`, image_url: `{{ p.image_url ?: '' | escape('js') }}`})">
                     📤 Partager
                 </button>
+                {% if p.user_id != userId %}
+                <form method="post" action="{{ path('app_social_post_hide') }}" class="social-post-hide-form" data-post-id="{{ p.post_id }}" style="display: inline;">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_post_hide') }}">
+                    <input type="hidden" name="post_id" value="{{ p.post_id }}">
+                    <button type="submit" class="action-item" style="background: none; border: none; color: #4b5563; cursor: pointer;">
+                        🙈 Masquer
+                    </button>
+                </form>
+                {% endif %}
             </div>
             
             <!-- Comments Section (Threaded) -->
-            {% set comments = commentsByPost[p.post_id]|default([]) %}
-            {% if comments|length > 0 %}
+            {% set comments = commentsByPost[p.post_id]|default(null) %}
+            {% if comments and comments.getTotalItemCount > 0 %}
+            <div id="comments-wrapper-{{ p.post_id }}" class="comments-wrapper" style="display: none;">
             <div class="comments-section">
                 {# Render comment with its replies (threaded) #}
                 {% macro render_comment(comment, userId, indent, postId) %}
@@ -349,16 +359,39 @@
                         {{ _self.render_comment(c, userId, 0, p.post_id) }}
                     {% endif %}
                 {% endfor %}
+
+                {% if comments.pageCount > 1 %}
+                <div style="padding-top: 10px; border-top: 1px solid #eef2f7;">
+                    <div style="font-size: 12px; color: #65676b; margin-bottom: 8px;">
+                        {{ comments.getTotalItemCount }} commentaires
+                    </div>
+                    {{ knp_pagination_render(comments) }}
+                </div>
+                {% endif %}
+            </div>
             </div>
             {% endif %}
             
             <!-- Add Comment Form -->
-            <form method="post" action="{{ path('app_social_comment') }}" enctype="multipart/form-data" class="social-comment-form" style="padding: 12px 16px; border-top: 1px solid #e4e6eb; display: flex; flex-direction: column; gap: 8px;">
+            <form method="post" action="{{ path('app_social_comment') }}" enctype="multipart/form-data" class="social-comment-form comments-wrapper" id="comment-form-{{ p.post_id }}" data-post-id="{{ p.post_id }}" style="padding: 12px 16px; border-top: 1px solid #e4e6eb; display: none; flex-direction: column; gap: 8px;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_comment') }}">
                 <input type="hidden" name="post_id" value="{{ p.post_id }}">
                 <div style="display: flex; gap: 8px; align-items: flex-start;">
                     <textarea name="content" rows="1" placeholder="Écrivez un commentaire..." style="flex: 1; padding: 8px 12px; background-color: #f0f2f5; border: 1px solid #e4e6eb; border-radius: 16px; resize: none; font-size: 13px; min-height: 32px; line-height: 18px; max-height: 100px; font-family: inherit;" class="comment-textarea"></textarea>
                     <button type="submit" class="btn btn-sm btn-primary" style="padding: 8px 14px; height: fit-content; align-self: flex-end;">Poster</button>
+                </div>
+                <div class="comment-gif-panel" style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" name="gif_query" placeholder="Rechercher un GIF..." class="comment-gif-query" style="flex:1; padding: 8px 10px; background-color: #f8f9fa; border: 1px solid #e4e6eb; border-radius: 12px; font-size: 12px;">
+                        <button type="button" onclick="searchCommentGifs(this)" class="btn btn-outline" style="padding: 8px 14px; font-size: 12px; white-space: nowrap;">GIF</button>
+                    </div>
+                    <div class="comment-gif-results" style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;"></div>
+                    <div class="comment-gif-preview" style="display:none; align-items:center; gap:10px; padding: 8px 10px; border: 1px solid #e4e6eb; border-radius: 12px; background: #ffffff;">
+                        <span style="font-size:12px; color:#65676b;">GIF sélectionné :</span>
+                        <div class="comment-gif-preview-img" style="max-width:120px; max-height:90px; overflow:hidden; border-radius: 10px;"></div>
+                        <button type="button" onclick="clearSelectedGif(this)" class="btn btn-sm btn-link" style="padding:0; font-size:12px;">Effacer</button>
+                    </div>
+                    <input type="hidden" name="gif_url" class="comment-gif-url">
                 </div>
                 <div style="display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 8px; align-items: center;">
                     <input type="file" name="image_file" accept="image/jpeg,image/png,image/webp" class="comment-image-input" style="padding: 8px 10px; background-color: #f8f9fa; border: 1px solid #e4e6eb; border-radius: 12px; font-size: 12px;">
@@ -384,15 +417,9 @@
         {% endfor %}
         
         <!-- Pagination -->
-        {% if page > 1 or feed|length >= perPage %}
-        <div style="display: flex; justify-content: center; gap: 12px; padding: 20px;">
-            {% if page > 1 %}
-            <a href="{{ path('app_social_index', { query: searchQuery, sort: sort, page: page - 1, perPage: perPage }) }}" class="btn btn-outline">← Précédent</a>
-            {% endif %}
-            <span style="padding: 10px 16px; text-align: center; color: #65676b;">Page {{ page }}</span>
-            {% if feed|length >= perPage %}
-            <a href="{{ path('app_social_index', { query: searchQuery, sort: sort, page: page + 1, perPage: perPage }) }}" class="btn btn-outline">Suivant →</a>
-            {% endif %}
+        {% if feed.pageCount > 1 %}
+        <div style="padding: 20px 0;">
+            {{ knp_pagination_render(feed) }}
         </div>
         {% endif %}
 
@@ -831,9 +858,53 @@
         if (e.target.id === 'viewStoryModal') closeStoryModal();
     });
 
+    function openComments(postId) {
+        const wrappers = document.querySelectorAll(`#comments-wrapper-${postId}, #comment-form-${postId}`);
+        const toggleButton = document.querySelector(`.comment-toggle-btn[data-post-id="${postId}"]`);
+
+        wrappers.forEach((wrapper) => {
+            wrapper.style.display = wrapper.tagName === 'FORM' ? 'flex' : 'block';
+        });
+
+        if (toggleButton) {
+            toggleButton.setAttribute('aria-expanded', 'true');
+            toggleButton.innerHTML = '💬 Fermer';
+        }
+    }
+
+    function closeComments(postId) {
+        const wrappers = document.querySelectorAll(`#comments-wrapper-${postId}, #comment-form-${postId}`);
+        const toggleButton = document.querySelector(`.comment-toggle-btn[data-post-id="${postId}"]`);
+
+        wrappers.forEach((wrapper) => {
+            wrapper.style.display = 'none';
+        });
+
+        if (toggleButton) {
+            toggleButton.setAttribute('aria-expanded', 'false');
+            toggleButton.innerHTML = '💬 Commenter';
+        }
+    }
+
+    function toggleComments(postId) {
+        const form = document.getElementById(`comment-form-${postId}`);
+        const isOpen = form && form.style.display !== 'none';
+
+        if (isOpen) {
+            closeComments(postId);
+            return;
+        }
+
+        openComments(postId);
+        const textarea = document.querySelector(`#comment-form-${postId} textarea[name="content"]`);
+        textarea?.focus();
+    }
+
     // P2 Fix 9: Comment threading - add mention to reply
     function addMention(mention, postId) {
-        const textarea = document.querySelector(`textarea[name="content"]`);
+        openComments(postId);
+
+        const textarea = document.querySelector(`#comment-form-${postId} textarea[name="content"]`);
         if (textarea) {
             const current = textarea.value.trim();
             if (current && !current.startsWith(mention)) {
@@ -842,7 +913,96 @@
                 textarea.value = mention + ' ';
             }
             textarea.focus();
-            textarea.parentElement.parentElement.scrollIntoView({ behavior: 'smooth' });
+            textarea.closest('form')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    function searchCommentGifs(button) {
+        const form = button.closest('form');
+        if (!form) {
+            return;
+        }
+
+        const queryInput = form.querySelector('.comment-gif-query');
+        const results = form.querySelector('.comment-gif-results');
+        const preview = form.querySelector('.comment-gif-preview');
+        const previewImg = form.querySelector('.comment-gif-preview-img');
+        const hiddenInput = form.querySelector('.comment-gif-url');
+        const fileInput = form.querySelector('input[name="image_file"]');
+        const status = form.querySelector('.comment-status');
+
+        if (!queryInput || !results || !hiddenInput || !preview || !previewImg) {
+            return;
+        }
+
+        const query = queryInput.value.trim();
+        if (query === '') {
+            results.innerHTML = '<div style="grid-column:1/-1;color:#555;">Entrez un terme pour rechercher un GIF.</div>';
+            return;
+        }
+
+        results.innerHTML = '<div style="grid-column:1/-1;color:#555;">Recherche en cours...</div>';
+
+        fetch('{{ path('app_social_comment_gif_search') }}?q=' + encodeURIComponent(query))
+            .then((response) => response.json())
+            .then((json) => {
+                if (!json.ok) {
+                    results.innerHTML = '<div style="grid-column:1/-1;color:#d9534f;">' + (json.error || 'Erreur lors de la recherche.') + '</div>';
+                    return;
+                }
+
+                if (!Array.isArray(json.data) || json.data.length === 0) {
+                    results.innerHTML = '<div style="grid-column:1/-1;color:#555;">Aucun GIF trouvé pour cette recherche.</div>';
+                    return;
+                }
+
+                results.innerHTML = '';
+                json.data.forEach((gif) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.style.cssText = 'border:none; padding:0; background:none; cursor:pointer; outline:none;';
+                    button.innerHTML = '<img src="' + gif.preview + '" alt="' + (gif.title || 'GIF') + '" style="width:100%; height:100%; border-radius:10px; object-fit:cover;">';
+                    button.addEventListener('click', () => {
+                        hiddenInput.value = gif.url;
+                        previewImg.innerHTML = '<img src="' + gif.url + '" alt="GIF sélectionné" style="max-width:100%; max-height:80px; border-radius:10px;">';
+                        preview.style.display = 'flex';
+                        if (fileInput) {
+                            fileInput.value = '';
+                        }
+                        if (status) {
+                            status.textContent = 'GIF sélectionné pour le commentaire.';
+                        }
+                    });
+                    results.appendChild(button);
+                });
+            })
+            .catch(() => {
+                results.innerHTML = '<div style="grid-column:1/-1;color:#d9534f;">Impossible de charger les GIFs.</div>';
+            });
+    }
+
+    function clearSelectedGif(button) {
+        const form = button.closest('form');
+        if (!form) {
+            return;
+        }
+
+        const hiddenInput = form.querySelector('.comment-gif-url');
+        const preview = form.querySelector('.comment-gif-preview');
+        const previewImg = form.querySelector('.comment-gif-preview-img');
+        const status = form.querySelector('.comment-status');
+
+        if (hiddenInput) {
+            hiddenInput.value = '';
+        }
+        if (preview) {
+            preview.style.display = 'none';
+        }
+        if (previewImg) {
+            previewImg.innerHTML = '';
+        }
+        if (status) {
+            status.textContent = 'GIF supprimé.';
         }
     }
 
@@ -1275,6 +1435,191 @@
             }
         });
 
+        const hiddenPostSnapshots = new Map();
+        let activeCommentCooldown = null;
+
+        function buildHiddenPostNotice(postId, csrfToken) {
+            return `
+                <div style="padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px dashed #d1d5db; border-radius: 18px; background: linear-gradient(180deg, #fcfcfd 0%, #f7f8fa 100%);">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 700; color: #1f2937;">Post masque dans votre feed</div>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Il reste visible pour les autres utilisateurs.</div>
+                    </div>
+                    <form method="post" action="{{ path('app_social_post_hide') }}" class="social-post-hide-form" data-post-id="${postId}" style="margin: 0;">
+                        <input type="hidden" name="_csrf_token" value="${csrfToken}">
+                        <input type="hidden" name="post_id" value="${postId}">
+                        <button type="submit" class="btn btn-sm btn-outline" style="padding: 8px 14px;">Reafficher</button>
+                    </form>
+                </div>
+            `;
+        }
+
+        function setPostHiddenState(postId, hidden, csrfToken) {
+            const postCard = document.getElementById(`post-card-${postId}`);
+            if (!postCard) {
+                return;
+            }
+
+            if (hidden) {
+                if (!hiddenPostSnapshots.has(postId)) {
+                    hiddenPostSnapshots.set(postId, postCard.innerHTML);
+                }
+                postCard.innerHTML = buildHiddenPostNotice(postId, csrfToken);
+                return;
+            }
+
+            const originalMarkup = hiddenPostSnapshots.get(postId);
+            if (originalMarkup) {
+                postCard.innerHTML = originalMarkup;
+                hiddenPostSnapshots.delete(postId);
+            }
+        }
+
+        async function submitHidePostForm(form) {
+            const postId = form.dataset.postId;
+            const submitButton = form.querySelector('button[type="submit"]');
+            const csrfToken = form.querySelector('input[name="_csrf_token"]')?.value || '';
+            const formData = new FormData(form);
+
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || !payload?.ok) {
+                    throw new Error(payload?.error || 'Unable to update hidden post state.');
+                }
+
+                setPostHiddenState(postId, !!payload.hidden, csrfToken);
+            } catch (error) {
+                console.error('Hide post failed:', error);
+                alert('Impossible de mettre a jour ce post masque pour le moment.');
+                if (submitButton) {
+                    submitButton.disabled = false;
+                }
+            }
+        }
+
+        function setCommentStatus(form, message, color) {
+            const status = form?.querySelector('.comment-status');
+            if (!status) return;
+
+            status.textContent = message;
+            status.style.color = color;
+        }
+
+        function clearCommentCooldown() {
+            if (activeCommentCooldown !== null) {
+                window.clearInterval(activeCommentCooldown);
+                activeCommentCooldown = null;
+            }
+        }
+
+        function startCommentCooldown(form, waitSeconds) {
+            const submitButton = form?.querySelector('button[type="submit"]');
+            let secondsLeft = Math.max(1, waitSeconds);
+
+            clearCommentCooldown();
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Patientez...';
+            }
+
+            setCommentStatus(form, '⏳ Anti-spam actif: attendez ' + secondsLeft + ' secondes.', '#d97706');
+
+            activeCommentCooldown = window.setInterval(() => {
+                secondsLeft -= 1;
+
+                if (secondsLeft <= 0) {
+                    clearCommentCooldown();
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Poster';
+                    }
+                    setCommentStatus(form, '✅ Vous pouvez republier un commentaire.', '#27ae60');
+                    return;
+                }
+
+                setCommentStatus(form, '⏳ Anti-spam actif: attendez ' + secondsLeft + ' secondes.', '#d97706');
+            }, 1000);
+        }
+
+        function extractCommentError(payload) {
+            if (payload?.errors) {
+                const firstField = Object.keys(payload.errors)[0];
+                if (firstField && payload.errors[firstField]) {
+                    return payload.errors[firstField];
+                }
+            }
+
+            return payload?.error || '❌ Une erreur est survenue.';
+        }
+
+        async function submitCommentForm(form) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            const formData = new FormData(form);
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Envoi...';
+            }
+
+            setCommentStatus(form, 'Envoi du commentaire...', '#2563eb');
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const payload = await response.json().catch(() => ({}));
+
+                if (response.ok && payload?.ok) {
+                    clearCommentCooldown();
+                    setCommentStatus(form, '✅ Commentaire publié.', '#27ae60');
+                    window.location.reload();
+                    return;
+                }
+
+                if (response.status === 429) {
+                    const retryAfterHeader = Number(response.headers.get('Retry-After') || 0);
+                    const retryAfterTimestamp = Number(payload?.retryAfter || 0);
+                    const nowSeconds = Math.floor(Date.now() / 1000);
+                    const waitSeconds = retryAfterHeader > 0
+                        ? retryAfterHeader
+                        : Math.max(1, retryAfterTimestamp - nowSeconds);
+
+                    startCommentCooldown(form, waitSeconds);
+                    return;
+                }
+
+                setCommentStatus(form, extractCommentError(payload), '#e74c3c');
+            } catch (error) {
+                console.error('Comment submission failed:', error);
+                setCommentStatus(form, '❌ Erreur réseau, réessayez dans un instant.', '#e74c3c');
+            } finally {
+                if (submitButton && activeCommentCooldown === null) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Poster';
+                }
+            }
+        }
+
         // Real-time comment validation
         document.addEventListener('input', (e) => {
             if (e.target.classList.contains('comment-textarea')) {
@@ -1340,16 +1685,26 @@
 
         // Comment form validation on submit
         document.addEventListener('submit', (e) => {
+            if (e.target.classList && e.target.classList.contains('social-post-hide-form')) {
+                e.preventDefault();
+                submitHidePostForm(e.target);
+                return;
+            }
+
             if (e.target.classList && e.target.classList.contains('social-comment-form')) {
+                e.preventDefault();
+
                 const textarea = e.target.querySelector('textarea[name="content"]');
                 const content = textarea?.value?.trim();
                 const imageInput = e.target.querySelector('input[name="image_file"]');
+                const gifUrlInput = e.target.querySelector('.comment-gif-url');
                 const status = e.target.querySelector('.comment-status');
                 const charCount = e.target.querySelector('.comment-char-count');
                 const hasImage = !!imageInput?.files?.length;
+                const hasGif = !!gifUrlInput?.value?.trim();
+                const hasMedia = hasImage || hasGif;
                 
-                if (!content && !hasImage) {
-                    e.preventDefault();
+                if (!content && !hasMedia) {
                     if (textarea) {
                         textarea.style.borderColor = '#e74c3c';
                         textarea.style.backgroundColor = '#ffe6e6';
@@ -1367,7 +1722,6 @@
                 }
                 
                 if ((content?.length || 0) > MAX_COMMENT_CHARS) {
-                    e.preventDefault();
                     if (status) {
                         status.textContent = '❌ Le commentaire est trop long';
                         status.style.color = '#e74c3c';
@@ -1375,6 +1729,8 @@
                     alert('❌ Le commentaire dépasse ' + MAX_COMMENT_CHARS + ' caractères.');
                     return false;
                 }
+
+                submitCommentForm(e.target);
             }
         });
     })();

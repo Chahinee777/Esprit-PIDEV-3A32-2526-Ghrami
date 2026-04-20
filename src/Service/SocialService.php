@@ -7,6 +7,7 @@ use App\Entity\Post;
 use App\Entity\PostLike;
 use App\Entity\Story;
 use App\Entity\User;
+use Doctrine\DBAL\Query\QueryBuilder;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -16,13 +17,80 @@ class SocialService
     {
     }
 
+    public function createFeedQueryBuilder(int $userId, string $searchQuery = '', string $sort = 'recent'): QueryBuilder
+    {
+        $qb = $this->em->getConnection()->createQueryBuilder();
+        $qb
+            ->select(
+                'p.post_id',
+                'p.user_id',
+                'p.content',
+                'p.image_url',
+                'p.location',
+                'p.mood',
+                'p.hobby_tag',
+                'p.visibility',
+                'p.created_at',
+                'p.updated_at',
+                'p.is_hidden',
+                'u.username',
+                'u.full_name',
+                'u.profile_picture',
+                '(SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) AS likes_count',
+                '(SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comments_count',
+                'EXISTS(SELECT 1 FROM post_likes pl2 WHERE pl2.post_id = p.post_id AND pl2.user_id = :uid) AS liked_by_me'
+            )
+            ->from('posts', 'p')
+            ->innerJoin('p', 'users', 'u', 'u.user_id = p.user_id')
+            ->where(
+                '(p.user_id = :uid
+                    OR p.visibility = :publicVisibility
+                    OR (
+                        p.visibility = :friendsVisibility
+                        AND p.user_id IN (
+                            SELECT user2_id FROM friendships WHERE user1_id = :uid AND status = :acceptedStatus
+                            UNION
+                            SELECT user1_id FROM friendships WHERE user2_id = :uid AND status = :acceptedStatus
+                        )
+                    )
+                )'
+            )
+            ->andWhere('(p.is_hidden = 0 OR p.user_id = :uid)')
+            ->andWhere('NOT EXISTS (
+                SELECT 1
+                FROM hidden_posts hp
+                WHERE hp.post_id = p.post_id
+                  AND hp.user_id = :uid
+            )')
+            ->setParameter('uid', $userId, ParameterType::INTEGER)
+            ->setParameter('publicVisibility', 'public')
+            ->setParameter('friendsVisibility', 'friends')
+            ->setParameter('acceptedStatus', 'ACCEPTED');
+
+        if ($searchQuery !== '') {
+            $qb
+                ->andWhere('(u.username LIKE :search OR u.full_name LIKE :search OR p.content LIKE :search)')
+                ->setParameter('search', '%' . $searchQuery . '%');
+        }
+
+        if ($sort === 'popular') {
+            $qb
+                ->addOrderBy('((SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) + (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id))', 'DESC')
+                ->addOrderBy('p.created_at', 'DESC');
+        } else {
+            $qb->addOrderBy('p.created_at', 'DESC');
+        }
+
+        return $qb;
+    }
+
     public function getFeedForUser(int $userId, int $page = 1, int $perPage = 20, string $searchQuery = '', string $sort = 'recent'): array
     {
         $page = max(1, $page);
         $perPage = max(1, min(50, $perPage));
         $offset = ($page - 1) * $perPage;
 
-        $sql = "SELECT p.post_id, p.user_id, p.content, p.image_url, p.location, p.mood, p.hobby_tag, p.visibility, p.created_at, p.updated_at,
+        $sql = "SELECT p.post_id, p.user_id, p.content, p.image_url, p.location, p.mood, p.hobby_tag, p.visibility, p.created_at, p.updated_at, p.is_hidden,
                        u.username, u.full_name, u.profile_picture,
                        (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.post_id) AS likes_count,
                        (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.post_id) AS comments_count,
@@ -40,7 +108,8 @@ class SocialService
                             SELECT user1_id FROM friendships WHERE user2_id = :uid AND status = 'ACCEPTED'
                         )
                     )
-                )";
+                )
+                AND (p.is_hidden = 0 OR p.user_id = :uid)";
         
         $params = ['uid' => $userId];
         
@@ -400,5 +469,33 @@ class SocialService
              LIMIT 100",
             ['u1' => $userId, 'u2' => $otherUserId, 'q' => "%{$query}%"]
         );
+    }
+
+    public function hidePost(int $postId, int $userId): ?bool
+    {
+        $post = $this->em->getRepository(Post::class)->find($postId);
+        if (!$post instanceof Post || $userId <= 0 || (int) ($post->user?->id ?? 0) === $userId) {
+            return null;
+        }
+
+        $connection = $this->em->getConnection();
+        $alreadyHidden = (int) $connection->fetchOne(
+            'SELECT COUNT(*) FROM hidden_posts WHERE user_id = :userId AND post_id = :postId',
+            ['userId' => $userId, 'postId' => $postId],
+            ['userId' => ParameterType::INTEGER, 'postId' => ParameterType::INTEGER]
+        ) > 0;
+
+        if ($alreadyHidden) {
+            $connection->delete('hidden_posts', ['user_id' => $userId, 'post_id' => $postId]);
+            return false;
+        }
+
+        $connection->insert('hidden_posts', [
+            'user_id' => $userId,
+            'post_id' => $postId,
+            'created_at' => (new \DateTime())->format('Y-m-d H:i:s'),
+        ]);
+
+        return true;
     }
 }

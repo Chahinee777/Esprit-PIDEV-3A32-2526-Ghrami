@@ -4,6 +4,7 @@
 
 {% block auth_body %}
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -343,7 +344,16 @@
                  placeholder="••••••••" />
         </div>
 
-        <button class="gl-btn-primary" type="submit">
+        <div style="margin: 20px 0 4px;">
+          <div class="g-recaptcha"
+               data-sitekey="{{ app.request.server.get('RECAPTCHA_SITE_KEY') }}"               
+               data-callback="onRecaptchaDone"
+               data-expired-callback="onRecaptchaExpired">
+          </div>
+        </div>
+
+        <button class="gl-btn-primary" type="submit" id="gl-submit-btn" disabled
+                style="opacity:.5; cursor:not-allowed;">
           Se connecter <span class="arr">→</span>
         </button>
 
@@ -417,4 +427,19 @@
   </div>
 
 </div>
+
+<script>
+  function onRecaptchaDone() {
+    var btn = document.getElementById('gl-submit-btn');
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  }
+  function onRecaptchaExpired() {
+    var btn = document.getElementById('gl-submit-btn');
+    btn.disabled = true;
+    btn.style.opacity = '.5';
+    btn.style.cursor = 'not-allowed';
+  }
+</script>
 {% endblock %}

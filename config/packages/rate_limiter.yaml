@@ -1,0 +1,6 @@
+framework:
+    rate_limiter:
+        social_comment:
+            policy: 'sliding_window'
+            limit: 6
+            interval: '1 minute'

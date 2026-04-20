@@ -44,6 +44,9 @@
             "ref": "07a97ec434d43b7903c78069a04c92adb6442e52"
         }
     },
+    "knplabs/knp-paginator-bundle": {
+        "version": "v6.10.0"
+    },
     "liip/imagine-bundle": {
         "version": "2.17",
         "recipe": {
@@ -51,11 +54,7 @@
             "branch": "main",
             "version": "1.8",
             "ref": "d1227d002b70d1a1f941d91845fcd7ac7fbfc929"
-        },
-        "files": [
-            "./config/packages/liip_imagine.yaml",
-            "./config/routes/liip_imagine.yaml"
-        ]
+        }
     },
     "phpunit/phpunit": {
         "version": "11.5",
@@ -163,6 +162,18 @@
             "./src/Controller/.gitignore",
             "./src/Kernel.php",
             "./.editorconfig"
+        ]
+    },
+    "symfony/lock": {
+        "version": "6.4",
+        "recipe": {
+            "repo": "github.com/symfony/recipes",
+            "branch": "main",
+            "version": "5.2",
+            "ref": "8e937ff2b4735d110af1770f242c1107fdab4c8e"
+        },
+        "files": [
+            "config/packages/lock.yaml"
         ]
     },
     "symfony/mailer": {
@@ -360,10 +371,7 @@
             "branch": "main",
             "version": "1.1",
             "ref": "0c643e17b5340747b35c2c75e11727fa31bfa9bb"
-        },
-        "files": [
-            "./config/routes/calendar.yaml"
-        ]
+        }
     },
     "twig/extra-bundle": {
         "version": "v3.24.0"
