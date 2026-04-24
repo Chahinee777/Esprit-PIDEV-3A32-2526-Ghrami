@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Service\MatchScore;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -186,42 +187,5 @@ class SmartMatchingService
              WHERE h.user_id = :uid',
             ['uid' => $userId]
         );
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// VALUE OBJECT
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Immutable data class representing one user's match result.
- * Max raw score is 100, so getPercentage() maps 1:1.
- */
-class MatchScore
-{
-    public function __construct(
-        public readonly int     $id,
-        public readonly string  $username,
-        public readonly string  $fullName,
-        public readonly ?string $location,
-        public readonly ?string $bio,
-        public readonly ?string $profilePicture,
-        public readonly int     $score,
-        public readonly string  $reason,
-        public readonly array   $commonInterests = []
-    ) {}
-
-    /** Clamp to 0–100 %. */
-    public function getPercentage(): int
-    {
-        return max(0, min(100, $this->score));
-    }
-
-    public function getScoreColor(): string
-    {
-        $pct = $this->getPercentage();
-        if ($pct >= 60) return 'green';
-        if ($pct >= 40) return 'blue';
-        return 'orange';
     }
 }

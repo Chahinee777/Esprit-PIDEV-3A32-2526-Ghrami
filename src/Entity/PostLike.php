@@ -22,4 +22,3 @@ class PostLike
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_MUTABLE)]
     public ?\DateTimeInterface $createdAt = null;
 }
-

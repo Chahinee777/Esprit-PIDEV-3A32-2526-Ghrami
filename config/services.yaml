@@ -7,14 +7,17 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
-    groq_api_key: '%env(GROQ_API_KEY)%'
-    groq_text_model: '%env(GROQ_TEXT_MODEL)%'
+    groq_api_key: '%env(default::GROQ_API_KEY)%'
+    groq_text_model: '%env(default::GROQ_TEXT_MODEL)%'
 
 services:
     # default configuration for services in *this* file
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        bind:
+            $groqApiKey: '%env(default::GROQ_API_KEY)%'
+            $groqModel: '%env(default::GROQ_TEXT_MODEL)%'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
@@ -27,44 +30,12 @@ services:
 
     App\Service\StripePaymentService:
         arguments:
-            $secretKey: '%env(STRIPE_SECRET_KEY)%'
-            $publishableKey: '%env(STRIPE_PUBLISHABLE_KEY)%'
+            $secretKey: '%env(default::STRIPE_SECRET_KEY)%'
+            $publishableKey: '%env(default::STRIPE_PUBLISHABLE_KEY)%'
 
     App\Service\ChatServerSimple:
         arguments:
             $projectDir: '%kernel.project_dir%'
-
-    App\Service\GroqSmartMatchingService:
-        arguments:
-            $groqApiKey: '%env(GROQ_API_KEY)%'
-
-    App\Service\SmartFeedbackService:
-        arguments:
-            $groqApiKey: '%env(GROQ_API_KEY)%'
-
-    App\Service\HobbyCoachService:
-        arguments:
-            $groqApiKey: '%env(GROQ_API_KEY)%'
-            $groqModel: '%env(GROQ_TEXT_MODEL)%'
-
-    App\Service\GroqAnalyticsService:
-        arguments:
-            $groqApiKey: '%env(GROQ_API_KEY)%'
-            $groqModel: '%env(GROQ_TEXT_MODEL)%'
-
-    App\Service\SmartRepliesService:
-        arguments:
-            $groqApiKey: '%env(GROQ_API_KEY)%'
-            $groqModel: '%env(GROQ_TEXT_MODEL)%'
-
-    App\Service\VoiceTranscriptionService:
-        arguments:
-            $groqApiKey: '%env(GROQ_API_KEY)%'
-
-    App\Service\AiContentService:
-        arguments:
-            $groqApiKey: '%env(GROQ_API_KEY)%'
-            $groqModel: '%env(GROQ_TEXT_MODEL)%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

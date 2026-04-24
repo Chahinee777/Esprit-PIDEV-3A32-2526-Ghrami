@@ -72,7 +72,7 @@ final class MeetingsApiController extends AbstractController
             return $this->json(['ok' => false, 'error' => 'Missing required fields: connection_id and scheduled_at.'], Response::HTTP_BAD_REQUEST);
         }
 
-
+        // Validate future date early (before Google Meet API call)
         try {
             $dt = new \DateTimeImmutable($scheduledAt);
         } catch (\Throwable) {
@@ -86,7 +86,7 @@ final class MeetingsApiController extends AbstractController
         $meetLinkCreated = false;
 
         try {
-
+            // For virtual meetings attempt to create a real Google Meet link.
             if ($meetingType === 'virtual' && $location === null) {
                 $googleToken = $data['google_access_token'] ?? null;
                 if ($googleToken) {
@@ -94,8 +94,6 @@ final class MeetingsApiController extends AbstractController
                         (string) $googleToken, $scheduledAt, $duration, $title
                     );
                 }
-
-
 
                 if ($location === null) {
                     // Try service-account fallback
@@ -105,7 +103,7 @@ final class MeetingsApiController extends AbstractController
                 }
 
                 $meetLinkCreated = ($location !== null);
-
+                // If Meet creation fails → location stays null (no fake link)
             }
 
             $this->meetingsService->createMeeting(
@@ -127,6 +125,11 @@ final class MeetingsApiController extends AbstractController
             return $this->json(['ok' => false, 'error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // UPDATE MEETING
+    // BUG FIX: same 'in_person' → 'physical' normalisation, no fake link on update
+    // ─────────────────────────────────────────────────────────────────────────
 
     #[Route('/{meetingId}/update', name: 'api_meetings_update', methods: ['POST'])]
     public function update(string $meetingId, Request $request): JsonResponse

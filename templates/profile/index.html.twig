@@ -142,6 +142,32 @@
                 
                 <button type="submit" class="btn btn-secondary">🔑 Changer le Mot de Passe</button>
             </form>
+
+            <!-- 2FA Section -->
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e4e6eb;">
+                <h4 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; color: #1c1e21;">📱 Authentification à Deux Facteurs</h4>
+                <p style="margin: 0 0 12px 0; font-size: 14px; color: #65676b; line-height: 1.5;">
+                    {% if app.user.isTwoFactorEnabled %}
+                        ✅ L'authentification à deux facteurs est <strong>activée</strong> sur votre compte.
+                    {% else %}
+                        Ajoutez une couche de sécurité supplémentaire à votre compte avec l'authentification à deux facteurs.
+                    {% endif %}
+                </p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    {% if app.user.isTwoFactorEnabled %}
+                        <a href="{{ path('app_user_security_settings') }}" class="btn btn-primary" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 10px 16px; border-radius: 8px; text-align: center; text-decoration: none; font-weight: 600; font-size: 13px; border: none; cursor: pointer; transition: all 0.3s;">
+                            ⚙️ Gérer 2FA
+                        </a>
+                    {% else %}
+                        <a href="{{ path('app_2fa_setup') }}" class="btn btn-primary" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 10px 16px; border-radius: 8px; text-align: center; text-decoration: none; font-weight: 600; font-size: 13px; border: none; cursor: pointer; transition: all 0.3s;">
+                            🚀 Activer 2FA
+                        </a>
+                    {% endif %}
+                    <a href="{{ path('app_user_security_settings') }}" class="btn btn-secondary" style="background: #f3f4f6; color: #1c1e21; padding: 10px 16px; border-radius: 8px; text-align: center; text-decoration: none; font-weight: 600; font-size: 13px; border: 1px solid #e5e7eb; cursor: pointer; transition: all 0.3s;">
+                        📊 Paramètres Sécurité
+                    </a>
+                </div>
+            </div>
         </div>
     </main>
     

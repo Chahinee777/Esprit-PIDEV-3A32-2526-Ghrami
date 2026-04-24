@@ -41,6 +41,7 @@ security:
         - { path: ^/register$, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
         - { path: ^/auth/google, roles: PUBLIC_ACCESS }
+        - { path: ^/security/2fa/verify, roles: PUBLIC_ACCESS }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/_, roles: PUBLIC_ACCESS }
         - { path: ^/, roles: ROLE_USER }

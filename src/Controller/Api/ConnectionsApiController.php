@@ -30,7 +30,6 @@ final class ConnectionsApiController extends AbstractController
             return $this->json(['ok' => false], Response::HTTP_UNAUTHORIZED);
         }
 
-
         $data = json_decode($request->getContent(), true);
         $receiverId = (int) ($data['receiver_id'] ?? 0);
         $type = $data['type'] ?? 'General';
@@ -93,7 +92,7 @@ final class ConnectionsApiController extends AbstractController
 
         // Check if already connected
         $existing = $this->em->getConnection()->fetchOne(
-            "SELECT COUNT(*) FROM connections
+            "SELECT COUNT(*) FROM connections 
              WHERE (initiator_id = :uid1 AND receiver_id = :uid2)
                 OR (initiator_id = :uid2 AND receiver_id = :uid1)",
             ['uid1' => (int) $user->id, 'uid2' => $userId]

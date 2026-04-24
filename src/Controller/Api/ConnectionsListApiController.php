@@ -14,16 +14,16 @@ final class ConnectionsListApiController extends AbstractController
 {
     public function __construct(private readonly ConnectionService $connectionService) {}
 
+    /**
+     * Get all connections for current user.
+     */
     #[Route('', name: 'api_connections_list', methods: ['GET'])]
     public function list(): JsonResponse
     {
-
         $user = $this->getUser();
         if (!$user instanceof User) {
             return $this->json(['ok' => false], Response::HTTP_UNAUTHORIZED);
         }
-
-
 
         try {
             $connections = $this->connectionService->getConnections((int) $user->id);

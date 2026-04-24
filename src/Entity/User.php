@@ -101,6 +101,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'is_banned', type: Types::BOOLEAN, options: ['default' => false])]
     public bool $isBanned = false;
 
+    #[ORM\Column(name: 'is_two_factor_enabled', type: Types::BOOLEAN, options: ['default' => false])]
+    public bool $isTwoFactorEnabled = false;
+
+    #[ORM\Column(name: 'two_factor_secret', length: 255, nullable: true)]
+    public ?string $twoFactorSecret = null;
+
+    #[ORM\Column(name: 'two_factor_enabled_at', type: Types::DATETIME_MUTABLE, nullable: true)]
+    public ?\DateTimeInterface $twoFactorEnabledAt = null;
+
+    #[ORM\Column(name: 'two_factor_backup_codes', type: Types::JSON, nullable: true)]
+    public ?array $twoFactorBackupCodes = null;
+
     public function getUserIdentifier(): string
     {
         return $this->email;

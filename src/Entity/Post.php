@@ -47,6 +47,9 @@ class Post
     #[Assert\Choice(choices: ['public', 'friends', 'private'])]
     public string $visibility = 'public';
 
+    #[ORM\Column(name: 'is_hidden', type: Types::BOOLEAN)]
+    public bool $isHidden = false;
+
     #[ORM\Column(name: 'updated_at', type: Types::DATETIME_MUTABLE, nullable: true)]
     public ?\DateTimeInterface $updatedAt = null;
 
