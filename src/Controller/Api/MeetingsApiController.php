@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Service\MeetingsService;
 use App\Service\GoogleMeetService;
+use App\Service\GoogleAuthService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -132,18 +133,24 @@ final class MeetingsApiController extends AbstractController
     // ─────────────────────────────────────────────────────────────────────────
 
     #[Route('/{meetingId}/update', name: 'api_meetings_update', methods: ['POST'])]
-    public function update(string $meetingId, Request $request): JsonResponse
-    {
+    public function update(
+        string $meetingId,
+        Request $request,
+        GoogleMeetService $googleMeetService,
+        GoogleAuthService $googleAuthService
+    ): JsonResponse {
         $user = $this->getUser();
         if (!$user instanceof User) {
             return $this->json(['ok' => false], Response::HTTP_UNAUTHORIZED);
         }
 
+        $session = $request->getSession();
         $data        = json_decode($request->getContent(), true) ?? [];
         $meetingType = strtolower(trim((string) ($data['meeting_type'] ?? 'virtual')));
         $location    = isset($data['location']) && $data['location'] !== '' ? (string) $data['location'] : null;
         $scheduledAt = trim((string) ($data['scheduled_at'] ?? ''));
         $duration    = (int) ($data['duration'] ?? 60);
+        $addToCalendar = (bool) ($data['add_to_calendar'] ?? false);
 
         if ($meetingType === 'in_person') {
             $meetingType = 'physical';
@@ -169,7 +176,69 @@ final class MeetingsApiController extends AbstractController
                 $duration
             );
 
-            return $this->json(['ok' => true]);
+            $calendarSuccess = null;
+            $calendarError = null;
+
+            if ($addToCalendar) {
+                $userAccessToken = $session->get('google_access_token');
+                $meeting = $this->meetingsService->getMeeting($meetingId);
+                $peerName = 'Participant';
+                if ($meeting && isset($meeting['otherParticipantName'])) {
+                    $peerName = $meeting['otherParticipantName'];
+                }
+
+                $summary = "Ghrami Meeting with $peerName";
+                $desc = "Scheduled via Ghrami platform.\nType: " . ucfirst($meetingType) . ($location ? "\nLocation: $location" : "");
+
+                if ($userAccessToken) {
+                    $result = $googleMeetService->createMeetLinkWithUserToken(
+                        (string) $userAccessToken,
+                        $scheduledAt,
+                        $duration,
+                        $summary,
+                        $desc
+                    );
+                    if ($result !== null) {
+                        $calendarSuccess = true;
+                    } else {
+                        // Try refresh
+                        $refreshToken = (string) $session->get('google_refresh_token', '');
+                        if ($refreshToken !== '') {
+                            $refreshed = $googleAuthService->refreshAccessTokenWithRefreshToken($refreshToken);
+                            if (is_array($refreshed) && !empty($refreshed['access_token'])) {
+                                $session->set('google_access_token', $refreshed['access_token']);
+                                if (!empty($refreshed['refresh_token'])) {
+                                    $session->set('google_refresh_token', $refreshed['refresh_token']);
+                                }
+                                $result = $googleMeetService->createMeetLinkWithUserToken(
+                                    (string) $refreshed['access_token'],
+                                    $scheduledAt,
+                                    $duration,
+                                    $summary,
+                                    $desc
+                                );
+                                if ($result !== null) {
+                                    $calendarSuccess = true;
+                                } else {
+                                    $calendarError = $googleMeetService->getLastError();
+                                }
+                            } else {
+                                $calendarError = 'Could not refresh Google token.';
+                            }
+                        } else {
+                            $calendarError = $googleMeetService->getLastError();
+                        }
+                    }
+                } else {
+                    $calendarError = 'User not authenticated with Google.';
+                }
+            }
+
+            return $this->json([
+                'ok' => true,
+                'calendar_added' => $calendarSuccess,
+                'calendar_error' => $calendarError
+            ]);
         } catch (\Exception $e) {
             return $this->json(['ok' => false, 'error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }

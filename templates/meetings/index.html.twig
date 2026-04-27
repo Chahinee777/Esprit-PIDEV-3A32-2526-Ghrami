@@ -393,8 +393,14 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn-cancel" onclick="closeModal('editMeetingModal')">Cancel</button>
-            <button class="btn-primary" id="btnEmConfirm" style="background:linear-gradient(to right,#b45309,#d97706);">💾 Save Changes</button>
+            <div style="display: flex; gap: 8px; width: 100%;">
+                <button class="btn-cancel" onclick="closeModal('editMeetingModal')" style="flex:1;">Cancel</button>
+                <button class="btn-primary" id="btnEmGoogleCalendar" style="background: #fff; color: #4285f4; border: 1px solid #4285f4; flex: 2; display: flex; align-items: center; justify-content: center; font-weight: 600;">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_48dp.png" alt="G" style="width:18px; margin-right: 8px;">
+                    Add to Google
+                </button>
+                <button class="btn-primary" id="btnEmConfirm" style="background:linear-gradient(to right,#b45309,#d97706); flex:2;">💾 Save Changes</button>
+            </div>
         </div>
     </div>
 </div>
@@ -2089,22 +2095,53 @@ document.addEventListener('DOMContentLoaded', function () {
         if (dtErr) { showToast(dtErr, 'error'); return; }
         if (type === 'physical' && !location) { showToast('Please enter a location for an in-person meeting.', 'error'); return; }
         if (type === 'virtual' && !/^https:\/\/meet\.google\.com\//.test(virtualLocation)) {
+            if (confirm('Aucun lien Google Meet n\'est généré. Voulez-vous en générer un automatiquement via votre calendrier ?')) {
+                await generateGoogleMeetLink();
+                return;
+            }
             showToast('Please generate a real Google Meet link first.', 'error'); return;
         }
         if (duration <= 0 || duration > 1440) { showToast('Duration must be between 1 and 1440 minutes.', 'error'); return; }
+
+        let addToCalendar = false;
+        if (confirm('Voulez-vous ajouter ce meeting à votre calendrier Google ?')) {
+            addToCalendar = true;
+            const connectBtn = document.getElementById('btnConnectGoogleCalendar');
+            if (connectBtn && connectBtn.style.display !== 'none') {
+                if (confirm('Vous n\'êtes pas encore connecté à Google Calendar. Voulez-vous vous connecter maintenant pour ajouter l\'événement ?')) {
+                    connectGoogleCalendarFromMeeting();
+                    return; // Wait for connection and let them confirm again
+                }
+            }
+        }
 
         try {
             const resp = await fetch('/meetings/api/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ connection_id: connId, meeting_type: type, scheduled_at: `${dateVal} ${timeVal}:00`, duration, location: type === 'physical' ? location : virtualLocation }),
+                body: JSON.stringify({
+                    connection_id: connId,
+                    meeting_type: type,
+                    scheduled_at: `${dateVal} ${timeVal}:00`,
+                    duration,
+                    location: type === 'physical' ? location : virtualLocation,
+                    add_to_calendar: addToCalendar
+                }),
             });
             const data = await resp.json();
             if (data.ok) {
                 closeModal('createMeetingModal');
                 resetCreateMeetingForm();
-                const linkMsg = data.meet_link && data.meet_link.startsWith('http') ? ' ✅ Google Meet link auto-generated!' : '';
-                showToast(`Meeting scheduled!${linkMsg} 📅`, 'success');
+                let msg = data.message || 'Meeting scheduled!';
+                if (data.meet_link && data.meet_link.startsWith('http')) {
+                    msg += ' ✅ Google Meet link auto-generated!';
+                }
+                if (data.calendar_added === true) {
+                    msg += ' Also added to your Google Calendar.';
+                } else if (data.calendar_added === false) {
+                    msg += ' But could not add to Google Calendar: ' + (data.calendar_error || 'Unknown error');
+                }
+                showToast(msg + ' 📅', 'success');
                 loadMeetings(state.currentMeetingFilter);
             } else { showToast(data.error || 'Failed to schedule meeting.', 'error'); }
         } catch (err) { console.error('Error scheduling meeting:', err); showToast('Error scheduling meeting. Please try again.', 'error'); }
@@ -2132,15 +2169,87 @@ document.addEventListener('DOMContentLoaded', function () {
         if (type === 'physical' && !location) { showToast('Please enter a location for an in-person meeting.', 'error'); return; }
         if (duration <= 0 || duration > 1440) { showToast('Duration must be between 1 and 1440 minutes.', 'error'); return; }
         try {
+            const body = { meeting_type: type, scheduled_at: `${dateVal} ${timeVal}:00`, duration, location: type === 'physical' ? location : null };
+
+            // If the confirm button was clicked AND the user clicked "Add to Google" previously
+            // or if we want to support the new button specifically.
+            // Let's modify the flow to support the specific button.
+
             const resp = await fetch(`/api/meetings/${meetingId}/update`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ meeting_type: type, scheduled_at: `${dateVal} ${timeVal}:00`, duration, location: type === 'physical' ? location : null }),
+                body: JSON.stringify(body),
             });
             const data = await resp.json();
-            if (data.ok) { closeModal('editMeetingModal'); showToast('Meeting updated! ✏️', 'success'); loadMeetings(state.currentMeetingFilter); }
+            if (data.ok) {
+                closeModal('editMeetingModal');
+                showToast('Meeting updated! ✏️', 'success');
+                loadMeetings(state.currentMeetingFilter);
+            }
             else { showToast(data.error || 'Failed to update meeting.', 'error'); }
         } catch (err) { console.error(err); }
+    });
+
+    document.getElementById('btnEmGoogleCalendar').addEventListener('click', async () => {
+        const meetingId = document.getElementById('emMeetingId').value;
+        const type      = document.querySelector('input[name="em-type"]:checked')?.value || 'virtual';
+        const dateVal   = document.getElementById('emDate').value;
+        const timeVal   = document.getElementById('emTime').value;
+        const duration  = parseInt(document.getElementById('emDurationValue').value) || 60;
+        const location  = document.getElementById('emLocation').value.trim();
+        const dtErr = validateMeetingDatetime(dateVal, timeVal);
+        if (dtErr) { showToast(dtErr, 'error'); return; }
+        if (type === 'physical' && !location) { showToast('Please enter a location for an in-person meeting.', 'error'); return; }
+
+        const btn = document.getElementById('btnEmGoogleCalendar');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Adding...';
+
+        try {
+            const resp = await fetch(`/api/meetings/${meetingId}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    meeting_type: type,
+                    scheduled_at: `${dateVal} ${timeVal}:00`,
+                    duration,
+                    location: type === 'physical' ? location : null,
+                    add_to_calendar: true
+                }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                if (data.calendar_added) {
+                    showToast('✅ Added to Google Calendar!', 'success');
+                    closeModal('editMeetingModal');
+                    loadMeetings(state.currentMeetingFilter);
+                } else if (data.calendar_error) {
+                    if (data.calendar_error.includes('authenticated') || data.calendar_error.includes('token')) {
+                        if (confirm('Google account not connected or session expired. Connect now?')) {
+                            const width = 500, height = 600;
+                            const left = (window.innerWidth / 2) - (width / 2);
+                            const top = (window.innerHeight / 2) - (height / 2);
+                            window.open('/google/calendar/connect', 'google_auth', `width=${width},height=${height},top=${top},left=${left}`);
+                        }
+                    } else {
+                        showToast('Error: ' + data.calendar_error, 'error');
+                    }
+                } else {
+                    showToast('Meeting updated, but not added to calendar.', 'info');
+                    closeModal('editMeetingModal');
+                    loadMeetings(state.currentMeetingFilter);
+                }
+            } else {
+                showToast(data.error || 'Failed to update meeting.', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('Network error.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     });
 
     // ── Meeting filter select ──
@@ -2197,6 +2306,13 @@ async function generateGoogleMeetLink() {
         const duration   = parseInt(document.getElementById('cmDurationValue').value) || 60;
         const connectBtn = document.getElementById('btnConnectGoogleCalendar');
         const authHint   = document.getElementById('cmGoogleAuthHint');
+        const generateBtn = document.getElementById('btnGenerateMeetLink');
+
+        if (generateBtn) {
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating...';
+        }
+
         const resp = await fetch('/meetings/api/google-meet-link', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -2209,11 +2325,19 @@ async function generateGoogleMeetLink() {
             showToast('✅ Google Meet link generated! 📞', 'success');
             if (connectBtn) connectBtn.style.display = 'none';
             if (authHint)   authHint.textContent = '';
+            if (generateBtn) {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Re-generate Link';
+            }
             return;
         }
         document.getElementById('cmVirtualLocation').value = '';
         document.getElementById('btnCopyMeetLink').style.display = 'none';
         if (connectBtn) connectBtn.style.display = 'inline-block';
+        if (generateBtn) {
+            generateBtn.disabled = false;
+            generateBtn.textContent = 'Generate Meet Link';
+        }
         const details = Array.isArray(data.details) ? data.details.filter(Boolean).join(' | ') : '';
         if (authHint) authHint.textContent = details || 'Connect Google Calendar to generate a real Meet room automatically.';
         showToast(data.error || 'Could not generate real Google Meet link.', 'error');
@@ -2223,6 +2347,11 @@ async function generateGoogleMeetLink() {
         document.getElementById('btnCopyMeetLink').style.display = 'none';
         const connectBtn = document.getElementById('btnConnectGoogleCalendar');
         const authHint   = document.getElementById('cmGoogleAuthHint');
+        const generateBtn = document.getElementById('btnGenerateMeetLink');
+        if (generateBtn) {
+            generateBtn.disabled = false;
+            generateBtn.textContent = 'Generate Meet Link';
+        }
         if (connectBtn) connectBtn.style.display = 'inline-block';
         if (authHint)   authHint.textContent = 'Google Meet generation failed. Connect Google Calendar and try again.';
         showToast('Google Meet generation failed.', 'error');

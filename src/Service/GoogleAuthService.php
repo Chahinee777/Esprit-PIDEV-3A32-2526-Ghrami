@@ -8,7 +8,7 @@ use Google\Service\Oauth2;
 
 /**
  * Service for Google OAuth 2.0 authentication flow.
- * 
+ *
  * Setup:
  *   1. Install Google Client library: composer require google/apiclient
  *   2. Create OAuth 2.0 credentials at Google Cloud Console
@@ -28,7 +28,7 @@ class GoogleAuthService
     {
         $this->clientId = $_ENV['GOOGLE_CLIENT_ID'] ?? '';
         $this->clientSecret = $_ENV['GOOGLE_CLIENT_SECRET'] ?? '';
-        $this->redirectUri = $_ENV['GOOGLE_REDIRECT_URI'] ?? 'http://localhost/auth/google/callback';
+        $this->redirectUri = $_ENV['GOOGLE_REDIRECT_URI'] ?? 'http://localhost:8000/google/callback';
 
         $this->client = new Client();
         $this->client->setClientId($this->clientId);
@@ -49,7 +49,7 @@ class GoogleAuthService
 
     /**
      * Returns the Google authentication URL with specific scopes.
-     * 
+     *
      * @param array $additionalScopes Scopes to add beyond the default
      * @return string The authentication URL
      */
@@ -87,7 +87,7 @@ class GoogleAuthService
             }
 
             $token = $this->client->fetchAccessTokenWithAuthCode($code);
-            
+
             if (isset($token['error'])) {
                 error_log('Google OAuth error: ' . $token['error']);
                 return null;
@@ -236,15 +236,15 @@ class GoogleAuthService
         // Scopes are already set in constructor (openid email profile)
         // Add calendar scope if specified
         if (isset($options['calendar']) && $options['calendar']) {
-            $this->client->addScope('https://www.googleapis.com/auth/calendar.events');
+            $this->client->addScope('https://www.googleapis.com/auth/calendar');
         }
-        
+
         if (isset($options['state']) && is_string($options['state']) && $options['state'] !== '') {
             $this->client->setState($options['state']);
         } else {
             $this->client->setState(bin2hex(random_bytes(16)));
         }
-        
+
         if (isset($options['access_type'])) {
             $this->client->setAccessType($options['access_type']);
         }
@@ -256,7 +256,7 @@ class GoogleAuthService
         if (isset($options['include_granted_scopes'])) {
             $this->client->setIncludeGrantedScopes((bool) $options['include_granted_scopes']);
         }
-        
+
         if (isset($options['approval_prompt'])) {
             $this->client->setApprovalPrompt($options['approval_prompt']);
         }

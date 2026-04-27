@@ -50,7 +50,7 @@ class GoogleMeetService
 
             $client = new Client();
             $client->setAuthConfig($this->serviceAccountPath);
-            $client->addScope(Calendar::CALENDAR_EVENTS);
+            $client->addScope('https://www.googleapis.com/auth/calendar');
 
             $calendar = new Calendar($client);
 
@@ -136,7 +136,7 @@ class GoogleMeetService
             $client->setAccessToken([
                 'access_token' => $userAccessToken,
             ]);
-            $client->addScope(Calendar::CALENDAR_EVENTS);
+            $client->addScope('https://www.googleapis.com/auth/calendar');
 
             $calendar = new Calendar($client);
 

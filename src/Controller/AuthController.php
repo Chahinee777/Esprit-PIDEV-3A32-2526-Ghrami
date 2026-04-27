@@ -279,9 +279,28 @@ final class AuthController extends AbstractController
             'state' => $state,
             'calendar' => true,
             'access_type' => 'offline',
-            'prompt' => 'consent',
+            'prompt' => 'consent select_account',
             'approval_prompt' => 'force',
         ]));
+    }
+
+    #[Route('/google/callback', name: 'app_auth_google_callback_universal', methods: ['GET'])]
+    public function googleUniversalCallback(
+        Request $request,
+        SessionInterface $session,
+        GoogleAuthService $googleAuthService,
+        UserRepository $userRepository,
+        EntityManagerInterface $entityManager,
+        UserAuthenticatorInterface $userAuthenticator,
+        LoginFormAuthenticator $loginFormAuthenticator
+    ): Response {
+        // If we have an expected state for calendar, it's a calendar connection
+        if ($session->has('google_calendar_oauth_state')) {
+            return $this->googleCalendarCallback($request, $session, $googleAuthService);
+        }
+
+        // Otherwise, it's a login
+        return $this->googleCallback($request, $session, $googleAuthService, $userRepository, $entityManager, $userAuthenticator, $loginFormAuthenticator);
     }
 
     #[Route('/auth/google/callback', name: 'app_auth_google_callback', methods: ['GET'])]
@@ -405,14 +424,14 @@ final class AuthController extends AbstractController
         $state = bin2hex(random_bytes(16));
         $session->set('google_calendar_oauth_state', $state);
 
-        $calendarCallbackUrl = $this->generateUrl('app_auth_google_calendar_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
+        $calendarCallbackUrl = $request->getSchemeAndHttpHost() . '/google/callback';
 
         $authUrl = $googleAuthService->buildLoginUrl([
             'state' => $state,
             'calendar' => true,
             'access_type' => 'offline',
-            'prompt' => 'consent',
-            'approval_prompt' => 'force',
+            'prompt' => 'consent select_account',
+            'include_granted_scopes' => true,
             'redirect_uri' => $calendarCallbackUrl,
         ]);
 
@@ -461,7 +480,7 @@ final class AuthController extends AbstractController
         }
 
         try {
-            $calendarCallbackUrl = $this->generateUrl('app_auth_google_calendar_callback', [], UrlGeneratorInterface::ABSOLUTE_URL);
+            $calendarCallbackUrl = $request->getSchemeAndHttpHost() . '/google/callback';
             $token = $googleAuthService->handleAuthorizationCode($code, $calendarCallbackUrl);
             if ($token === null) {
                 throw new \RuntimeException('Failed to exchange Google authorization code.');

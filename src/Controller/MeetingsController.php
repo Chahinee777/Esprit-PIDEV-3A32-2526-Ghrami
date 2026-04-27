@@ -395,12 +395,13 @@ final class MeetingsController extends AbstractController
             }
 
             $data = json_decode($request->getContent(), true);
-            
+
             $connectionId = trim((string) ($data['connection_id'] ?? ''));
             $meetingType = (string) ($data['meeting_type'] ?? 'virtual');
             $location = trim((string) ($data['location'] ?? ''));
             $scheduledAt = trim((string) ($data['scheduled_at'] ?? ''));
             $duration = (int) ($data['duration'] ?? 60);
+            $addToCalendar = (bool) ($data['add_to_calendar'] ?? false);
 
             if ($connectionId === '') {
                 return new JsonResponse(['ok' => false, 'error' => 'Connection is required.'], 400);
@@ -428,6 +429,9 @@ final class MeetingsController extends AbstractController
             }
 
             $autoMeetLink = null;
+            $calendarSuccess = false;
+            $calendarError = null;
+
             if ($meetingType === 'virtual' && $location === '') {
                 // Try user's personal Google credentials first
                 $userAccessToken = $session->get('google_access_token');
@@ -436,9 +440,14 @@ final class MeetingsController extends AbstractController
                         (string) $userAccessToken,
                         $scheduledAt,
                         $duration,
-                        'Ghrami Meeting',
+                        'Ghrami Meeting: ' . ($user->fullName ?? $user->username),
                         'Scheduled from Ghrami platform'
                     );
+                    if ($autoMeetLink) {
+                        $calendarSuccess = true;
+                        // Since we just created it in their personal calendar, we don't need to add it again later
+                        $addToCalendar = false;
+                    }
                 }
 
                 // Retry once with refreshed token when available.
@@ -456,9 +465,13 @@ final class MeetingsController extends AbstractController
                                 (string) $refreshed['access_token'],
                                 $scheduledAt,
                                 $duration,
-                                'Ghrami Meeting',
+                                'Ghrami Meeting: ' . ($user->fullName ?? $user->username),
                                 'Scheduled from Ghrami platform'
                             );
+                            if ($autoMeetLink) {
+                                $calendarSuccess = true;
+                                $addToCalendar = false;
+                            }
                         }
                     }
                 }
@@ -468,7 +481,7 @@ final class MeetingsController extends AbstractController
                     $autoMeetLink = $googleMeetService->createMeetLink(
                         $scheduledAt,
                         $duration,
-                        'Ghrami Meeting',
+                        'Ghrami Meeting: ' . ($user->fullName ?? $user->username),
                         'Scheduled from Ghrami platform'
                     );
                 }
@@ -499,10 +512,60 @@ final class MeetingsController extends AbstractController
                 true
             );
 
+            if ($addToCalendar && $location !== '') {
+                // This part is only reached if it wasn't already added (e.g. physical meeting or virtual with existing link)
+                $userAccessToken = $session->get('google_access_token');
+
+                if ($userAccessToken !== null && $userAccessToken !== '') {
+                    $result = $googleMeetService->createMeetLinkWithUserToken(
+                        (string) $userAccessToken,
+                        $scheduledAt,
+                        $duration,
+                        'Ghrami Meeting: ' . ($user->fullName ?? $user->username),
+                        'Scheduled from Ghrami platform. Location: ' . $location
+                    );
+                    if ($result !== null) {
+                        $calendarSuccess = true;
+                    } else {
+                        $calendarError = $googleMeetService->getLastError();
+                    }
+                } else {
+                    // Try refreshing the token if a refresh token exists
+                    $refreshToken = (string) $session->get('google_refresh_token', '');
+                    if ($refreshToken !== '') {
+                        $refreshed = $googleAuthService->refreshAccessTokenWithRefreshToken($refreshToken);
+                        if (is_array($refreshed) && !empty($refreshed['access_token'])) {
+                            $session->set('google_access_token', $refreshed['access_token']);
+                            if (!empty($refreshed['refresh_token'])) {
+                                $session->set('google_refresh_token', $refreshed['refresh_token']);
+                            }
+                            $result = $googleMeetService->createMeetLinkWithUserToken(
+                                (string) $refreshed['access_token'],
+                                $scheduledAt,
+                                $duration,
+                                'Ghrami Meeting: ' . ($user->fullName ?? $user->username),
+                                'Scheduled from Ghrami platform. Location: ' . $location
+                            );
+                            if ($result !== null) {
+                                $calendarSuccess = true;
+                            } else {
+                                $calendarError = $googleMeetService->getLastError();
+                            }
+                        } else {
+                            $calendarError = 'Could not refresh Google token.';
+                        }
+                    } else {
+                        $calendarError = 'User not authenticated with Google.';
+                    }
+                }
+            }
+
             return new JsonResponse([
                 'ok' => true,
                 'message' => 'Meeting scheduled successfully.',
-                'meet_link' => $autoMeetLink
+                'meet_link' => $autoMeetLink,
+                'calendar_added' => $calendarSuccess ?? null,
+                'calendar_error' => $calendarError ?? null
             ]);
         } catch (\Exception $e) {
             return new JsonResponse(['ok' => false, 'error' => $e->getMessage()], 400);
@@ -518,7 +581,7 @@ final class MeetingsController extends AbstractController
         }
 
         $status = $request->query->get('status', '');
-        
+
         // Get meetings from database
         $meetingRepo = $em->getRepository(Meeting::class);
         $query = $meetingRepo->createQueryBuilder('m')
