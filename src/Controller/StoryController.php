@@ -119,12 +119,6 @@ final class StoryController extends AbstractController
             return $this->json(['ok' => true, 'message' => 'Story deleted.']);
         } catch (\Exception $e) {
             return $this->json(['ok' => false, 'error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-            if ($this->isXmlHttpRequest()) {
-                return $this->json(['ok' => false, 'error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
-            }
-
-            $this->addFlash('error', 'Failed to delete story.');
-            return $this->redirectToRoute('app_stories_index');
         }
     }
 
@@ -141,18 +135,5 @@ final class StoryController extends AbstractController
 
         $stories = $socialService->getActiveStoriesForUser((int) $currentUser->id);
         return $this->json(['ok' => true, 'stories' => $stories]);
-    }
-
-    /**
-     * Helper to check if request is AJAX/XHR.
-     */
-    private function isXmlHttpRequest(): bool
-    {
-        return $this->getRequest()->isXmlHttpRequest();
-    }
-
-    private function getRequest(): Request
-    {
-        return $this->container->get('request_stack')->getCurrentRequest() ?? new Request();
     }
 }

@@ -33,7 +33,7 @@ final class ProfileController extends AbstractController
         }
 
         $errors = [];
-        $profileLocation = $user->location ?? '';
+        $profileLocation = $user->location;
 
         if ($request->isMethod('POST')) {
             if (!$this->isCsrfTokenValid('profile', (string) $request->request->get('_csrf_token'))) {
@@ -158,25 +158,24 @@ final class ProfileController extends AbstractController
             $stats['friends'] = 0;
         }
 
-        // Fetch friends list
-        $friendships = $conn->fetchAllAssociative(
-            "SELECT CASE WHEN user1_id = ? THEN user2_id ELSE user1_id END as friend_id, created_date
-             FROM friendships 
-             WHERE status = 'ACCEPTED' AND (user1_id = ? OR user2_id = ?)",
-            [(int) $user->id, (int) $user->id, (int) $user->id]
+        // Fetch friends list - OPTIMIZED: Single JOIN query instead of N+1 pattern
+        $friends = $conn->fetchAllAssociative(
+            "SELECT 
+                u.user_id, 
+                u.username, 
+                u.email, 
+                u.profile_picture, 
+                u.is_online,
+                f.created_date AS friend_since
+             FROM friendships f
+             JOIN users u ON (
+                (f.user1_id = ? AND f.user2_id = u.user_id) OR
+                (f.user2_id = ? AND f.user1_id = u.user_id)
+             )
+             WHERE f.status = 'ACCEPTED'
+             ORDER BY f.created_date DESC",
+            [(int) $user->id, (int) $user->id]
         );
-
-        $friends = [];
-        foreach ($friendships as $friendship) {
-            $friendData = $conn->fetchAssociative(
-                'SELECT user_id, username, email, profile_picture, is_online FROM users WHERE user_id = ?',
-                [(int) $friendship['friend_id']]
-            );
-            if ($friendData) {
-                $friendData['friend_since'] = $friendship['created_date'];
-                $friends[] = $friendData;
-            }
-        }
 
         return $this->render('profile/index.html.twig', [
             'profile' => $user,
@@ -292,7 +291,7 @@ final class ProfileController extends AbstractController
                 curl_setopt($ch, CURLOPT_TIMEOUT, 120);
                 curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
                 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
                 curl_setopt($ch, CURLOPT_BINARYTRANSFER, true);
                 
@@ -361,7 +360,7 @@ final class ProfileController extends AbstractController
                 'image/jpg' => 'jpg',
                 'image/webp' => 'webp',
             ];
-            $extension = $extensionMap[$mimeType] ?? 'jpg';
+            $extension = $extensionMap[$mimeType];  // mimeType is guaranteed to be one of the array keys
 
             // Save the generated image
             $uploadDir = $this->getParameter('kernel.project_dir') . '/public/images/profile_pictures';

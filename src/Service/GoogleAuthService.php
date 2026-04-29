@@ -114,7 +114,7 @@ class GoogleAuthService
             $this->client->setAccessType('offline');
             $token = $this->client->fetchAccessTokenWithRefreshToken($refreshToken);
 
-            if (!is_array($token) || isset($token['error']) || empty($token['access_token'])) {
+            if (isset($token['error']) || empty($token['access_token'])) {
                 return null;
             }
 

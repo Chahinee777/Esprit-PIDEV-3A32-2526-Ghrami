@@ -35,8 +35,6 @@ class ProgressLog
     #[ORM\PrePersist]
     public function ensureImmutableDates(): void
     {
-        if ($this->logDate && !$this->logDate instanceof \DateTimeImmutable) {
-            $this->logDate = \DateTimeImmutable::createFromMutable($this->logDate);
-        }
+        // logDate is already typed as DateTimeImmutable | null, no conversion needed
     }
 }

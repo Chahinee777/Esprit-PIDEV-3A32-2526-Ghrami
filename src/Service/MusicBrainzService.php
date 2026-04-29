@@ -170,7 +170,7 @@ class MusicBrainzService
 
         // Remove duplicates and sort by score
         $recordings = array_unique($recordings, SORT_REGULAR);
-        usort($recordings, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+        usort($recordings, fn($a, $b) => $b['score'] <=> $a['score']);
 
         return array_slice($recordings, 0, 10);
     }

@@ -22,7 +22,7 @@ final class MessageController extends AbstractController
     #[Route('', name: 'app_messages_index', methods: ['GET'])]
     public function index(Request $request, MatchingService $matchingService): Response
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->redirectToRoute('app_login');
@@ -67,7 +67,7 @@ final class MessageController extends AbstractController
     #[Route('/send', name: 'app_messages_send', methods: ['POST'])]
     public function send(Request $request, MatchingService $matchingService, ChatServerSimple $chatServerSimple, ValidatorInterface $validator): JsonResponse
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->json(['error' => 'Unauthorized'], 401);
@@ -112,7 +112,7 @@ final class MessageController extends AbstractController
     #[Route('/mark-as-read', name: 'app_messages_mark_read', methods: ['POST'])]
     public function markAsRead(Request $request, MatchingService $matchingService): JsonResponse
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->json(['error' => 'Unauthorized'], 401);
@@ -135,7 +135,7 @@ final class MessageController extends AbstractController
     #[Route('/poll', name: 'app_messages_poll', methods: ['GET'])]
     public function poll(Request $request, MatchingService $matchingService, ChatServerSimple $chatServerSimple): JsonResponse
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->json(['error' => 'Unauthorized'], 401);
@@ -169,7 +169,7 @@ final class MessageController extends AbstractController
     #[Route('/smart-replies', name: 'app_messages_smart_replies', methods: ['POST'])]
     public function getSmartReplies(Request $request, SmartRepliesService $smartRepliesService): JsonResponse
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->json(['error' => 'Unauthorized'], 401);
@@ -197,7 +197,7 @@ final class MessageController extends AbstractController
     #[Route('/transcribe', name: 'app_messages_transcribe', methods: ['POST'])]
     public function transcribeVoice(Request $request, VoiceTranscriptionService $voiceTranscriptionService): JsonResponse
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->json(['error' => 'Unauthorized'], 401);

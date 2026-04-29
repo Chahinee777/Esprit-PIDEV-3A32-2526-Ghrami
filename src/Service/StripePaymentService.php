@@ -23,12 +23,9 @@ class StripePaymentService
 {
     private string $secretKey;
     private string $publishableKey;
-    private ParameterBagInterface $params;
 
-    public function __construct(ParameterBagInterface $params, string $secretKey = '', string $publishableKey = '')
+    public function __construct(string $secretKey = '', string $publishableKey = '')
     {
-        $this->params = $params;
-        
         // Log the injected values for debugging
         error_log('StripePaymentService constructor: secretKey length=' . strlen($secretKey) . ', publishableKey length=' . strlen($publishableKey));
         

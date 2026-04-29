@@ -176,7 +176,8 @@ class ProgressService
         $log->hobby = $hobby;
         $log->hoursSpent = $hours;
         $log->notes = $notes;
-        $log->logDate = $logDate ? new \DateTime($logDate) : new \DateTime();
+        $logDateTime = $logDate ? new \DateTime($logDate) : new \DateTime();
+        $log->logDate = \DateTimeImmutable::createFromMutable($logDateTime);
         $this->em->persist($log);
 
         $this->em->flush();
@@ -187,7 +188,10 @@ class ProgressService
         $milestone = new Milestone();
         $milestone->hobby = $this->em->getRepository(Hobby::class)->find($hobbyId);
         $milestone->title = $title;
-        $milestone->targetDate = $targetDate ? new \DateTime($targetDate) : null;
+        if ($targetDate) {
+            $dateTime = new \DateTime($targetDate);
+            $milestone->targetDate = \DateTimeImmutable::createFromMutable($dateTime);
+        }
         $milestone->isAchieved = false;
         $this->em->persist($milestone);
         $this->em->flush();

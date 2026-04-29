@@ -36,7 +36,7 @@ class ConnectionService
             $initiatorId, $receiverId, $type, $receiverSkill, $initiatorSkill
         );
 
-        $initiatorName = $this->em->getRepository(User::class)->find($initiatorId)?->username ?? 'Someone';
+        $initiatorName = ($user = $this->em->getRepository(User::class)->find($initiatorId)) ? $user->username : 'Someone';
 
         $this->matchingService->createNotificationPublic(
             $receiverId,
@@ -188,7 +188,7 @@ class ConnectionService
 
         $this->matchingService->updateConnectionStatus($connectionId, 'accepted');
 
-        $acceptorName = $this->em->getRepository(User::class)->find($userId)?->username ?? 'Someone';
+        $acceptorName = ($user = $this->em->getRepository(User::class)->find($userId)) ? $user->username : 'Someone';
 
         $this->matchingService->createNotificationPublic(
             (int) $connection->initiator->id,

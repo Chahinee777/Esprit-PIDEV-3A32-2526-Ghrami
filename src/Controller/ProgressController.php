@@ -255,8 +255,8 @@ final class ProgressController extends AbstractController
         }
         
         $milestones = $progressService->listMilestones($userId);
-        $totalMilestones = count($milestones ?? []);
-        $completedMilestones = count(array_filter($milestones ?? [], fn($m) => $m['is_completed']));
+        $totalMilestones = count($milestones);
+        $completedMilestones = count(array_filter($milestones, fn($m) => $m['is_completed']));
 
         $avgProgress = $totalMilestones > 0 ? round(($completedMilestones / $totalMilestones) * 100) : 0;
 
@@ -340,7 +340,7 @@ final class ProgressController extends AbstractController
             $prompt = "I have been pursuing these hobbies: $hobbyNames. Total hours spent: $totalHours hours. " .
                       "Give me 3 specific, encouraging insights or tips to improve my hobby journey. Be concise and motivating.";
 
-            $insights = $aiContentService->completeText($prompt);
+            $insights = $aiContentService->completePostText($prompt);
             return $this->json([
                 'ok' => true,
                 'insights' => $insights,

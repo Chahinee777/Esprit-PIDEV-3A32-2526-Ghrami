@@ -22,18 +22,18 @@ class WeatherService
      * 
      * @param float $latitude
      * @param float $longitude
-     * @param \DateTimeImmutable|string $date Date or date string (YYYY-MM-DD)
+     * @param \DateTimeImmutable|string|null $date Date or date string (YYYY-MM-DD)
      * @return array|null Weather data or null on error
      */
-    public function getWeather(float $latitude, float $longitude, $date = null): ?array
+    public function getWeather(float $latitude, float $longitude, \DateTimeImmutable|string|null $date = null): ?array
     {
         try {
-            if ($date instanceof \DateTimeImmutable) {
-                $dateStr = $date->format('Y-m-d');
-            } elseif ($date instanceof \DateTime) {
-                $dateStr = $date->format('Y-m-d');
+            if ($date === null) {
+                $dateStr = (new \DateTimeImmutable())->format('Y-m-d');
+            } elseif (is_string($date)) {
+                $dateStr = $date;
             } else {
-                $dateStr = $date ?? (new \DateTimeImmutable())->format('Y-m-d');
+                $dateStr = $date->format('Y-m-d');
             }
 
             // Open-Meteo API - Free, no authentication needed

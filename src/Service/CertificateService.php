@@ -12,10 +12,10 @@ class CertificateService
      */
     public function generate(array $data): string
     {
-        $student = $this->escape($data['student_name'] ?? 'Student');
-        $classTitle = $this->escape($data['class_title'] ?? 'Class');
-        $instructor = $this->escape($data['instructor_name'] ?? 'Instructor');
-        $issuedOn = $this->escape($data['issued_on'] ?? date('F d, Y'));
+        $student = $this->escape($data['student_name']);
+        $classTitle = $this->escape($data['class_title']);
+        $instructor = $this->escape($data['instructor_name']);
+        $issuedOn = $this->escape($data['issued_on']);
 
         $html = $this->buildHtml($student, $classTitle, $instructor, $issuedOn);
 

@@ -369,7 +369,7 @@ final class HobbiesController extends AbstractController
             if (!isset($logsByDate[$date])) {
                 $logsByDate[$date] = ['total' => 0, 'logs' => []];
             }
-            $logsByDate[$date]['total'] += $log->hoursSpent ?? 0;
+            $logsByDate[$date]['total'] += $log->hoursSpent;
             $logsByDate[$date]['logs'][] = [
                 'hours' => $log->hoursSpent,
                 'notes' => $log->notes,
@@ -403,13 +403,13 @@ final class HobbiesController extends AbstractController
                 'description' => $hobby->description,
             ],
             'progress' => [
-                'total_hours' => $progress?->hoursSpent ?? 0,
+                'total_hours' => $progress->hoursSpent,
             ],
             'logs_by_date' => $logsByDate,
             'day_hours' => $dayHours,
             'recent_logs' => array_map(function($log) {
                 return [
-                    'hours' => $log->hoursSpent ?? 0,
+                    'hours' => $log->hoursSpent,
                     'notes' => $log->notes ?? '',
                     'date' => $log->logDate?->format('M d, Y') ?? 'Unknown date',
                 ];
@@ -460,14 +460,14 @@ final class HobbiesController extends AbstractController
         foreach ($hobbies as $hobby) {
             // Use Progress entity for accurate cumulative hours (same as index page)
             $progress = $progressRepo->findOneBy(['hobby' => $hobby]);
-            $hobbyHours = $progress?->hoursSpent ?? 0;
+            $hobbyHours = $progress->hoursSpent ?? 0;
             
             // Still get logs for day-of-week stats
             $logs = $logRepo->findBy(['hobby' => $hobby]);
             foreach ($logs as $log) {
                 if ($log->logDate) {
                     $dow = $log->logDate->format('w');
-                    $dayOfWeekStats[$dow] += $log->hoursSpent ?? 0;
+                    $dayOfWeekStats[$dow] += $log->hoursSpent;
                 }
             }
 
@@ -577,9 +577,9 @@ final class HobbiesController extends AbstractController
         $context .= "Hobby you're coaching for:\n";
 
         $totalHours = 0;
-        if ($hobby->progress && $hobby->progress->count() > 0) {
+        if (count($hobby->progress) > 0) {
             foreach ($hobby->progress as $progress) {
-                $totalHours += $progress->hoursSpent ?? 0;
+                $totalHours += $progress->hoursSpent;
             }
         }
 
@@ -641,7 +641,7 @@ final class HobbiesController extends AbstractController
 
             foreach ($hobbies as $hobby) {
                 $progress = $progressRepo->findOneBy(['hobby' => $hobby]);
-                $hours = $progress?->hoursSpent ?? 0;
+                $hours = $progress->hoursSpent ?? 0;
                 $milestones = $milestoneRepo->findBy(['hobby' => $hobby]);
                 $achieved = 0;
                 foreach ($milestones as $m) {

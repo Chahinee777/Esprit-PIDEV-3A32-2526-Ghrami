@@ -8,6 +8,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 #[AsCommand(
     name: 'test:social-ai-image-caption',
@@ -17,7 +18,7 @@ class TestSocialAiImageCaptionCommand extends Command
 {
     private AiContentService $aiContentService;
 
-    public function __construct(AiContentService $aiContentService)
+    public function __construct(AiContentService $aiContentService, #[Autowire('%kernel.project_dir%')] private string $projectDir)
     {
         parent::__construct();
         $this->aiContentService = $aiContentService;
@@ -30,8 +31,7 @@ class TestSocialAiImageCaptionCommand extends Command
         $io->title('🖼️  Testing Social Media AI Image Captioning with Groq Vision');
 
         // Find an existing test image
-        $projectDir = $this->getApplication()->getKernel()->getProjectDir();
-        $testImagePath = $projectDir . '/public/images/assets/ghrami-logo.png';
+        $testImagePath = $this->projectDir . '/public/images/assets/ghrami-logo.png';
 
         // Fallback: create simple 1x1 test image
         if (!file_exists($testImagePath)) {
@@ -68,10 +68,11 @@ class TestSocialAiImageCaptionCommand extends Command
     {
         // Minimal 1x1 red JPEG (base64 encoded)
         $jpegData = base64_decode(
-            '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8VAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA8A/9k='
+            '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8VAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA8A/9k=',
+            true
         );
 
-        if ($jpegData === false || !file_put_contents($path, $jpegData)) {
+        if (!$jpegData || !file_put_contents($path, $jpegData)) {
             return false;
         }
 

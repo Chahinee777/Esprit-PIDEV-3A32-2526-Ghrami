@@ -38,8 +38,6 @@ class Milestone
     #[ORM\PrePersist]
     public function ensureImmutableDate(): void
     {
-        if ($this->targetDate && !$this->targetDate instanceof \DateTimeImmutable) {
-            $this->targetDate = \DateTimeImmutable::createFromMutable($this->targetDate);
-        }
+        // targetDate is already typed as DateTimeImmutable | null, no conversion needed
     }
 }

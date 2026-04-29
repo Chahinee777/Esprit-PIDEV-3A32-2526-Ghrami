@@ -16,7 +16,7 @@ final class FriendsController extends AbstractController
     #[Route('', name: 'app_friends_index', methods: ['GET'])]
     public function index(Request $request, MatchingService $matchingService): Response
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->redirectToRoute('app_login');
@@ -95,7 +95,7 @@ final class FriendsController extends AbstractController
     #[Route('/send-request/{receiverId}', name: 'app_friends_send_request', methods: ['POST'])]
     public function sendFriendRequest(int $receiverId, MatchingService $matchingService): JsonResponse
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->json(['error' => 'Unauthorized'], 401);
@@ -112,7 +112,7 @@ final class FriendsController extends AbstractController
     #[Route('/cancel-request/{friendshipId}', name: 'app_friends_cancel_request', methods: ['POST'])]
     public function cancelFriendRequest(int $friendshipId, MatchingService $matchingService): JsonResponse
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->json(['error' => 'Unauthorized'], 401);
@@ -129,7 +129,7 @@ final class FriendsController extends AbstractController
     #[Route('/accept/{friendshipId}', name: 'app_friends_accept', methods: ['POST'])]
     public function acceptFriendRequest(int $friendshipId, MatchingService $matchingService): JsonResponse
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->json(['error' => 'Unauthorized'], 401);
@@ -146,7 +146,7 @@ final class FriendsController extends AbstractController
     #[Route('/reject/{friendshipId}', name: 'app_friends_reject', methods: ['POST'])]
     public function rejectFriendRequest(int $friendshipId, MatchingService $matchingService): JsonResponse
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->json(['error' => 'Unauthorized'], 401);
@@ -163,7 +163,7 @@ final class FriendsController extends AbstractController
     #[Route('/remove/{friendshipId}', name: 'app_friends_remove', methods: ['POST'])]
     public function removeFriend(int $friendshipId, MatchingService $matchingService): JsonResponse
     {
-        /** @var User $currentUser */
+        /** @var User|null $currentUser */
         $currentUser = $this->getUser();
         if (!$currentUser) {
             return $this->json(['error' => 'Unauthorized'], 401);

@@ -342,7 +342,7 @@ class SocialService
     public function deletePost(int $postId, int $userId): bool
     {
         $post = $this->em->getRepository(Post::class)->find($postId);
-        if (!$post instanceof Post || (int) ($post->user?->id ?? 0) !== $userId) {
+        if (!$post instanceof Post || (int) ($post->user->id ?? 0) !== $userId) {
             return false;
         }
 
@@ -355,7 +355,7 @@ class SocialService
     public function updatePostContent(int $postId, int $userId, string $content): bool
     {
         $post = $this->em->getRepository(Post::class)->find($postId);
-        if (!$post instanceof Post || (int) ($post->user?->id ?? 0) !== $userId) {
+        if (!$post instanceof Post || (int) ($post->user->id ?? 0) !== $userId) {
             return false;
         }
 
@@ -369,7 +369,7 @@ class SocialService
     public function updateComment(int $commentId, int $userId, ?string $content, ?string $imageUrl = null, ?string $mood = null): bool
     {
         $comment = $this->em->getRepository(Comment::class)->find($commentId);
-        if (!$comment instanceof Comment || (int) ($comment->user?->id ?? 0) !== $userId) {
+        if (!$comment instanceof Comment || (int) ($comment->user->id ?? 0) !== $userId) {
             return false;
         }
 
@@ -385,7 +385,7 @@ class SocialService
     public function deleteComment(int $commentId, int $userId): bool
     {
         $comment = $this->em->getRepository(Comment::class)->find($commentId);
-        if (!$comment instanceof Comment || (int) ($comment->user?->id ?? 0) !== $userId) {
+        if (!$comment instanceof Comment || (int) ($comment->user->id ?? 0) !== $userId) {
             return false;
         }
 
@@ -474,7 +474,7 @@ class SocialService
     public function hidePost(int $postId, int $userId): ?bool
     {
         $post = $this->em->getRepository(Post::class)->find($postId);
-        if (!$post instanceof Post || $userId <= 0 || (int) ($post->user?->id ?? 0) === $userId) {
+        if (!$post instanceof Post || $userId <= 0 || (int) ($post->user->id ?? 0) === $userId) {
             return null;
         }
 

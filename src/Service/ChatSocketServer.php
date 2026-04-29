@@ -25,11 +25,12 @@ class ChatSocketServer
             return;
         }
 
-        $this->serverSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-        if (!$this->serverSocket) {
+        $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        if ($socket === false) {
             echo "[ChatServer] Failed to create socket: " . socket_strerror(socket_last_error()) . "\n";
             return;
         }
+        $this->serverSocket = $socket;
 
         socket_set_option($this->serverSocket, SOL_SOCKET, SO_REUSEADDR, 1);
 
@@ -110,10 +111,10 @@ class ChatSocketServer
         $line = trim($data);
         if (strpos($line, 'MSG:') === 0) {
             $parts = explode(':', $line, 4);
-            if (count($parts) === 4) {
+            if (count($parts) >= 4) {
                 $fromId = (int) $parts[1];
                 $toId = (int) $parts[2];
-                $content = $parts[3] ?? '';
+                $content = $parts[3];
 
                 // Find recipient and relay
                 foreach ($this->clients as $userId => $socket) {

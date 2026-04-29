@@ -109,20 +109,20 @@ final class SocialController extends AbstractController
         }
 
         // Get user stats
-        $postCount = (int) $this->em->getConnection()->fetchOne(
+        $postCount = (int) ($this->em->getConnection()->fetchOne(
             'SELECT COUNT(*) FROM posts WHERE user_id = :uid',
             ['uid' => $userId]
-        ) ?? 0;
+        ) ?? 0);
 
-        $followerCount = (int) $this->em->getConnection()->fetchOne(
+        $followerCount = (int) ($this->em->getConnection()->fetchOne(
             "SELECT COUNT(*) FROM connections WHERE receiver_id = :uid AND status = 'accepted'",
             ['uid' => $userId]
-        ) ?? 0;
+        ) ?? 0);
 
-        $hobbyCount = (int) $this->em->getConnection()->fetchOne(
+        $hobbyCount = (int) ($this->em->getConnection()->fetchOne(
             'SELECT COUNT(*) FROM hobbies WHERE user_id = :uid',
             ['uid' => $userId]
-        ) ?? 0;
+        ) ?? 0);
 
         return $this->render('social/index.html.twig', [
             'userId' => $userId,
@@ -284,14 +284,11 @@ final class SocialController extends AbstractController
                 $payload = [
                     'ok' => false,
                     'error' => $message,
-                    'retryAfter' => $retryAfter?->getTimestamp(),
+                    'retryAfter' => $retryAfter->getTimestamp(),
                 ];
 
                 $response = $this->json($payload, Response::HTTP_TOO_MANY_REQUESTS);
-                if ($retryAfter !== null) {
-                    $response->headers->set('Retry-After', (string) max(1, $retryAfter->getTimestamp() - time()));
-                }
-
+                $response->headers->set('Retry-After', (string) max(1, (int) $retryAfter->getTimestamp() - time()));
                 return $response;
             }
 
@@ -463,7 +460,7 @@ final class SocialController extends AbstractController
         $content = trim((string) $request->request->get('content', ''));
 
         $existingPost = $this->em->getRepository(Post::class)->find($postId);
-        if (!$existingPost instanceof Post || (int) ($existingPost->user?->id ?? 0) !== $userId) {
+        if (!$existingPost instanceof Post || (int) ($existingPost->user->id ?? 0) !== $userId) {
             $this->addFlash('error', 'Unable to edit this post.');
             return $this->redirectToRoute('app_social_index');
         }
@@ -527,7 +524,7 @@ final class SocialController extends AbstractController
         $imageFile = $request->files->get('image_file');
 
         $existingComment = $this->em->getRepository(Comment::class)->find($commentId);
-        if (!$existingComment instanceof Comment || (int) ($existingComment->user?->id ?? 0) !== $userId) {
+        if (!$existingComment instanceof Comment || (int) ($existingComment->user->id ?? 0) !== $userId) {
             $this->addFlash('error', 'Unable to edit this comment.');
             return $this->redirectToRoute('app_social_index');
         }
@@ -739,7 +736,7 @@ final class SocialController extends AbstractController
         $postId = (int) $request->request->get('post_id');
 
         $existingPost = $this->em->getRepository(Post::class)->find($postId);
-        if (!$existingPost instanceof Post || (int) ($existingPost->user?->id ?? 0) === $userId) {
+        if (!$existingPost instanceof Post || (int) ($existingPost->user->id ?? 0) === $userId) {
             $this->addFlash('error', 'Unable to hide this post.');
             return $this->redirectToRoute('app_social_index');
         }

@@ -91,7 +91,8 @@ class AiContentService
         ]);
 
         $status = $response->getStatusCode();
-        $contentType = strtolower((string) $response->getHeaders(false)['content-type'][0] ?? '');
+        $headers = $response->getHeaders(false);
+        $contentType = strtolower((string) ($headers['content-type'][0] ?? ''));
         $content = $response->getContent(false);
 
         if ($status >= 400) {
@@ -300,16 +301,5 @@ class AiContentService
 
         // Fallback - same as desktop
         return 'image/jpeg';
-    }
-
-    private function getMimeTypeFromPath(string $path): string
-    {
-        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        return match ($extension) {
-            'png' => 'image/png',
-            'webp' => 'image/webp',
-            'gif' => 'image/gif',
-            default => 'image/jpeg',
-        };
     }
 }

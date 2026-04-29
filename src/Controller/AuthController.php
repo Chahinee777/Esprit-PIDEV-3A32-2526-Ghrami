@@ -363,7 +363,6 @@ final class AuthController extends AbstractController
             if ($picture !== '' && $user->profilePicture === null) {
                 $user->profilePicture = $picture;
             }
-            $user->isBanned = $user->isBanned ?? false;
 
             $entityManager->flush();
 

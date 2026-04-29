@@ -435,7 +435,7 @@ final class MatchingController extends AbstractController
         try {
             $prompt = "Generate 3 short, casual, professional reply suggestions for this message: \"$messageContent\". Return exactly 3 short suggestions (under 20 words each), one per line. Be concise and friendly.";
             
-            $replies = $aiContentService->completeText($prompt);
+            $replies = $aiContentService->completePostText($prompt);
             $items = array_filter(array_map('trim', explode("\n", $replies)));
             $suggestions = array_slice($items, 0, 3);
 

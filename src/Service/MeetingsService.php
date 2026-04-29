@@ -124,15 +124,19 @@ class MeetingsService
 
         $params = ['uid' => $userId];
 
-        match ($filter) {
-            'upcoming'  => $sql .= " AND m.scheduled_at > NOW() AND m.status != 'cancelled'",
-            'past'      => $sql .= " AND (m.scheduled_at <= NOW() OR m.status = 'completed')",
-            // BUG FIX: was 'in_person', DB stores 'physical'
-            'physical'  => $sql .= " AND m.meeting_type = 'physical'",
-            'virtual'   => $sql .= " AND m.meeting_type = 'virtual'",
-            'scheduled', 'completed', 'cancelled' => ($sql .= " AND m.status = :status") && ($params['status'] = $filter),
-            default     => null, // 'all' or unknown → no extra WHERE
-        };
+        if (in_array($filter, ['scheduled', 'completed', 'cancelled'])) {
+            $params['status'] = $filter;
+            $sql .= " AND m.status = :status";
+        } else {
+            match ($filter) {
+                'upcoming'  => $sql .= " AND m.scheduled_at > NOW() AND m.status != 'cancelled'",
+                'past'      => $sql .= " AND (m.scheduled_at <= NOW() OR m.status = 'completed')",
+                // BUG FIX: was 'in_person', DB stores 'physical'
+                'physical'  => $sql .= " AND m.meeting_type = 'physical'",
+                'virtual'   => $sql .= " AND m.meeting_type = 'virtual'",
+                default     => null, // 'all' or unknown → no extra WHERE
+            };
+        }
 
         $sql .= " ORDER BY m.scheduled_at ASC";
 

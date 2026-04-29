@@ -61,7 +61,7 @@ class MarketplaceService
         $b->bookingDate = new \DateTime();
         $b->status = 'pending';
         $b->paymentStatus = 'pending';
-        $b->totalAmount = $class?->price ?? 0;
+        $b->totalAmount = $class->price ?? 0;
         $b->watchProgress = 0;
         $this->em->persist($b);
         $this->em->flush();

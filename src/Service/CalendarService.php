@@ -2,15 +2,10 @@
 
 namespace App\Service;
 
-use Psr\Log\LoggerInterface;
-
 class CalendarService
 {
-    private LoggerInterface $logger;
-
-    public function __construct(LoggerInterface $logger)
+    public function __construct()
     {
-        $this->logger = $logger;
     }
 
     /**

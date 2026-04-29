@@ -482,7 +482,7 @@ final class MeetingsController extends AbstractController
                         'details' => [$googleMeetService->getLastError()],
                     ], 400);
                 }
-            } elseif ($meetingType === 'virtual' && $location !== '' && !str_starts_with($location, 'https://meet.google.com/')) {
+            } elseif ($meetingType === 'virtual' && !str_starts_with((string) $location, 'https://meet.google.com/')) {
                 return new JsonResponse([
                     'ok' => false,
                     'error' => 'Virtual meetings require a real Google Meet link (https://meet.google.com/...).',
@@ -540,8 +540,8 @@ final class MeetingsController extends AbstractController
                 'id' => $meeting->id,
                 'title' => $meeting->title ?? 'Meeting',
                 'start' => $meeting->scheduledAt->format('Y-m-d H:i'),
-                'end' => (clone $meeting->scheduledAt)
-                    ->modify('+' . ($meeting->duration ?? 60) . ' minutes')
+                'end' => (new \DateTime($meeting->scheduledAt->format('Y-m-d H:i:s')))
+                    ->modify('+' . ($meeting->duration) . ' minutes')
                     ->format('Y-m-d H:i'),
                 'backgroundColor' => match($meeting->status) {
                     'scheduled' => '#4f46e5',
@@ -594,7 +594,7 @@ final class MeetingsController extends AbstractController
             }
 
             // Check access
-            if ($meeting->user1?->id !== $user->id && $meeting->user2?->id !== $user->id) {
+            if ($meeting->organizer?->id !== $user->id && $meeting->connection === null) {
                 return new JsonResponse(['ok' => false, 'error' => 'Access denied'], 403);
             }
 
@@ -602,14 +602,11 @@ final class MeetingsController extends AbstractController
                 'ok' => true,
                 'meeting' => [
                     'id' => $meeting->id,
-                    'title' => $meeting->title,
+                    'meetingType' => $meeting->meetingType,
                     'scheduledAt' => $meeting->scheduledAt->format('c'),
                     'duration' => $meeting->duration,
                     'location' => $meeting->location,
-                    'type' => $meeting->meetingType,
                     'status' => $meeting->status,
-                    'notes' => $meeting->notes,
-                    'googleMeetLink' => $meeting->googleMeetLink,
                 ]
             ]);
         } catch (\Exception $e) {
