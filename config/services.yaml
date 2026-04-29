@@ -57,6 +57,14 @@ services:
             $groqApiKey: '%env(GROQ_API_KEY)%'
             $groqModel: '%env(GROQ_TEXT_MODEL)%'
 
+    App\Service\AiNotificationService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
+    App\Service\ContentModerationService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
     App\Service\VoiceTranscriptionService:
         arguments:
             $groqApiKey: '%env(GROQ_API_KEY)%'

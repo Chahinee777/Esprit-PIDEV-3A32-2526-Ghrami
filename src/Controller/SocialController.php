@@ -10,6 +10,7 @@ use App\Service\AiContentService;
 use App\Service\SocialService;
 use App\Service\BadgeService;
 use App\Service\NotificationService;
+use App\Service\ContentModerationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -143,7 +144,7 @@ final class SocialController extends AbstractController
     }
 
     #[Route('/post', name: 'app_social_post', methods: ['POST'])]
-    public function createPost(Request $request, SocialService $socialService, BadgeService $badgeService, NotificationService $notificationService, SluggerInterface $slugger, ValidatorInterface $validator): Response
+    public function createPost(Request $request, SocialService $socialService, BadgeService $badgeService, NotificationService $notificationService, ContentModerationService $moderationService, SluggerInterface $slugger, ValidatorInterface $validator): Response
     {
         if (!$this->isCsrfTokenValid('social_post', (string) $request->request->get('_csrf_token'))) {
             $this->addFlash('error', 'Invalid CSRF token.');
@@ -191,6 +192,17 @@ final class SocialController extends AbstractController
             return $this->validationFailure($request, $this->normalizeValidationErrors($violations));
         }
 
+        // Content Moderation: Check for inappropriate content
+        $moderation = $moderationService->checkContent($content, 'post');
+        if (!$moderation['approved']) {
+            $reason = $moderation['reason'];
+            if ($moderation['severity'] === 'blocked') {
+                return $this->validationFailure($request, ['content' => '🚫 Your post was blocked: ' . $reason]);
+            } else {
+                return $this->validationFailure($request, ['content' => '⚠️ Your post contains inappropriate content: ' . $reason]);
+            }
+        }
+
         $post = $socialService->createPost(
             $userId,
             $content,
@@ -225,6 +237,7 @@ final class SocialController extends AbstractController
     public function addComment(
         Request $request,
         SocialService $socialService,
+        ContentModerationService $moderationService,
         SluggerInterface $slugger,
         ValidatorInterface $validator,
         #[Autowire(service: 'limiter.social_comment')] RateLimiterFactory $commentLimiter
@@ -246,6 +259,12 @@ final class SocialController extends AbstractController
 
         if ($imageFile !== null && !$imageFile->isValid()) {
             return $this->validationFailure($request, ['image_file' => 'Uploaded image is invalid.']);
+        }
+
+        // Content Moderation: Check comment for inappropriate content
+        $moderation = $moderationService->checkContent($content, 'comment');
+        if (!$moderation['approved']) {
+            return $this->validationFailure($request, ['content' => '⚠️ ' . $moderation['reason']]);
         }
 
         $imageUrl = null;

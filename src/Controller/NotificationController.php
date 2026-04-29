@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Service\NotificationService;
+use App\Service\AiNotificationService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,16 +15,20 @@ use Symfony\Component\Routing\Attribute\Route;
 final class NotificationController extends AbstractController
 {
     #[Route('', name: 'app_notifications_index', methods: ['GET'])]
-    public function index(NotificationService $notificationService): Response
+    public function index(NotificationService $notificationService, AiNotificationService $aiService): Response
     {
         $currentUser = $this->getUser();
         if (!$currentUser instanceof User) {
             return $this->redirectToRoute('app_auth_login');
         }
 
+        $userId = (int) $currentUser->id;
+        $digest = $aiService->buildSmartDigest($userId, 3);
+
         return $this->render('notifications/index.html.twig', [
-            'notifications' => $notificationService->getForUser((int) $currentUser->id),
-            'unreadCount' => $notificationService->countUnread((int) $currentUser->id),
+            'notifications' => $notificationService->getForUser($userId),
+            'unreadCount' => $notificationService->countUnread($userId),
+            'aiDigest' => $digest,
         ]);
     }
 

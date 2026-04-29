@@ -193,6 +193,102 @@
     .notification-type.message { background: #cffafe; color: #0891b2; }
     .notification-type.badge { background: #fce7f3; color: #be185d; }
     .notification-type.connection { background: #e0e7ff; color: #4f46e5; }
+
+    /* AI Digest Section */
+    .ai-digest-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    }
+
+    .ai-digest-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.95;
+    }
+
+    .ai-digest-header::before {
+        content: '✨';
+        font-size: 1.2rem;
+    }
+
+    .ai-digest-text {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+        font-weight: 500;
+    }
+
+    .ai-digest-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.85rem;
+        opacity: 0.9;
+        flex-wrap: wrap;
+    }
+
+    .ai-digest-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+    }
+
+    .ai-digest-priority {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .ai-digest-priority.critical {
+        background: rgba(255, 59, 48, 0.3);
+    }
+
+    .ai-digest-priority.high {
+        background: rgba(255, 152, 0, 0.3);
+    }
+
+    .ai-digest-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .ai-action-btn {
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .ai-action-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: white;
+        transform: translateY(-1px);
+    }
+
 </style>
 {% endblock %}
 
@@ -204,6 +300,31 @@
             <button class="mark-all-read-btn" onclick="markAllAsRead()">✓ Mark all read ({{ unreadCount }})</button>
         {% endif %}
     </div>
+
+    {# AI Digest Section #}
+    {% if aiDigest and aiDigest.digest %}
+        <div class="ai-digest-container">
+            <div class="ai-digest-header">AI-Powered Summary</div>
+            <div class="ai-digest-text">{{ aiDigest.digest }}</div>
+            
+            <div class="ai-digest-meta">
+                <div class="ai-digest-count">
+                    📊 {{ aiDigest.count_condensed }} of {{ aiDigest.count_total }} highlighted
+                </div>
+                <div class="ai-digest-priority {% if aiDigest.priority == 'critical' %}critical{% elseif aiDigest.priority == 'high' %}high{% endif %}">
+                    {% if aiDigest.priority == 'critical' %}⚡ Critical{% elseif aiDigest.priority == 'high' %}🔔 High{% elseif aiDigest.priority == 'medium' %}📌 Medium{% else %}💤 Low{% endif %} Priority
+                </div>
+            </div>
+
+            {% if aiDigest.actions|length > 0 %}
+                <div class="ai-digest-actions">
+                    {% for action in aiDigest.actions %}
+                        <a href="{{ action.url }}" class="ai-action-btn">{{ action.label }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
 
     {% if notifications|length == 0 %}
         <div class="empty-state">
