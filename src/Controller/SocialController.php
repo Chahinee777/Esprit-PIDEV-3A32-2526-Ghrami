@@ -195,6 +195,14 @@ final class SocialController extends AbstractController
         // Content Moderation: Check for inappropriate content
         $moderation = $moderationService->checkContent($content, 'post');
         if (!$moderation['approved']) {
+            if ($request->isXmlHttpRequest() || str_contains((string) $request->headers->get('Accept'), 'application/json')) {
+                return $this->json([
+                    'ok' => false,
+                    'error' => $moderation['reason'],
+                    'severity' => $moderation['severity'],
+                    'flagged_words' => $moderation['flagged_words'],
+                ], Response::HTTP_BAD_REQUEST);
+            }
             $reason = $moderation['reason'];
             if ($moderation['severity'] === 'blocked') {
                 return $this->validationFailure($request, ['content' => '🚫 Your post was blocked: ' . $reason]);
@@ -264,6 +272,13 @@ final class SocialController extends AbstractController
         // Content Moderation: Check comment for inappropriate content
         $moderation = $moderationService->checkContent($content, 'comment');
         if (!$moderation['approved']) {
+            if ($request->isXmlHttpRequest() || str_contains((string) $request->headers->get('Accept'), 'application/json')) {
+                return $this->json([
+                    'ok' => false,
+                    'error' => $moderation['reason'],
+                    'severity' => $moderation['severity'],
+                ], Response::HTTP_BAD_REQUEST);
+            }
             return $this->validationFailure($request, ['content' => '⚠️ ' . $moderation['reason']]);
         }
 

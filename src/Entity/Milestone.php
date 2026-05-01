@@ -15,7 +15,7 @@ class Milestone
     #[ORM\GeneratedValue]
     public ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Hobby::class)]
+    #[ORM\ManyToOne(targetEntity: Hobby::class, inversedBy: 'milestones')]
     #[ORM\JoinColumn(name: 'hobby_id', referencedColumnName: 'hobby_id', nullable: false, onDelete: 'CASCADE')]
     public ?Hobby $hobby = null;
 

@@ -26,15 +26,17 @@ final class AiNotificationService
     /**
      * Build a smart AI digest from pending notifications.
      * 
-     * @return array|null Digest data or null if no notifications
+     * @return array Digest data or empty digest if no notifications
      */
-    public function buildSmartDigest(int $userId, int $maxNotifications = 3): ?array
+    public function buildSmartDigest(int $userId, int $maxNotifications = 3): array
     {
         try {
             // 1. Fetch pending notifications
             $pending = $this->getPendingNotifications($userId);
+            
+            // Return empty digest if no notifications
             if (empty($pending)) {
-                return null;
+                return $this->emptyDigest();
             }
 
             // 2. Score each by urgency
@@ -73,8 +75,23 @@ final class AiNotificationService
             ];
         } catch (\Exception $e) {
             error_log('AiNotificationService error: ' . $e->getMessage());
-            return null;
+            return $this->emptyDigest();
         }
+    }
+
+    /**
+     * Build a safe empty digest payload for the view.
+     */
+    private function emptyDigest(): array
+    {
+        return [
+            'digest' => 'You are all caught up. No new notifications to digest.',
+            'notifications' => [],
+            'actions' => [],
+            'priority' => 'low',
+            'count_total' => 0,
+            'count_condensed' => 0,
+        ];
     }
 
     /**
@@ -82,11 +99,32 @@ final class AiNotificationService
      */
     private function getPendingNotifications(int $userId): array
     {
-        return $this->em->getRepository(Notification::class)->findBy(
-            ['user_id' => $userId, 'is_read' => false],
-            ['created_at' => 'DESC'],
-            20
+        $rows = $this->em->getConnection()->fetchAllAssociative(
+            'SELECT n.type, n.content, n.created_at, n.is_read
+             FROM notifications n
+             WHERE n.user_id = :uid AND n.is_read = 0
+             ORDER BY n.created_at DESC
+             LIMIT 20',
+            ['uid' => $userId]
         );
+
+        if (empty($rows)) {
+            return [];
+        }
+
+        $notifications = [];
+        foreach ($rows as $row) {
+            $notif = new Notification();
+            $notif->type = (string) ($row['type'] ?? '');
+            $notif->content = (string) ($row['content'] ?? '');
+            $notif->isRead = (bool) ($row['is_read'] ?? false);
+            if (!empty($row['created_at'])) {
+                $notif->createdAt = new \DateTime((string) $row['created_at']);
+            }
+            $notifications[] = $notif;
+        }
+
+        return $notifications;
     }
 
     /**
@@ -120,7 +158,9 @@ final class AiNotificationService
      */
     private function fallbackScore(Notification $notif): int
     {
-        return match ($notif->type) {
+        $type = strtolower($notif->type);
+
+        return match ($type) {
             'booking' => 90,
             'message' => 70,
             'connection_request' => 60,
@@ -184,7 +224,9 @@ final class AiNotificationService
      */
     private function mapToAction(string $type): ?array
     {
-        return match ($type) {
+        $normalized = strtolower($type);
+
+        return match ($normalized) {
             'message' => ['label' => '💬 Reply', 'url' => '/messages'],
             'booking' => ['label' => '✓ Confirm', 'url' => '/bookings'],
             'connection_request' => ['label' => '👥 Accept', 'url' => '/connections'],

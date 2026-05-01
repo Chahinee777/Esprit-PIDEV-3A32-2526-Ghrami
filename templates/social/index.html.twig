@@ -1390,8 +1390,42 @@
             publishBtn.disabled = true;
             publishBtn.textContent = '⏳ Publication...';
 
-            // Submit the form
-            postForm?.submit();
+            // Use Fetch API to intercept response and check for moderation errors
+            const formData = new FormData(postForm);
+            
+            fetch('{{ path('app_social_post') }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(async response => {
+                const data = await response.json();
+                
+                if (response.status === 400 && !data.ok) {
+                    // Moderation error
+                    showModerationModal(data.error, data.severity, data.flagged_words);
+                    publishBtn.disabled = false;
+                    publishBtn.textContent = '✓ Publier';
+                } else if (response.ok && data.ok) {
+                    // Success - reload page
+                    window.location.reload();
+                } else {
+                    // Other error
+                    status.textContent = '❌ Erreur: ' + (data.error || 'Erreur inconnue');
+                    status.style.color = '#e74c3c';
+                    publishBtn.disabled = false;
+                    publishBtn.textContent = '✓ Publier';
+                }
+            })
+            .catch(err => {
+                console.error('Post error:', err);
+                status.textContent = '❌ Erreur réseau';
+                status.style.color = '#e74c3c';
+                publishBtn.disabled = false;
+                publishBtn.textContent = '✓ Publier';
+            });
         });
 
         completeBtn?.addEventListener('click', async () => {
@@ -1734,5 +1768,96 @@
             }
         });
     })();
+
+    // Moderation Modal
+    function showModerationModal(errorMsg, severity, flaggedWords = []) {
+        const modal = document.createElement('div');
+        modal.id = 'moderation-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            animation: slideUp 0.3s ease;
+        `;
+
+        const icon = severity === 'blocked' ? '🚫' : '⚠️';
+        const title = severity === 'blocked' ? 'Post Blocked' : 'Inappropriate Content';
+        const color = severity === 'blocked' ? '#e74c3c' : '#f39c12';
+
+        content.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 16px;">${icon}</div>
+            <h2 style="color: ${color}; margin: 0 0 12px 0; font-size: 24px;">${title}</h2>
+            <p style="color: #666; margin: 0 0 16px 0; line-height: 1.6;">${errorMsg}</p>
+            ${flaggedWords.length > 0 ? `
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: left;">
+                    <p style="color: #666; font-size: 12px; margin: 0 0 8px 0; font-weight: 600;">Flagged Words:</p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        ${flaggedWords.map(w => `<span style="background: ${color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">${w}</span>`).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            <button onclick="closeModerationModal()" style="
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                padding: 12px 32px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 600;
+                transition: all 0.2s;
+            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                Understood
+            </button>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Add slide up animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModerationModal();
+        });
+    }
+
+    function closeModerationModal() {
+        const modal = document.getElementById('moderation-modal');
+        if (modal) modal.remove();
+    }
+
 </script>
 {% endblock %}

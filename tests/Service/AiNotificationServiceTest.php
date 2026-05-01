@@ -4,8 +4,8 @@ namespace App\Tests\Service;
 
 use App\Entity\Notification;
 use App\Service\AiNotificationService;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\TestCase;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -15,18 +15,17 @@ class AiNotificationServiceTest extends TestCase
     private AiNotificationService $service;
     private EntityManagerInterface $em;
     private HttpClientInterface $httpClient;
-    private EntityRepository $notificationRepo;
+    private Connection $connection;
     private string $groqApiKey = 'test-key';
 
     protected function setUp(): void
     {
         $this->em = $this->createMock(EntityManagerInterface::class);
         $this->httpClient = $this->createMock(HttpClientInterface::class);
-        $this->notificationRepo = $this->createMock(EntityRepository::class);
+        $this->connection = $this->createMock(Connection::class);
 
-        $this->em->method('getRepository')
-            ->with(Notification::class)
-            ->willReturn($this->notificationRepo);
+        $this->em->method('getConnection')
+            ->willReturn($this->connection);
 
         $this->service = new AiNotificationService(
             $this->em,
@@ -37,20 +36,28 @@ class AiNotificationServiceTest extends TestCase
 
     public function testBuildSmartDigestWithNoNotifications(): void
     {
-        $this->notificationRepo->method('findBy')->willReturn([]);
+        $this->connection->method('fetchAllAssociative')
+            ->willReturn([]);
 
         $result = $this->service->buildSmartDigest(1);
 
-        $this->assertNull($result);
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('digest', $result);
+        $this->assertEquals(0, $result['count_total']);
+        $this->assertEquals([], $result['notifications']);
+        $this->assertEquals('low', $result['priority']);
     }
 
     public function testBuildSmartDigestScoringAndSorting(): void
     {
-        // Create mock notifications
-        $notif1 = $this->createMockNotification(1, 'booking', 'Book confirmed');
-        $notif2 = $this->createMockNotification(2, 'like', 'John liked your post');
+        // Create raw DB rows
+        $rows = [
+            ['type' => 'booking', 'content' => 'Book confirmed', 'created_at' => '2024-01-01 10:00:00', 'is_read' => 0],
+            ['type' => 'like', 'content' => 'John liked your post', 'created_at' => '2024-01-01 09:00:00', 'is_read' => 0],
+        ];
 
-        $this->notificationRepo->method('findBy')->willReturn([$notif1, $notif2]);
+        $this->connection->method('fetchAllAssociative')
+            ->willReturn($rows);
 
         // Mock Groq responses: score + digest
         $this->mockGroqResponses(['90', '30', 'Your booking was confirmed and John liked your post.']);
@@ -68,13 +75,18 @@ class AiNotificationServiceTest extends TestCase
 
     public function testBuildSmartDigestLimitsToMaxNotifications(): void
     {
-        // Create 5 notifications
-        $notifications = array_map(
-            fn($i) => $this->createMockNotification($i, 'message', "Message $i"),
-            range(1, 5)
-        );
+        // Create 5 raw DB rows
+        $rows = array_map(function ($i) {
+            return [
+                'type' => 'message',
+                'content' => "Message $i",
+                'created_at' => '2024-01-0' . $i . ' 10:00:00',
+                'is_read' => 0,
+            ];
+        }, range(1, 5));
 
-        $this->notificationRepo->method('findBy')->willReturn($notifications);
+        $this->connection->method('fetchAllAssociative')
+            ->willReturn($rows);
 
         // Mock scoring responses + digest (5 scores + 1 digest)
         $this->mockGroqResponses(['50', '50', '50', '50', '50', 'You have 3 new messages.']);
@@ -89,8 +101,9 @@ class AiNotificationServiceTest extends TestCase
 
     public function testBuildSmartDigestPriorityCalculation(): void
     {
-        $notif = $this->createMockNotification(1, 'booking', 'Book confirmed');
-        $this->notificationRepo->method('findBy')->willReturn([$notif]);
+        $row = ['type' => 'booking', 'content' => 'Book confirmed', 'created_at' => '2024-01-01 10:00:00', 'is_read' => 0];
+        $this->connection->method('fetchAllAssociative')
+            ->willReturn([$row]);
 
         // Mock high urgency score + digest
         $this->mockGroqResponses(['95', 'Your booking is confirmed!']);
@@ -102,8 +115,9 @@ class AiNotificationServiceTest extends TestCase
 
     public function testBuildSmartDigestFallbackWhenGroqFails(): void
     {
-        $notif = $this->createMockNotification(1, 'booking', 'Book confirmed');
-        $this->notificationRepo->method('findBy')->willReturn([$notif]);
+        $row = ['type' => 'booking', 'content' => 'Book confirmed', 'created_at' => '2024-01-01 10:00:00', 'is_read' => 0];
+        $this->connection->method('fetchAllAssociative')
+            ->willReturn([$row]);
 
         // Mock Groq failure
         $this->httpClient->method('request')->willThrowException(
@@ -120,10 +134,13 @@ class AiNotificationServiceTest extends TestCase
     public function testExtractActionsFromNotifications(): void
     {
         // Test that actions are properly extracted
-        $bookingNotif = $this->createMockNotification(1, 'booking', 'Book confirmed');
-        $messageNotif = $this->createMockNotification(2, 'message', 'New message');
+        $rows = [
+            ['type' => 'booking', 'content' => 'Book confirmed', 'created_at' => '2024-01-01 10:00:00', 'is_read' => 0],
+            ['type' => 'message', 'content' => 'New message', 'created_at' => '2024-01-01 09:00:00', 'is_read' => 0],
+        ];
 
-        $this->notificationRepo->method('findBy')->willReturn([$bookingNotif, $messageNotif]);
+        $this->connection->method('fetchAllAssociative')
+            ->willReturn($rows);
 
         // Mock scoring: 2 scores + 1 digest
         $this->mockGroqResponses(['85', '75', 'You have actions to take.']);
@@ -142,8 +159,9 @@ class AiNotificationServiceTest extends TestCase
 
     public function testGroqScoringEdgeCases(): void
     {
-        $notif = $this->createMockNotification(1, 'test', 'Test');
-        $this->notificationRepo->method('findBy')->willReturn([$notif]);
+        $row = ['type' => 'test', 'content' => 'Test', 'created_at' => '2024-01-01 10:00:00', 'is_read' => 0];
+        $this->connection->method('fetchAllAssociative')
+            ->willReturn([$row]);
 
         // Test with response that has score > 100 + digest
         $this->mockGroqResponses(['150', 'You have a notification.']);
@@ -157,8 +175,9 @@ class AiNotificationServiceTest extends TestCase
 
     public function testGroqScoringNegativeValues(): void
     {
-        $notif = $this->createMockNotification(1, 'test', 'Test');
-        $this->notificationRepo->method('findBy')->willReturn([$notif]);
+        $row = ['type' => 'test', 'content' => 'Test', 'created_at' => '2024-01-01 10:00:00', 'is_read' => 0];
+        $this->connection->method('fetchAllAssociative')
+            ->willReturn([$row]);
 
         // Test with negative response (should become 0) + digest
         $this->mockGroqResponses(['-50', 'You have a notification.']);
@@ -167,21 +186,6 @@ class AiNotificationServiceTest extends TestCase
 
         $this->assertIsArray($result);
         $this->assertNotNull($result['digest']);
-    }
-
-    /**
-     * Helper: Create notification with required properties.
-     */
-    private function createMockNotification(int $id, string $type, string $content): Notification
-    {
-        $notif = new Notification();
-        $notif->id = $id;
-        $notif->type = $type;
-        $notif->content = $content;
-        $notif->createdAt = new \DateTime();
-        $notif->isRead = false;
-
-        return $notif;
     }
 
     /**

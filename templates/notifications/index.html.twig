@@ -302,26 +302,31 @@
     </div>
 
     {# AI Digest Section #}
-    {% if aiDigest and aiDigest.digest %}
+    {% if aiDigest %}
         <div class="ai-digest-container">
-            <div class="ai-digest-header">AI-Powered Summary</div>
+            <div class="ai-digest-header">
+                <span>AI-Powered Summary</span>
+                <span style="margin-left: 0.5rem;" title="Powered by Groq AI">🤖</span>
+            </div>
             <div class="ai-digest-text">{{ aiDigest.digest }}</div>
             
-            <div class="ai-digest-meta">
-                <div class="ai-digest-count">
-                    📊 {{ aiDigest.count_condensed }} of {{ aiDigest.count_total }} highlighted
+            {% if aiDigest.count_total > 0 %}
+                <div class="ai-digest-meta">
+                    <div class="ai-digest-count">
+                        📊 {{ aiDigest.count_condensed }} of {{ aiDigest.count_total }} highlighted
+                    </div>
+                    <div class="ai-digest-priority {% if aiDigest.priority == 'critical' %}critical{% elseif aiDigest.priority == 'high' %}high{% endif %}">
+                        {% if aiDigest.priority == 'critical' %}⚡ Critical{% elseif aiDigest.priority == 'high' %}🔔 High{% elseif aiDigest.priority == 'medium' %}📌 Medium{% else %}💤 Low{% endif %} Priority
+                    </div>
                 </div>
-                <div class="ai-digest-priority {% if aiDigest.priority == 'critical' %}critical{% elseif aiDigest.priority == 'high' %}high{% endif %}">
-                    {% if aiDigest.priority == 'critical' %}⚡ Critical{% elseif aiDigest.priority == 'high' %}🔔 High{% elseif aiDigest.priority == 'medium' %}📌 Medium{% else %}💤 Low{% endif %} Priority
-                </div>
-            </div>
 
-            {% if aiDigest.actions|length > 0 %}
-                <div class="ai-digest-actions">
-                    {% for action in aiDigest.actions %}
-                        <a href="{{ action.url }}" class="ai-action-btn">{{ action.label }}</a>
-                    {% endfor %}
-                </div>
+                {% if aiDigest.actions|length > 0 %}
+                    <div class="ai-digest-actions">
+                        {% for action in aiDigest.actions %}
+                            <a href="{{ action.url }}" class="ai-action-btn">{{ action.label }}</a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             {% endif %}
         </div>
     {% endif %}
