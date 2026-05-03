@@ -1,0 +1,145 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Search - Ghrami{% endblock %}
+
+{% block body %}
+<div style="max-width: 1000px; margin: 40px auto; padding: 0 20px;">
+    <!-- Search Header -->
+    <div style="margin-bottom: 40px;">
+        <h1 style="font-size: 48px; font-weight: 800; color: #1c1e21; margin: 0 0 24px 0;">🔍 Search Ghrami</h1>
+        
+        <!-- Search Form -->
+        <form method="get" action="{{ path('app_search_index') }}" style="display: flex; gap: 12px;">
+            <input type="text" name="q" value="{{ query }}" placeholder="Search posts, people, hobbies..." 
+                   style="flex: 1; padding: 16px 20px; background-color: white; border: 2px solid #e4e6eb; border-radius: 25px; font-size: 16px; transition: all 0.3s;"
+                   onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102,126,234,0.1)'"
+                   onblur="this.style.borderColor='#e4e6eb'; this.style.boxShadow='none'">
+            <button type="submit" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 28px; border-radius: 25px; font-weight: 600; cursor: pointer; font-size: 16px; transition: all 0.3s;"
+                    onmouseover="this.style.transform='scale(1.05)'"
+                    onmouseout="this.style.transform='scale(1)'">
+                Search
+            </button>
+        </form>
+    </div>
+
+    {% if query %}
+        <!-- Search Results -->
+        <div style="display: grid; gap: 32px;">
+            
+            <!-- Posts Results -->
+            {% if results.posts|length > 0 %}
+                <div>
+                    <h2 style="font-size: 20px; font-weight: 700; color: #1c1e21; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+                        📰 Posts
+                        <span style="background: #f0f2f5; color: #65676b; padding: 2px 8px; border-radius: 12px; font-size: 14px;">{{ results.posts|length }}</span>
+                    </h2>
+                    <div style="display: grid; gap: 12px;">
+                        {% for post in results.posts %}
+                            <div style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); padding: 20px; transition: all 0.3s;"
+                                 onmouseover="this.style.boxShadow='0 12px 24px rgba(0, 0, 0, 0.12)'"
+                                 onmouseout="this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.08)'">
+                                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                                    {% if post.profile_picture %}
+                                        <img src="{{ post.profile_picture }}" alt="Profile" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">
+                                    {% else %}
+                                        <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                                    {% endif %}
+                                    <div>
+                                        <div style="font-weight: 600; color: #1c1e21;">{{ post.full_name ?: post.username }}</div>
+                                        <div style="font-size: 12px; color: #65676b;">@{{ post.username }} • {{ post.created_at }}</div>
+                                    </div>
+                                </div>
+                                <p style="color: #1c1e21; margin: 0 0 12px 0; line-height: 1.5;">{{ post.content[:150] }}{% if post.content|length > 150 %}...{% endif %}</p>
+                                <div style="font-size: 12px; color: #65676b;">👍 {{ post.likes_count }} Likes</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Users Results -->
+            {% if results.users|length > 0 %}
+                <div>
+                    <h2 style="font-size: 20px; font-weight: 700; color: #1c1e21; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+                        👥 People
+                        <span style="background: #f0f2f5; color: #65676b; padding: 2px 8px; border-radius: 12px; font-size: 14px;">{{ results.users|length }}</span>
+                    </h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;">
+                        {% for user in results.users %}
+                            <div style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); padding: 20px; text-align: center; transition: all 0.3s;"
+                                 onmouseover="this.style.boxShadow='0 12px 24px rgba(0, 0, 0, 0.12)'; this.style.transform='translateY(-4px)'"
+                                 onmouseout="this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.08)'; this.style.transform='translateY(0)'">
+                                {% if user.profile_picture %}
+                                    <img src="{{ user.profile_picture }}" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px; object-fit: cover;">
+                                {% else %}
+                                    <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto 12px;"></div>
+                                {% endif %}
+                                <h3 style="font-size: 16px; font-weight: 700; color: #1c1e21; margin: 0 0 4px 0;">{{ user.full_name ?: user.username }}</h3>
+                                <p style="font-size: 13px; color: #65676b; margin: 0 0 8px 0;">@{{ user.username }}</p>
+                                {% if user.bio %}
+                                    <p style="font-size: 12px; color: #8a8d91; margin: 0 0 12px 0;">{{ user.bio[:50] }}{% if user.bio|length > 50 %}...{% endif %}</p>
+                                {% endif %}
+                                <a href="{{ path('app_profile_view', {'userId': user.user_id}) }}" 
+                                   style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px;">
+                                    View Profile
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Hobbies Results -->
+            {% if results.hobbies|length > 0 %}
+                <div>
+                    <h2 style="font-size: 20px; font-weight: 700; color: #1c1e21; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;">
+                        🎯 Hobbies
+                        <span style="background: #f0f2f5; color: #65676b; padding: 2px 8px; border-radius: 12px; font-size: 14px;">{{ results.hobbies|length }}</span>
+                    </h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">
+                        {% for hobby in results.hobbies %}
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; padding: 20px; text-align: center; transition: all 0.3s;"
+                                 onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 24px rgba(102,126,234,0.3)'"
+                                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                <div style="font-size: 24px; margin-bottom: 8px;">🎯</div>
+                                <h3 style="font-size: 16px; font-weight: 700; margin: 0 0 4px 0;">{{ hobby.name }}</h3>
+                                <p style="font-size: 12px; opacity: 0.9; margin: 0 0 8px 0;">{{ hobby.category }}</p>
+                                <div style="font-size: 13px; font-weight: 600; background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; display: inline-block;">
+                                    👥 {{ hobby.user_count }} members
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- No Results -->
+            {% if results.posts|length == 0 and results.users|length == 0 and results.hobbies|length == 0 %}
+                <div style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); padding: 60px 40px; text-align: center;">
+                    <div style="font-size: 64px; margin-bottom: 16px;">🔍</div>
+                    <h3 style="font-size: 20px; color: #1c1e21; margin: 0 0 8px 0;">No results found</h3>
+                    <p style="font-size: 14px; color: #65676b; margin: 0;">Try searching with different keywords.</p>
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); padding: 60px 40px; text-align: center;">
+            <div style="font-size: 64px; margin-bottom: 16px;">🔍</div>
+            <h3 style="font-size: 20px; color: #1c1e21; margin: 0 0 8px 0;">Start Searching</h3>
+            <p style="font-size: 14px; color: #65676b; margin: 0;">Find posts, people, and hobbies to explore.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 32px !important;
+        }
+        div[style*="grid-template-columns: repeat"] {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>
+{% endblock %}

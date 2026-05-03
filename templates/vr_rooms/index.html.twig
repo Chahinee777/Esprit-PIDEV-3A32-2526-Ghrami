@@ -1,0 +1,626 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ room.name }} | Ghrami VR{% endblock %}
+
+{% block body %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  /* ══════════════════════════════════════════════════════════════
+     TOKENS
+  ══════════════════════════════════════════════════════════════ */
+  :root {
+    --c-primary:   #667eea;
+    --c-secondary: #764ba2;
+    --c-grad:      linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --c-green:     #22c55e;
+    --c-green-bg:  #f0f7f0;
+    --c-green-bdr: #c3e6cb;
+    --c-green-txt: #2e7d32;
+    --c-border:    #e5e7eb;
+    --c-surface:   #ffffff;
+    --c-muted:     #f9fafb;
+    --c-text:      #1c1e21;
+    --c-sub:       #9ca3af;
+    --radius-lg:   16px;
+    --radius-md:   12px;
+    --radius-sm:   8px;
+    --shadow-sm:   0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+    --shadow-md:   0 4px 24px rgba(102,126,234,.12), 0 1px 4px rgba(0,0,0,.06);
+    --transition:  .22s cubic-bezier(.4,0,.2,1);
+    --font:        'Outfit', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  /* ══════════════════════════════════════════════════════════════
+     KEYFRAMES
+  ══════════════════════════════════════════════════════════════ */
+  @keyframes fadeUp   { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:none } }
+  @keyframes pulseDot { 0%,100% { box-shadow:0 0 0 0 rgba(34,197,94,.5) } 50% { box-shadow:0 0 0 6px rgba(34,197,94,0) } }
+  @keyframes toastIn  { from { opacity:0; transform:translateY(20px) scale(.95) } to { opacity:1; transform:none } }
+  @keyframes toastOut { to   { opacity:0; transform:translateY(20px) scale(.95) } }
+  @keyframes shimmer  { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+  @keyframes pulse    { 0%,100%{opacity:.5} 50%{opacity:1} }
+
+  /* ══════════════════════════════════════════════════════════════
+     TOAST
+  ══════════════════════════════════════════════════════════════ */
+  #vr-toast-container {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .vr-toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--c-text);
+    color: #fff;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 18px;
+    border-radius: 40px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    animation: toastIn .3s cubic-bezier(.34,1.56,.64,1) both;
+    white-space: nowrap;
+    pointer-events: auto;
+  }
+
+  .vr-toast.out { animation: toastOut .3s ease both; }
+  .vr-toast-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+  /* ══════════════════════════════════════════════════════════════
+     PAGE SHELL
+  ══════════════════════════════════════════════════════════════ */
+  .vr-page {
+    font-family: var(--font);
+    max-width: 1340px;
+    margin: 0 auto;
+    animation: fadeUp .4s ease both;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── Page header ─────────────────────────────────────────── */
+  .vr-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .vr-page-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .vr-page-title h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--c-text);
+    letter-spacing: -.3px;
+  }
+
+  .vr-badge {
+    background: var(--c-grad);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    padding: 3px 9px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+
+  .vr-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .vr-live-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--c-green-bg);
+    border: 1px solid var(--c-green-bdr);
+    border-radius: 24px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-green-txt);
+    font-family: var(--font);
+  }
+
+  .vr-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--c-green);
+    animation: pulseDot 2s infinite;
+  }
+
+  .vr-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 10px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    user-select: none;
+    text-decoration: none;
+    border: none;
+  }
+
+  .vr-btn-outline {
+    border: 1.5px solid var(--c-border);
+    background: var(--c-surface);
+    color: var(--c-sub);
+  }
+
+  .vr-btn-outline:hover {
+    border-color: var(--c-primary);
+    color: var(--c-primary);
+    background: rgba(102,126,234,.05);
+  }
+
+  .vr-btn-primary {
+    background: var(--c-grad);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(102,126,234,.35);
+  }
+
+  .vr-btn-primary:hover {
+    box-shadow: 0 4px 20px rgba(102,126,234,.5);
+    transform: translateY(-1px);
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     ROOM INFO CARD (top)
+  ══════════════════════════════════════════════════════════════ */
+  .vr-room-card {
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+  }
+
+  .vr-room-emoji {
+    font-size: 42px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .vr-room-info {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .vr-room-info h3 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--c-text);
+  }
+
+  .vr-room-info p {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: var(--c-sub);
+    line-height: 1.5;
+  }
+
+  .vr-room-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .vr-tag {
+    background: var(--c-muted);
+    border: 1px solid var(--c-border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--c-sub);
+  }
+
+  .vr-room-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .vr-stat-bubble {
+    background: var(--c-green-bg);
+    border: 1px solid var(--c-green-bdr);
+    border-radius: 12px;
+    padding: 8px 16px;
+    text-align: center;
+  }
+
+  .vr-stat-num {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--c-green-txt);
+    display: block;
+    line-height: 1;
+  }
+
+  .vr-stat-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--c-green-txt);
+    opacity: .75;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     IFRAME CONTAINER
+  ══════════════════════════════════════════════════════════════ */
+  .vr-frame-wrapper {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--c-border);
+    box-shadow: var(--shadow-md);
+    background: #0a0a1a;
+    /* 16:9 aspect ratio, minimum height */
+    aspect-ratio: 16 / 9;
+    min-height: 480px;
+  }
+
+  /* Loading skeleton shown before iframe loads */
+  .vr-frame-loader {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: #0d0d2b;
+    z-index: 2;
+    transition: opacity .4s ease;
+  }
+
+  .vr-frame-loader.hidden { opacity: 0; pointer-events: none; }
+
+  .vr-loader-emoji {
+    font-size: 48px;
+    animation: pulse 1.5s infinite;
+  }
+
+  .vr-loader-text {
+    color: rgba(255,255,255,.55);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .vr-loader-bar {
+    width: 160px;
+    height: 3px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.1);
+    overflow: hidden;
+  }
+
+  .vr-loader-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    background: var(--c-grad);
+    background-size: 400px 100%;
+    animation: shimmer 1.4s infinite linear;
+  }
+
+  .vr-frame-wrapper iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    z-index: 1;
+  }
+
+  /* Fullscreen mode */
+  .vr-frame-wrapper.is-fullscreen {
+    position: fixed;
+    inset: 0;
+    border-radius: 0;
+    border: none;
+    z-index: 1000;
+    aspect-ratio: unset;
+    min-height: unset;
+  }
+
+  /* ── Frame toolbar (overlays top-right of iframe) ──────── */
+  .vr-frame-toolbar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    display: flex;
+    gap: 8px;
+  }
+
+  .vr-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all var(--transition);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .vr-tool-btn-dark {
+    background: rgba(10,10,30,.7);
+    color: rgba(255,255,255,.85);
+    border: 1px solid rgba(255,255,255,.15);
+  }
+
+  .vr-tool-btn-dark:hover {
+    background: rgba(102,126,234,.5);
+    border-color: rgba(102,126,234,.6);
+    color: #fff;
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     STATUS BAR
+  ══════════════════════════════════════════════════════════════ */
+  .vr-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--c-sub);
+    font-weight: 500;
+    padding: 10px 0 0;
+    flex-wrap: wrap;
+  }
+
+  .vr-status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--c-green);
+    flex-shrink: 0;
+  }
+
+  .vr-status-text { flex: 1; }
+
+  .vr-powered { margin-left: auto; }
+  .vr-powered a { color: var(--c-primary); text-decoration: none; font-weight: 600; }
+  .vr-powered a:hover { text-decoration: underline; }
+
+  /* ══════════════════════════════════════════════════════════════
+     RESPONSIVE
+  ══════════════════════════════════════════════════════════════ */
+  @media (max-width: 680px) {
+    .vr-frame-wrapper { min-height: 300px; }
+    .vr-room-card { flex-direction: column; align-items: flex-start; }
+    .vr-room-stats { flex-direction: row; align-self: stretch; }
+  }
+</style>
+
+<div id="vr-toast-container"></div>
+
+<div class="vr-page">
+
+  <!-- ── Page header ──────────────────────────────────────────── -->
+  <div class="vr-page-header">
+    <div class="vr-page-title">
+      <h2>{{ room.emoji }} {{ room.name }}</h2>
+      <span class="vr-badge">FrameVR</span>
+    </div>
+    <div class="vr-header-right">
+      <div class="vr-live-pill">
+        <div class="vr-live-dot"></div>
+        <span id="onlineCount">{{ onlineCount }}</span>&nbsp;en ligne
+      </div>
+      <a href="{{ room.url }}" target="_blank" rel="noopener" class="vr-btn vr-btn-outline" title="Ouvrir dans un nouvel onglet">
+        ↗ Ouvrir
+      </a>
+      <button class="vr-btn vr-btn-primary" onclick="toggleFullscreen()">
+        ⛶ Plein écran
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Room info card ───────────────────────────────────────── -->
+  <div class="vr-room-card">
+    <div class="vr-room-emoji">{{ room.emoji }}</div>
+    <div class="vr-room-info">
+      <h3>{{ room.name }}</h3>
+      <p>{{ room.description }}</p>
+      <div class="vr-room-tags">
+        {% for tag in room.tags %}
+          <span class="vr-tag">{{ tag }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="vr-room-stats">
+      <div class="vr-stat-bubble">
+        <span class="vr-stat-num" id="liveCount">{{ room.online }}</span>
+        <span class="vr-stat-label">Participants</span>
+      </div>
+      <button class="vr-btn vr-btn-outline" onclick="refreshCount()" title="Actualiser">
+        🔄 Actualiser
+      </button>
+    </div>
+  </div>
+
+  <!-- ── FrameVR embed ─────────────────────────────────────────── -->
+  <div class="vr-frame-wrapper" id="frameWrapper">
+
+    <!-- Loading overlay -->
+    <div class="vr-frame-loader" id="frameLoader">
+      <div class="vr-loader-emoji">🎯</div>
+      <div class="vr-loader-text">Chargement de la Hobbies Room…</div>
+      <div class="vr-loader-bar"><div class="vr-loader-bar-fill"></div></div>
+    </div>
+
+    <!-- Toolbar overlaying the iframe -->
+    <div class="vr-frame-toolbar">
+      <button class="vr-tool-btn vr-tool-btn-dark" onclick="reloadFrame()" title="Recharger">
+        🔄 Recharger
+      </button>
+      <button class="vr-tool-btn vr-tool-btn-dark" onclick="toggleFullscreen()" title="Plein écran">
+        ⛶ Plein écran
+      </button>
+    </div>
+
+    <!-- FrameVR iframe — allow all required permissions for WebXR & mic/cam -->
+    <iframe
+      id="vrFrame"
+      src="{{ room.url }}"
+      allow="camera; microphone; xr-spatial-tracking; gyroscope; accelerometer; fullscreen; display-capture; web-share"
+      allowfullscreen
+      loading="lazy"
+      title="{{ room.name }}"
+    ></iframe>
+
+  </div>
+
+  <!-- ── Status bar ───────────────────────────────────────────── -->
+  <div class="vr-status-bar">
+    <div class="vr-status-dot"></div>
+    <span class="vr-status-text">✅ Hobbies Room active — propulsée par FrameVR</span>
+    <div class="vr-powered">
+      ⚡ Powered by <a href="https://framevr.io/" target="_blank" rel="noopener">FrameVR</a>
+    </div>
+  </div>
+
+</div><!-- end .vr-page -->
+
+<script>
+  /* ── Toast ─────────────────────────────────────────────── */
+  function toast(msg, color = '#667eea', duration = 3000) {
+    const c  = document.getElementById('vr-toast-container');
+    const el = document.createElement('div');
+    el.className = 'vr-toast';
+    el.innerHTML = `<span class="vr-toast-dot" style="background:${color}"></span>${msg}`;
+    c.appendChild(el);
+    setTimeout(() => {
+      el.classList.add('out');
+      el.addEventListener('animationend', () => el.remove());
+    }, duration);
+  }
+
+  /* ── Hide loader when iframe is ready ───────────────────── */
+  document.getElementById('vrFrame').addEventListener('load', () => {
+    const loader = document.getElementById('frameLoader');
+    if (loader) {
+      loader.classList.add('hidden');
+      setTimeout(() => loader.remove(), 500);
+    }
+    toast('🎯 Hobbies Room prête — bienvenue !', '#22c55e');
+  });
+
+  /* ── Handle iframe load errors ───────────────────────────── */
+  document.getElementById('vrFrame').addEventListener('error', () => {
+    const loader = document.getElementById('frameLoader');
+    if (loader) {
+      loader.innerHTML = `
+        <div class="vr-loader-emoji">⚠️</div>
+        <div class="vr-loader-text">Impossible de charger la salle</div>
+        <button class="vr-btn vr-btn-primary" onclick="reloadFrame()" style="margin-top:10px">
+          🔄 Réessayer
+        </button>`;
+    }
+    toast('⚠️ Erreur de chargement — vérifiez votre connexion', '#f59e0b', 5000);
+  });
+
+  /* ── Fullscreen toggle ──────────────────────────────────── */
+  function toggleFullscreen() {
+    const wrapper = document.getElementById('frameWrapper');
+    if (!document.fullscreenElement) {
+      wrapper.requestFullscreen().then(() => {
+        wrapper.classList.add('is-fullscreen');
+        toast('⛶ Plein écran activé', '#667eea');
+      }).catch(() => {
+        toast('⚠️ Plein écran non disponible', '#f59e0b');
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  document.addEventListener('fullscreenchange', () => {
+    const wrapper = document.getElementById('frameWrapper');
+    if (!document.fullscreenElement) wrapper.classList.remove('is-fullscreen');
+  });
+
+  /* ── Reload the FrameVR iframe ──────────────────────────── */
+  function reloadFrame() {
+    const frame  = document.getElementById('vrFrame');
+    const loader = document.createElement('div');
+    loader.className = 'vr-frame-loader';
+    loader.id = 'frameLoader';
+    loader.innerHTML = `
+      <div class="vr-loader-emoji">🎯</div>
+      <div class="vr-loader-text">Rechargement…</div>
+      <div class="vr-loader-bar"><div class="vr-loader-bar-fill"></div></div>`;
+    document.getElementById('frameWrapper').appendChild(loader);
+
+    frame.src = frame.src; // force reload
+    frame.addEventListener('load', () => {
+      loader.classList.add('hidden');
+      setTimeout(() => loader.remove(), 500);
+      toast('🔄 Salle rechargée', '#22c55e');
+    }, { once: true });
+  }
+
+  /* ── Refresh online count via API ───────────────────────── */
+  async function refreshCount() {
+    try {
+      const res  = await fetch('/vr-rooms/api/room');
+      const data = await res.json();
+      document.getElementById('onlineCount').textContent = data.onlineCount;
+      document.getElementById('liveCount').textContent   = data.room.online;
+      toast(`👥 ${data.onlineCount} personnes en ligne`, '#22c55e');
+    } catch {
+      toast('⚠️ Impossible de récupérer le compteur', '#f59e0b');
+    }
+  }
+
+  /* ── Auto-refresh count every 45 s ─────────────────────── */
+  setInterval(refreshCount, 45_000);
+</script>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Security Settings - Ghrami{% endblock %}
+
+{% block body %}
+
+<div style="max-width: 800px; margin: 40px auto; padding: 20px;">
+    <div style="margin-bottom: 40px;">
+        <h1 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 800; color: #0f172a;">🔒 Security Settings</h1>
+        <p style="margin: 0; font-size: 14px; color: #64748b;">Manage your account security and authentication methods</p>
+    </div>
+
+    <!-- Two-Factor Authentication Card -->
+    <div style="background: white; border-radius: 16px; border: 1px solid #e8ecf4; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 32px; margin-bottom: 24px; overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+            <div>
+                <h2 style="margin: 0 0 4px 0; font-size: 20px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    📱 Two-Factor Authentication
+                </h2>
+                <p style="margin: 0; font-size: 13px; color: #64748b;">
+                    Add an extra layer of security to your account
+                </p>
+            </div>
+            <div style="min-width: 80px; text-align: right;">
+                {% if app.user.isTwoFactorEnabled %}
+                    <span style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                        ✓ Enabled
+                    </span>
+                {% else %}
+                    <span style="display: inline-block; background: #e5e7eb; color: #6b7280; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Disabled
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if app.user.isTwoFactorEnabled %}
+            <!-- 2FA Enabled State -->
+            <div style="background: #f0fdf4; padding: 16px; border-radius: 12px; border: 1px solid #86efac; margin-bottom: 24px;">
+                <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.6;">
+                    <strong>✓ Two-Factor Authentication is active</strong><br>
+                    You need your authenticator app in addition to your password to log in.
+                </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+                <form method="POST" action="{{ path('app_2fa_regenerate_backup') }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('regenerate_codes') }}">
+                    <button type="submit" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px;">
+                        🔑 Generate New Backup Codes
+                    </button>
+                </form>
+
+                <button type="button" onclick="openDisable2faModal()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px;">
+                    ✕ Disable 2FA
+                </button>
+            </div>
+
+            <div style="background: #fef9e7; padding: 16px; border-radius: 12px; border-left: 4px solid #fbbf24;">
+                <p style="margin: 0; font-size: 12px; color: #854d0e; line-height: 1.6;">
+                    <strong>⚠️ Disabling 2FA:</strong> Your account will only be protected by your password. We recommend keeping 2FA enabled for maximum security.
+                </p>
+            </div>
+        {% else %}
+            <!-- 2FA Disabled State -->
+            <div style="background: #f3f4f6; padding: 24px; border-radius: 12px; margin-bottom: 24px; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 16px;">🔓</div>
+                <p style="margin: 0 0 16px 0; font-size: 14px; color: #4b5563; line-height: 1.6;">
+                    Two-Factor Authentication is not enabled on your account.<br>
+                    Enable it to add an extra layer of security.
+                </p>
+                <a href="{{ path('app_2fa_setup') }}" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px;">
+                    🚀 Enable 2FA Now
+                </a>
+            </div>
+
+            <div style="background: #e0f2fe; padding: 16px; border-radius: 12px; border-left: 4px solid #0284c7;">
+                <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: 700; color: #0369a1;">
+                    Benefits of Two-Factor Authentication:
+                </h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #0369a1; line-height: 1.8;">
+                    <li>Protect your account even if someone obtains your password</li>
+                    <li>Use standard authenticator apps (Google Authenticator, Authy, etc.)</li>
+                    <li>Backup codes allow account recovery if you lose your device</li>
+                    <li>Simple 6-digit code verification on each login</li>
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Login Activity Card -->
+    <div style="background: white; border-radius: 16px; border: 1px solid #e8ecf4; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 32px; margin-bottom: 24px;">
+        <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+            📍 Last Login
+        </h2>
+        <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #0f766e;">
+            {% if app.user.lastLogin %}
+                <p style="margin: 0; font-size: 14px; color: #0f172a; font-weight: 700;">
+                    {{ app.user.lastLogin|date('F j, Y \a\t g:i A') }}
+                </p>
+            {% else %}
+                <p style="margin: 0; font-size: 14px; color: #64748b; font-style: italic;">
+                    You haven't logged in yet
+                </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Change Password Card -->
+    <div style="background: white; border-radius: 16px; border: 1px solid #e8ecf4; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 32px;">
+        <h2 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+            🔑 Change Password
+        </h2>
+        <a href="{{ path('app_reset_password_request') }}" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px;">
+            🔄 Request Password Change
+        </a>
+        <p style="margin: 16px 0 0 0; font-size: 12px; color: #64748b;">
+            You'll receive an email with instructions to reset your password.
+        </p>
+    </div>
+
+</div>
+
+<script>
+    // Confirm disable 2FA
+    function confirmDisable2fa() {
+        return confirm('Are you sure you want to disable 2FA? Your account will only be protected by your password.');
+    }
+
+    // Open disable 2FA modal
+    function openDisable2faModal() {
+        const modal = document.getElementById('disable2faModal');
+        modal.style.display = 'flex';
+        document.getElementById('disable2faPassword').focus();
+    }
+
+    // Close disable 2FA modal
+    function closeDisable2faModal() {
+        document.getElementById('disable2faModal').style.display = 'none';
+        document.getElementById('disable2faPassword').value = '';
+    }
+
+    // Submit disable 2FA form
+    function submitDisable2fa(event) {
+        event.preventDefault();
+        const password = document.getElementById('disable2faPassword').value;
+        if (!password) {
+            alert('Please enter your password');
+            return;
+        }
+
+        const form = document.getElementById('disable2faForm');
+        const passwordInput = document.createElement('input');
+        passwordInput.type = 'hidden';
+        passwordInput.name = 'password';
+        passwordInput.value = password;
+        form.appendChild(passwordInput);
+        form.submit();
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('disable2faModal');
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeDisable2faModal();
+            }
+        });
+    });
+</script>
+
+<!-- Disable 2FA Modal -->
+<div id="disable2faModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 16px; padding: 32px; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden;">
+        <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0f172a;">
+            ⚠️ Disable 2FA
+        </h2>
+        <p style="margin: 0 0 24px 0; font-size: 14px; color: #64748b; line-height: 1.6;">
+            Are you sure you want to disable Two-Factor Authentication? Your account will only be protected by your password.
+        </p>
+        
+        <form id="disable2faForm" method="POST" action="{{ path('app_2fa_disable') }}" onsubmit="submitDisable2fa(event)">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('disable_2fa') }}">
+            
+            <div style="margin-bottom: 20px;">
+                <label for="disable2faPassword" style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Enter Your Password
+                </label>
+                <input 
+                    type="password" 
+                    id="disable2faPassword"
+                    name="password"
+                    required
+                    placeholder="Your password"
+                    style="width: 100%; padding: 10px; border: 2px solid #e8ecf4; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <button type="submit" style="flex: 1; padding: 10px; background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px;">
+                    ✕ Disable 2FA
+                </button>
+                <button type="button" onclick="closeDisable2faModal()" style="flex: 1; padding: 10px; background: #f3f4f6; color: #6b7280; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px;">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

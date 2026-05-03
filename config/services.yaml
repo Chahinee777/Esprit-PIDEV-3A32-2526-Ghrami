@@ -1,0 +1,87 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+# See also https://symfony.com/doc/current/service_container/import.html
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+    groq_api_key: '%env(GROQ_API_KEY)%'
+    groq_text_model: '%env(GROQ_TEXT_MODEL)%'
+    anthropic_api_key: '%env(ANTHROPIC_API_KEY)%'
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/'
+
+    App\Service\PasswordResetTokenService:
+        arguments:
+            $appSecret: '%kernel.secret%'
+
+    App\Service\StripePaymentService:
+        arguments:
+            $secretKey: '%env(STRIPE_SECRET_KEY)%'
+            $publishableKey: '%env(STRIPE_PUBLISHABLE_KEY)%'
+
+    App\Service\ChatServerSimple:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
+    App\Service\GroqSmartMatchingService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
+    App\Service\SmartFeedbackService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
+    App\Service\HobbyCoachService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+            $groqModel: '%env(GROQ_TEXT_MODEL)%'
+
+    App\Service\GroqAnalyticsService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+            $groqModel: '%env(GROQ_TEXT_MODEL)%'
+
+    App\Service\SmartRepliesService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+            $groqModel: '%env(GROQ_TEXT_MODEL)%'
+
+    App\Service\AiNotificationService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
+    App\Service\ActivitySummaryService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
+    App\Service\WeeklyDigestAiService:
+        arguments:
+            $anthropicApiKey: '%env(ANTHROPIC_API_KEY)%'
+
+    App\Service\ContentModerationService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
+    App\Service\VoiceTranscriptionService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
+    App\Service\AiContentService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+            $groqModel: '%env(GROQ_TEXT_MODEL)%'
+
+    # add more service definitions when explicit configuration is needed
+    # please note that last definitions always *replace* previous ones

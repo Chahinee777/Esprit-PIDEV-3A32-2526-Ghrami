@@ -1,0 +1,142 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Verify Two-Factor Authentication - Ghrami{% endblock %}
+
+{% block body %}
+
+<div style="max-width: 400px; margin: 60px auto; padding: 20px;">
+    <div style="background: white; border-radius: 16px; border: 1px solid #e8ecf4; box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 40px; overflow: hidden;">
+        
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 32px;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📱</div>
+            <h1 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 800; color: #0f172a;">Two-Factor Verification</h1>
+            <p style="margin: 0; font-size: 13px; color: #64748b;">Enter the 6-digit code from your authenticator app</p>
+        </div>
+
+        <!-- Form -->
+        <form method="POST" action="{{ path('app_2fa_verify_login') }}" id="verifyForm">
+            <fieldset style="border: none; padding: 0; margin: 0;">
+                <div style="margin-bottom: 24px;">
+                    <label for="totpCode" style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Authenticator Code
+                    </label>
+                    <input 
+                        type="text" 
+                        id="totpCode"
+                        name="code"
+                        maxlength="6" 
+                        inputmode="numeric" 
+                        pattern="[0-9]{6}"
+                        required
+                        autofocus
+                        placeholder="000000"
+                        style="font-size: 32px; letter-spacing: 8px; text-align: center; padding: 16px; border: 2px solid #e8ecf4; border-radius: 8px; width: 100%; box-sizing: border-box; font-weight: 700; color: #0f172a; transition: all 0.2s ease;">
+                </div>
+
+                <button type="submit" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; margin-bottom: 12px; transition: all 0.2s ease;">
+                    ✓ Verify
+                </button>
+            </fieldset>
+        </form>
+
+        <!-- Backup Code Option -->
+        <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e8ecf4;">
+            <button 
+                type="button" 
+                onclick="toggleBackupCodeForm()"
+                style="width: 100%; padding: 10px; background: transparent; color: #4f46e5; border: 1px solid #e8ecf4; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; transition: all 0.2s ease;">
+                🔑 Lost your device? Use backup code
+            </button>
+        </div>
+
+        <!-- Backup Code Form (Hidden) -->
+        <form method="POST" action="{{ path('app_2fa_verify_login') }}" id="backupCodeForm" style="display: none; margin-top: 20px;">
+            <input type="hidden" name="is_backup_code" value="1">
+            <fieldset style="border: none; padding: 0; margin: 0;">
+                <div style="margin-bottom: 16px;">
+                    <label for="backupCode" style="display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Backup Code
+                    </label>
+                    <input 
+                        type="text" 
+                        id="backupCode"
+                        name="code"
+                        placeholder="XXXX-XXXX-XXXX"
+                        maxlength="14"
+                        required
+                        style="font-size: 14px; letter-spacing: 1px; text-align: center; padding: 12px; border: 2px solid #e8ecf4; border-radius: 8px; width: 100%; box-sizing: border-box; font-weight: 700; color: #0f172a; font-family: monospace;">
+                </div>
+                <button type="submit" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px;">
+                    ✓ Use Backup Code
+                </button>
+                <button 
+                    type="button"
+                    onclick="toggleBackupCodeForm()"
+                    style="width: 100%; padding: 8px; background: transparent; color: #64748b; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 12px; margin-top: 8px;">
+                    ← Back to Authenticator
+                </button>
+            </fieldset>
+        </form>
+
+        <!-- Info Box -->
+        <div style="background: #f0f9ff; padding: 16px; border-radius: 12px; margin-top: 24px; border-left: 4px solid #0284c7;">
+            <p style="margin: 0; font-size: 12px; color: #0369a1; line-height: 1.6;">
+                <strong>💡 Tip:</strong> Make sure you have the correct time on your device. 
+                TOTP codes expire after 30 seconds, so if your code doesn't work, wait for a new one.
+            </p>
+        </div>
+
+        <!-- Error Message Display -->
+        {% if app.flashes('error') %}
+            <div style="background: #fee2e2; padding: 16px; border-radius: 12px; margin-top: 16px; border-left: 4px solid #dc2626;">
+                <p style="margin: 0; font-size: 12px; color: #991b1b; line-height: 1.6;">
+                    <strong>❌ Error:</strong>
+                    {% for message in app.flashes('error') %}
+                        {{ message }}
+                    {% endfor %}
+                </p>
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<script>
+    // Auto-format TOTP input
+    document.getElementById('totpCode')?.addEventListener('input', function(e) {
+        this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);
+        if (this.value.length === 6) {
+            document.getElementById('verifyForm').submit();
+        }
+    });
+
+    // Auto-format backup code input (XXXX-XXXX-XXXX)
+    document.getElementById('backupCode')?.addEventListener('input', function(e) {
+        let value = this.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        if (value.length > 0) {
+            let formatted = value.substring(0, 4);
+            if (value.length > 4) formatted += '-' + value.substring(4, 8);
+            if (value.length > 8) formatted += '-' + value.substring(8, 12);
+            this.value = formatted.substring(0, 14);
+        }
+    });
+
+    // Toggle between TOTP and backup code forms
+    function toggleBackupCodeForm() {
+        const totpForm = document.getElementById('verifyForm');
+        const backupForm = document.getElementById('backupCodeForm');
+        
+        if (backupForm.style.display === 'none') {
+            totpForm.style.display = 'none';
+            backupForm.style.display = 'block';
+            document.getElementById('backupCode').focus();
+        } else {
+            backupForm.style.display = 'none';
+            totpForm.style.display = 'block';
+            document.getElementById('totpCode').focus();
+        }
+    }
+</script>
+
+{% endblock %}

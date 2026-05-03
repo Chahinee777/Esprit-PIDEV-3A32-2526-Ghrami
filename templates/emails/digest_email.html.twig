@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Digest hebdomadaire Ghrami</title>
+    <style>
+        body { margin: 0; padding: 24px; background: #f4efe6; font-family: Georgia, "Times New Roman", serif; color: #1f2933; }
+        .card { max-width: 680px; margin: 0 auto; background: #fffdf8; border-radius: 18px; overflow: hidden; box-shadow: 0 18px 50px rgba(71, 52, 24, 0.12); }
+        .hero { background: linear-gradient(135deg, #e9b44c 0%, #d36135 100%); color: #fffdf8; padding: 36px 32px; }
+        .hero h1 { margin: 0 0 10px 0; font-size: 30px; line-height: 1.1; }
+        .hero p { margin: 0; font-size: 15px; line-height: 1.6; max-width: 520px; }
+        .content { padding: 32px; }
+        .digest { white-space: pre-line; font-size: 16px; line-height: 1.8; color: #24313f; }
+        .stats { margin-top: 28px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .stat { background: #f9f2e6; border-radius: 14px; padding: 18px; }
+        .stat-label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #9a6b2f; margin-bottom: 8px; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #442b16; }
+        .stat-note { margin-top: 6px; font-size: 13px; color: #5e4d3c; }
+        .footer { padding: 0 32px 28px 32px; color: #7b6854; font-size: 13px; line-height: 1.6; }
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .content, .hero, .footer { padding-left: 20px; padding-right: 20px; }
+            .stats { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="hero">
+            <h1>Bonjour {{ user.fullName ?: user.username }},</h1>
+            <p>Voici ton point de la semaine sur Ghrami, préparé pour t’aider à garder de l’élan sans perdre le fil de ce que tu construis.</p>
+        </div>
+
+        <div class="content">
+            <div class="digest">{{ digest }}</div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Publications</div>
+                    <div class="stat-value">{{ context.posts.published }}</div>
+                    <div class="stat-note">{{ context.posts.top_post_title ?: 'Aucun post marquant cette semaine' }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Hobbies</div>
+                    <div class="stat-value">{{ context.hobbies.sessions }} session(s)</div>
+                    <div class="stat-note">{{ context.hobbies.total_minutes }} min au total{% if context.hobbies.top_hobby %} • Top hobby : {{ context.hobbies.top_hobby }}{% endif %}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Classes</div>
+                    <div class="stat-value">{{ context.classes.completed }} terminée(s)</div>
+                    <div class="stat-note">{{ context.classes.in_progress ?: 'Aucune classe en cours cette semaine' }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Régularité</div>
+                    <div class="stat-value">{{ context.streak_days }} jour(s)</div>
+                    <div class="stat-note">Prochain badge : {{ context.badges.next_badge ?: 'à définir' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Ce digest hebdomadaire est envoyé une fois par semaine aux utilisateurs actifs qui ont gardé cette option activée.
+        </div>
+    </div>
+</body>
+</html>

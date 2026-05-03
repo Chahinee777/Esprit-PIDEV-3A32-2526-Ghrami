@@ -1,0 +1,2360 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Meetings & Connections - Ghrami{% endblock %}
+
+{% block body %}
+
+<div class="meetings-container">
+
+    <!-- DASHBOARD STATS -->
+    <section class="dashboard-stats">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#667eea,#4f46e5)">🤝</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ stats.connections }}</div>
+                    <div class="stat-label">Active Connections</div>
+                </div>
+                <div class="stat-decoration"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)">📅</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ stats.upcoming }}</div>
+                    <div class="stat-label">Upcoming Meetings</div>
+                </div>
+                <div class="stat-decoration"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#f59e0b,#d97706)">⏳</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ stats.pending }}</div>
+                    <div class="stat-label">Pending Requests</div>
+                </div>
+                <div class="stat-decoration"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#10b981,#059669)">✨</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ stats.scheduled }}</div>
+                    <div class="stat-label">Scheduled Meetings</div>
+                </div>
+                <div class="stat-decoration"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NAVIGATION TABS -->
+    <div class="nav-pill-bar">
+        <div class="nav-pill-track">
+            <button class="tab-btn active" data-tab="discovery">
+                <span class="tab-icon">💫</span>
+                <span>Discover</span>
+            </button>
+            <button class="tab-btn" data-tab="connections">
+                <span class="tab-icon">🔗</span>
+                <span>Connections</span>
+            </button>
+            <button class="tab-btn" data-tab="meetings">
+                <span class="tab-icon">📅</span>
+                <span>Meetings</span>
+            </button>
+            <div class="nav-pill-slider"></div>
+        </div>
+    </div>
+
+    <!-- DISCOVERY TAB -->
+    <section class="tab-content active" id="discovery-tab">
+        <div class="swipe-header">
+            <div>
+                <h2 class="swipe-title">Find Your Match</h2>
+                <p class="swipe-subtitle">Swipe or tap to connect with people near you</p>
+            </div>
+            <span class="swipe-counter" id="swipeCounter"></span>
+        </div>
+
+        <div class="discovery-view-toggle" id="discoveryViewToggle">
+            <button type="button" class="filter-btn active" data-discovery-view="swipe">💫 Swipe</button>
+            <button type="button" class="filter-btn" data-discovery-view="grid">📋 All Users</button>
+        </div>
+
+        <div id="discoveryGrid" class="swipe-arena">
+            <div class="loading-placeholder">Loading matches…</div>
+        </div>
+
+        <div id="discoveryListGrid" class="discovery-list-grid" style="display:none;"></div>
+
+        <div class="swipe-controls" id="swipeControls" style="display:none;">
+            <button class="swipe-btn pass" id="btnPass" title="Pass">✕</button>
+            <button class="swipe-btn view-profile" id="btnViewProfile" title="View Profile">👤</button>
+            <button class="swipe-btn connect" id="btnConnect" title="Connect">💫</button>
+        </div>
+        <p class="swipe-hint" id="discoveryHint">Drag the card or use the buttons</p>
+    </section>
+
+    <!-- CONNECTIONS TAB -->
+    <section class="tab-content" id="connections-tab">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">Connections</h2>
+                <p class="section-sub">Your people, all in one place</p>
+            </div>
+            <button class="btn-primary" id="btnCreateConnection">+ New Connection</button>
+        </div>
+
+        <div id="pendingSection" style="display: none;">
+            <div class="pending-label">⏳ Pending Requests</div>
+            <div id="pendingList" class="pending-list"></div>
+        </div>
+
+        <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="accepted">Accepted</button>
+            <button class="filter-btn" data-filter="skill">🎯 Skill</button>
+            <button class="filter-btn" data-filter="activity">🏃 Activity</button>
+            <button class="filter-btn" data-filter="hobby">🎨 Hobby</button>
+        </div>
+
+        <div id="connectionsGrid" class="connections-list">
+            <div class="loading-placeholder">Loading connections…</div>
+        </div>
+    </section>
+
+    <!-- MEETINGS TAB -->
+    <section class="tab-content" id="meetings-tab">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">Your Meetings</h2>
+                <p class="section-sub">Stay on top of your schedule</p>
+            </div>
+            <button class="btn-primary" id="btnCreateMeeting">+ Schedule</button>
+        </div>
+
+        <div class="meeting-filter-row">
+            <span class="filter-label">Show:</span>
+            <select id="meetingFilterSelect" class="meeting-select">
+                <option value="upcoming">Upcoming</option>
+                <option value="past">Past</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="physical">Physical Only</option>
+                <option value="virtual">Virtual Only</option>
+            </select>
+        </div>
+
+        <div id="meetingsList" class="meetings-list">
+            <div class="loading-placeholder">Loading meetings…</div>
+        </div>
+    </section>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MODALS
+═══════════════════════════════════════════════ -->
+
+<!-- Quick Connect Modal (from Discovery card) -->
+<div class="modal" id="quickConnectModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header gradient-teal">
+            <div>
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;opacity:.75;margin-bottom:4px;">QUICK CONNECT</div>
+                <h2>⚡ Send Connection Request</h2>
+            </div>
+            <button class="close-btn" onclick="closeModal('quickConnectModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;align-items:center;gap:14px;background:#f0fdf4;border-radius:12px;padding:14px;margin-bottom:20px;">
+                <div class="user-avatar" id="quickConnectAvatar" style="margin:0;flex-shrink:0;width:48px;height:48px;font-size:22px;"></div>
+                <div>
+                    <div id="quickConnectName" style="font-size:16px;font-weight:700;color:#1e293b;"></div>
+                    <div style="font-size:12px;color:#64748b;">Your connection request will be sent to this user.</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Connection Type</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label class="type-radio-label">
+                        <input type="radio" name="qc-type" value="skill"> 🎯 Skill Exchange
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="qc-type" value="activity"> 🏃 Activity
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="qc-type" value="hobby"> 🎨 Hobby
+                    </label>
+                    <label class="type-radio-label active">
+                        <input type="radio" name="qc-type" value="general" checked> 🤝 General
+                    </label>
+                </div>
+            </div>
+            <div id="qcSkillsSection" style="display: none;">
+                <div class="form-group">
+                    <label>Your skill to share</label>
+                    <input type="text" id="qcInitiatorSkill" class="form-control" placeholder="e.g., Guitar, Python, Photography…">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Skill you want to learn</label>
+                    <input type="text" id="qcReceiverSkill" class="form-control" placeholder="e.g., Piano, Data Science, Cooking…">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('quickConnectModal')">Cancel</button>
+            <button class="btn-primary" id="btnQcConfirm">💫 Send Request</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create Connection Modal (from Connections tab) -->
+<div class="modal" id="createConnectionModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header gradient-cyan">
+            <div>
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;opacity:.75;margin-bottom:4px;">NEW CONNECTION</div>
+                <h2>🤝 Create Connection</h2>
+            </div>
+            <button class="close-btn" onclick="closeModal('createConnectionModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Target User</label>
+                <select id="ccUser" class="form-control" required style="padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px;">
+                    <option value="">📋 Select a user...</option>
+                </select>
+                <div id="ccUserLookup" style="margin-top:8px;font-size:12px;min-height:18px;"></div>
+            </div>
+            <div class="form-group">
+                <label>Connection Type</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label class="type-radio-label active">
+                        <input type="radio" name="cc-type" value="skill" checked> 🎯 Skill Exchange
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="cc-type" value="activity"> 🏃 Activity
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="cc-type" value="hobby"> 🎨 Hobby
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="cc-type" value="general"> 🤝 General
+                    </label>
+                </div>
+            </div>
+            <div id="ccSkillsSection">
+                <div class="form-group">
+                    <label>Your skill to share</label>
+                    <input type="text" id="ccInitiatorSkill" class="form-control" placeholder="e.g., Guitar, Python, Photoshop…">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Skill you want to learn</label>
+                    <input type="text" id="ccReceiverSkill" class="form-control" placeholder="e.g., Piano, Data Science, Cooking…">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('createConnectionModal')">Cancel</button>
+            <button class="btn-primary" id="btnCcConfirm">🤝 Send Request</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create Meeting Modal -->
+<div class="modal" id="createMeetingModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width:560px;">
+        <div class="modal-header gradient-indigo">
+            <div>
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;opacity:.75;margin-bottom:4px;">NEW MEETING</div>
+                <h2>📅 Schedule Meeting</h2>
+            </div>
+            <button class="close-btn" onclick="closeModal('createMeetingModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Connection</label>
+                <select id="cmConnection" class="form-control" required>
+                    <option value="">-- Select a connection --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Meeting Type</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label class="type-radio-label active">
+                        <input type="radio" name="cm-type" value="virtual" checked> 💻 Virtual
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="cm-type" value="physical"> 📍 In-Person
+                    </label>
+                </div>
+            </div>
+            <div id="cmVirtualLocationField" class="form-group" style="display: block;">
+                <label>Google Meet Link</label>
+                <div style="background-color: #f0f9ff; border: 2px solid #0284c7; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <input type="text" id="cmVirtualLocation" readonly class="form-control" placeholder="Auto-generated when date/time is set..." style="background: transparent; border: none; flex: 1; margin: 0; padding: 0; cursor: default; font-size: 14px;">
+                    <button type="button" class="btn" id="btnCopyMeetLink" style="background: #0284c7; color: white; padding: 6px 12px; border-radius: 6px; border: none; margin-left: 8px; display: none;">📋 Copy</button>
+                </div>
+                <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
+                    <button type="button" class="btn" id="btnConnectGoogleCalendar" style="background: #0f766e; color: white; padding: 6px 12px; border-radius: 6px; border: none; display: none;">🔐 Connect Google Calendar</button>
+                    <span id="cmGoogleAuthHint" style="font-size: 12px; color: #64748b;"></span>
+                </div>
+            </div>
+            <div id="cmLocationField" style="display: none;" class="form-group">
+                <label>Location / Address <span style="color:#dc2626;">*</span></label>
+                <input type="text" id="cmLocation" class="form-control" placeholder="Search location or click map to select...">
+                <div id="cmMapContainer" style="margin-top: 12px; border-radius: 10px; overflow: hidden; height: 250px; border: 2px solid #e2e8f0; display: none;">
+                    <div id="cmMap" style="width: 100%; height: 100%;"></div>
+                </div>
+                <div id="cmLocationCoords" style="margin-top: 8px; font-size: 12px; color: #64748b; min-height: 18px;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="form-group">
+                    <label>Date <span style="color:#dc2626;">*</span></label>
+                    <input type="date" id="cmDate" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Time (HH:MM) <span style="color:#dc2626;">*</span></label>
+                    <input type="time" id="cmTime" class="form-control" value="14:00">
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Duration</label>
+                <div id="cmDurationChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                    <button type="button" class="dur-chip" data-min="30">30 min</button>
+                    <button type="button" class="dur-chip" data-min="45">45 min</button>
+                    <button type="button" class="dur-chip active" data-min="60">1 hour</button>
+                    <button type="button" class="dur-chip" data-min="90">1h 30</button>
+                    <button type="button" class="dur-chip" data-min="120">2 hours</button>
+                    <button type="button" class="dur-chip" data-min="custom">✏ Custom</button>
+                </div>
+                <input type="number" id="cmDurationCustom" class="form-control" value="60" min="1" max="1440" placeholder="Minutes" style="display:none;max-width:140px;">
+                <input type="hidden" id="cmDurationValue" value="60">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('createMeetingModal')">Cancel</button>
+            <button class="btn-primary" id="btnCmConfirm">✅ Confirm Meeting</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Meeting Modal -->
+<div class="modal" id="editMeetingModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width:520px;">
+        <div class="modal-header gradient-amber">
+            <div>
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;opacity:.75;margin-bottom:4px;">EDIT MEETING</div>
+                <h2>✏️ Modify Meeting</h2>
+            </div>
+            <button class="close-btn" onclick="closeModal('editMeetingModal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="emMeetingId">
+            <div class="form-group">
+                <label>Meeting Type</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label class="type-radio-label active">
+                        <input type="radio" name="em-type" value="virtual" checked> 💻 Virtual
+                    </label>
+                    <label class="type-radio-label">
+                        <input type="radio" name="em-type" value="physical"> 📍 In-Person
+                    </label>
+                </div>
+            </div>
+            <div class="form-group" id="emLocationField" style="display:none;">
+                <label>Location / Address <span style="color:#dc2626;">*</span></label>
+                <input type="text" id="emLocation" class="form-control" placeholder="Enter meeting location">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="form-group">
+                    <label>Date <span style="color:#dc2626;">*</span></label>
+                    <input type="date" id="emDate" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Time (HH:MM) <span style="color:#dc2626;">*</span></label>
+                    <input type="time" id="emTime" class="form-control">
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label>Duration</label>
+                <div id="emDurationChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                    <button type="button" class="dur-chip" data-min="30">30 min</button>
+                    <button type="button" class="dur-chip" data-min="45">45 min</button>
+                    <button type="button" class="dur-chip active" data-min="60">1 hour</button>
+                    <button type="button" class="dur-chip" data-min="90">1h 30</button>
+                    <button type="button" class="dur-chip" data-min="120">2 hours</button>
+                    <button type="button" class="dur-chip" data-min="custom">✏ Custom</button>
+                </div>
+                <input type="number" id="emDurationCustom" class="form-control" value="60" min="1" max="1440" placeholder="Minutes" style="display:none;max-width:140px;">
+                <input type="hidden" id="emDurationValue" value="60">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('editMeetingModal')">Cancel</button>
+            <button class="btn-primary" id="btnEmConfirm" style="background:linear-gradient(to right,#b45309,#d97706);">💾 Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- User Profile Modal -->
+<div class="modal" id="profileModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width:560px;">
+        <div class="modal-header gradient-slate">
+            <div>
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;opacity:.75;margin-bottom:4px;">USER PROFILE</div>
+                <h2 id="profileModalTitle">👤 Profile</h2>
+            </div>
+            <button class="close-btn" onclick="closeModal('profileModal')">✕</button>
+        </div>
+        <div class="modal-body" id="profileModalBody">
+            <div class="loading-placeholder">Loading profile...</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('profileModal')">Close</button>
+            <button class="btn-primary" id="profileConnectBtn" style="display:none;">💫 Connect</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ═══════════════════════════════════════════════
+   BASE
+═══════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+
+.meetings-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+    font-family: var(--font-family);
+}
+
+/* ═══════════════════════════════════════════════
+   STATS
+═══════════════════════════════════════════════ */
+.dashboard-stats { margin-bottom: 36px; }
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.stat-card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 20px 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid #e8ecf4;
+    box-shadow: 0 2px 12px rgba(79,70,229,0.06);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(79,70,229,0.12);
+}
+
+.stat-icon-wrap {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.stat-value {
+    font-family: var(--font-family);
+    font-size: 30px; font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+}
+.stat-label { font-size: 12px; font-weight: 600; color: #94a3b8; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+
+.stat-decoration {
+    position: absolute; right: -10px; bottom: -14px;
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: rgba(79,70,229,0.04);
+    pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════
+   TABS — PILL BAR
+═══════════════════════════════════════════════ */
+.nav-pill-bar {
+    margin-bottom: 32px;
+}
+.nav-pill-track {
+    display: inline-flex;
+    background: #f1f3f9;
+    border-radius: 50px;
+    padding: 5px;
+    gap: 0;
+    position: relative;
+}
+
+.tab-btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 9px 22px;
+    border: none; background: none;
+    font-family: var(--font-family);
+    font-size: 13px; font-weight: 700;
+    color: #64748b;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: color 0.25s;
+    position: relative; z-index: 1;
+    white-space: nowrap;
+}
+.tab-btn .tab-icon { font-size: 15px; }
+.tab-btn.active { color: #fff; }
+
+.nav-pill-slider {
+    position: absolute;
+    top: 5px; left: 5px;
+    height: calc(100% - 10px);
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border-radius: 50px;
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), width 0.3s;
+    z-index: 0;
+    box-shadow: 0 4px 14px rgba(79,70,229,0.35);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ═══════════════════════════════════════════════
+   SECTION HEADER
+═══════════════════════════════════════════════ */
+.section-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+}
+.section-title {
+    font-family: var(--font-family);
+    font-size: 22px; font-weight: 800; color: #0f172a; margin: 0;
+}
+.section-sub { font-size: 13px; color: #94a3b8; margin: 4px 0 0; }
+
+/* ═══════════════════════════════════════════════
+   SWIPE DECK — DISCOVERY
+═══════════════════════════════════════════════ */
+.swipe-header {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; margin-bottom: 20px;
+}
+.swipe-title {
+    font-family: var(--font-family);
+    font-size: 22px; font-weight: 800; color: #0f172a; margin: 0;
+}
+.swipe-subtitle { font-size: 13px; color: #94a3b8; margin: 5px 0 0; }
+
+.swipe-counter {
+    font-family: var(--font-family);
+    font-size: 13px; font-weight: 700;
+    color: #4f46e5;
+    background: #eef2ff;
+    padding: 5px 14px; border-radius: 20px;
+    white-space: nowrap; margin-top: 4px;
+}
+
+.discovery-view-toggle {
+    display: flex;
+    gap: 8px;
+    margin: 0 0 14px;
+    flex-wrap: wrap;
+}
+
+.discovery-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.discovery-user-card {
+    background: #fff;
+    border: 1px solid #e8ecf4;
+    border-radius: 14px;
+    padding: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.discovery-user-top {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.discovery-user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef2ff;
+    flex-shrink: 0;
+    font-size: 20px;
+}
+
+.discovery-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.discovery-user-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+.discovery-user-username {
+    font-size: 12px;
+    color: #94a3b8;
+    margin: 2px 0 0;
+}
+
+.discovery-user-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.btn-view-discovery,
+.btn-connect-discovery {
+    flex: 1;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-family: var(--font-family);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-view-discovery {
+    background: #eef2ff;
+    color: #3730a3;
+}
+
+.btn-connect-discovery {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #fff;
+}
+
+/* The card arena */
+.swipe-arena {
+    position: relative;
+    height: 490px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+/* Individual swipe cards */
+.swipe-card {
+    position: absolute;
+    width: 330px;
+    max-width: calc(100vw - 64px);
+    height: 460px;
+    border-radius: 28px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.16);
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    will-change: transform;
+    transition: box-shadow 0.2s;
+}
+.swipe-card:active { cursor: grabbing; }
+
+/* Stack depth */
+.swipe-card[data-pos="0"] { z-index: 10; }
+.swipe-card[data-pos="1"] { z-index: 9; transform: translateY(14px) scale(0.96); pointer-events: none; }
+.swipe-card[data-pos="2"] { z-index: 8; transform: translateY(28px) scale(0.92); pointer-events: none; }
+
+/* Card photo top section */
+.sc-photo {
+    width: 100%; height: 230px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-size: cover; background-position: center;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+}
+.sc-emoji { font-size: 64px; }
+
+/* Gradient overlay for readability */
+.sc-photo::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.25) 100%);
+    pointer-events: none;
+}
+
+/* Card info section */
+.sc-body {
+    padding: 18px 20px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+}
+.sc-match-badge {
+    display: inline-flex; align-items: center;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.3px;
+    padding: 3px 10px; border-radius: 20px;
+    border: 1.5px solid;
+    width: fit-content;
+}
+.sc-name {
+    font-family: var(--font-family);
+    font-size: 20px; font-weight: 800;
+    color: #0f172a; margin: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sc-location { font-size: 12px; color: #64748b; margin: 0; }
+.sc-reason {
+    font-size: 12px; color: #4f46e5;
+    background: #eef2ff; border-radius: 8px;
+    padding: 7px 10px; margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sc-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.sc-tag {
+    font-size: 11px; font-weight: 600;
+    background: #f1f5f9; color: #475569;
+    padding: 3px 9px; border-radius: 10px;
+}
+
+/* Like / Nope stamps */
+.sc-like-stamp, .sc-nope-stamp {
+    position: absolute;
+    top: 32px;
+    font-size: 20px; font-weight: 900;
+    padding: 6px 16px;
+    border-radius: 10px;
+    border: 3px solid;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s;
+    letter-spacing: 1px;
+    transform: rotate(-15deg);
+}
+.sc-like-stamp {
+    right: 20px;
+    color: #4f46e5; border-color: #4f46e5;
+    transform: rotate(15deg);
+}
+.sc-nope-stamp {
+    left: 20px;
+    color: #dc2626; border-color: #dc2626;
+    transform: rotate(-15deg);
+}
+
+/* Swipe action buttons */
+.swipe-controls {
+    display: flex; justify-content: center; align-items: center;
+    gap: 20px; margin-top: 16px; margin-bottom: 6px;
+}
+.swipe-btn {
+    width: 56px; height: 56px;
+    border-radius: 50%; border: none;
+    font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+.swipe-btn:hover { transform: scale(1.12); }
+.swipe-btn:active { transform: scale(0.96); }
+
+.swipe-btn.pass { background: #fff; color: #dc2626; box-shadow: 0 4px 16px rgba(220,38,38,0.15); font-size: 18px; }
+.swipe-btn.view-profile { background: #fff; color: #0f172a; width: 44px; height: 44px; font-size: 16px; }
+.swipe-btn.connect { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; box-shadow: 0 4px 18px rgba(79,70,229,0.4); }
+
+.swipe-hint { text-align: center; font-size: 12px; color: #cbd5e1; margin: 0; }
+.swipe-done {
+    text-align: center; padding: 40px 20px;
+    font-size: 16px; color: #94a3b8;
+    font-family: var(--font-family);
+}
+
+/* ═══════════════════════════════════════════════
+   FILTER PILLS
+═══════════════════════════════════════════════ */
+.filter-buttons {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin: 20px 0 24px;
+}
+.filter-btn {
+    padding: 6px 16px; border-radius: 20px;
+    border: 1.5px solid #e2e8f0; background: white;
+    font-family: var(--font-family);
+    font-size: 12px; font-weight: 700; color: #64748b; cursor: pointer;
+    transition: all 0.2s;
+}
+.filter-btn.active, .filter-btn:hover {
+    background: #4f46e5; color: white; border-color: #4f46e5;
+    box-shadow: 0 2px 8px rgba(79,70,229,0.25);
+}
+
+.pending-label {
+    font-family: var(--font-family);
+    font-size: 12px; font-weight: 700;
+    color: #92400e; background: #fef3c7;
+    border: 1px solid #fbbf24;
+    padding: 6px 14px; border-radius: 20px;
+    display: inline-block;
+    margin: 20px 0 14px;
+    letter-spacing: 0.4px;
+}
+
+/* ═══════════════════════════════════════════════
+   CONNECTION CARDS
+═══════════════════════════════════════════════ */
+.connections-list { display: flex; flex-direction: column; gap: 12px; }
+
+.connection-card {
+    background: white;
+    border-radius: 16px;
+    padding: 16px 20px;
+    border: 1px solid #e8ecf4;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    transition: box-shadow 0.2s, transform 0.2s;
+    border-left: 4px solid #4f46e5;
+}
+.connection-card:hover {
+    box-shadow: 0 6px 20px rgba(79,70,229,0.1);
+    transform: translateX(2px);
+}
+
+.conn-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: #eef2ff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0; overflow: hidden;
+}
+.conn-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.conn-info { flex: 1; min-width: 160px; }
+.conn-name { font-family: var(--font-family); font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 3px; }
+.conn-username { font-size: 12px; color: #94a3b8; margin: 0 0 6px; }
+.conn-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.conn-skills { font-size: 12px; color: #475569; margin-top: 3px; }
+.conn-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.conn-actions button {
+    padding: 6px 14px; border: none; border-radius: 8px;
+    font-family: var(--font-family);
+    font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+}
+
+/* ═══════════════════════════════════════════════
+   PENDING CARDS
+═══════════════════════════════════════════════ */
+.pending-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+.pending-card {
+    display: flex; align-items: center; gap: 14px;
+    background: #fffbeb; padding: 14px 16px;
+    border-radius: 14px; border: 1px solid #fbbf24;
+}
+.pending-avatar { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: #fef3c7; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.pending-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pending-info { flex: 1; }
+.pending-name { font-size: 14px; font-weight: 700; color: #1e293b; margin: 0 0 2px; }
+.pending-type { font-size: 12px; color: #64748b; margin: 0; }
+.pending-actions { display: flex; gap: 8px; }
+
+/* ═══════════════════════════════════════════════
+   MEETINGS LIST — TIMELINE STYLE
+═══════════════════════════════════════════════ */
+.meeting-filter-row {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 24px;
+}
+.filter-label { font-size: 13px; font-weight: 700; color: #64748b; }
+.meeting-select {
+    padding: 8px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-family: var(--font-family);
+    font-size: 13px; font-weight: 600;
+    color: #1e293b;
+    background: white;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.meeting-select:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+
+.meetings-list { display: flex; flex-direction: column; gap: 14px; }
+
+.meeting-card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e8ecf4;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: box-shadow 0.2s, transform 0.2s;
+    display: flex;
+    border-left: 5px solid #4f46e5;
+}
+.meeting-card:hover {
+    box-shadow: 0 6px 20px rgba(79,70,229,0.1);
+    transform: translateX(2px);
+}
+
+/* Status border colors */
+.meeting-card.status-scheduled { border-left-color: #4f46e5; }
+.meeting-card.status-completed { border-left-color: #059669; }
+.meeting-card.status-cancelled { border-left-color: #dc2626; }
+
+.meeting-inner { flex: 1; }
+
+.meeting-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 20px; background: #f8fafc;
+    border-bottom: 1px solid #e8ecf4;
+    flex-wrap: wrap; gap: 10px;
+}
+.meeting-datetime {
+    font-family: var(--font-family);
+    font-size: 15px; font-weight: 700; color: #0f172a;
+}
+.meeting-badges { display: flex; gap: 8px; align-items: center; }
+.meeting-body { padding: 14px 20px; }
+.meeting-location { font-size: 13px; color: #475569; margin: 4px 0; word-break: break-all; }
+.meeting-meta { font-size: 12px; color: #94a3b8; margin: 3px 0; }
+.meeting-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.meeting-actions button, .meeting-actions a {
+    padding: 7px 14px; border: none; border-radius: 8px;
+    font-family: var(--font-family);
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s; text-decoration: none; display: inline-block;
+}
+
+/* Meeting action buttons */
+.btn-join { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; }
+.btn-join:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-complete { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.btn-complete:hover { background: #bbf7d0; }
+.btn-edit { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.btn-edit:hover { background: #bfdbfe; }
+.btn-cancel-meeting { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.btn-cancel-meeting:hover { background: #fde68a; }
+.btn-delete-meeting { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+.btn-delete-meeting:hover { background: #fecaca; }
+.btn-copy { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; padding: 7px 10px; }
+.btn-copy:hover { background: #e8ecf4; }
+
+/* ── Status badges ──────────────────────────── */
+.status-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 10px;
+    font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.status-scheduled { background: #ede9fe; color: #4f46e5; }
+.status-completed { background: #dcfce7; color: #15803d; }
+.status-cancelled { background: #fee2e2; color: #dc2626; }
+.status-pending   { background: #fef9c3; color: #854d0e; }
+.status-accepted  { background: #d1fae5; color: #065f46; }
+.status-rejected  { background: #fee2e2; color: #991b1b; }
+
+.type-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 10px;
+    font-size: 11px; font-weight: 600; background: #e0e7ff; color: #3730a3;
+}
+.type-virtual  { background: #e0f2fe; color: #0369a1; }
+.type-physical { background: #fef3c7; color: #92400e; }
+
+/* ── Connection action buttons ──────────────── */
+.btn-schedule { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.btn-schedule:hover { background: #bbf7d0; }
+.btn-delete-conn { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+.btn-delete-conn:hover { background: #fecaca; }
+.btn-accept-connection { background: #dcfce7; color: #15803d; padding: 6px 12px; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.btn-accept-connection:hover { background: #bbf7d0; }
+.btn-reject-connection  { background: #fee2e2; color: #dc2626; padding: 6px 12px; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.btn-reject-connection:hover { background: #fecaca; }
+
+/* ═══════════════════════════════════════════════
+   MODALS
+═══════════════════════════════════════════════ */
+.modal { display: none; position: fixed; inset: 0; z-index: 1000; align-items: center; justify-content: center; }
+.modal.active { display: flex; }
+.modal-overlay {
+    position: absolute; inset: 0;
+    background: rgba(15,23,42,0.55);
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+}
+.modal-content {
+    position: relative; background: white; border-radius: 20px;
+    width: 90%; max-width: 500px; max-height: 90vh;
+    overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+    animation: modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes modalIn { from { opacity:0; transform: scale(0.92) translateY(12px); } to { opacity:1; transform: none; } }
+
+.modal-header {
+    padding: 20px 24px; border-radius: 20px 20px 0 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    color: white; position: sticky; top: 0; z-index: 1;
+}
+.modal-header h2 { margin: 0; font-family: var(--font-family); font-size: 18px; font-weight: 800; }
+.close-btn {
+    background: rgba(255,255,255,0.2); border: none; color: white;
+    width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+    font-size: 16px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.2s;
+}
+.close-btn:hover { background: rgba(255,255,255,0.35); }
+.modal-body { padding: 24px; }
+.modal-footer {
+    padding: 16px 24px; display: flex; gap: 12px;
+    justify-content: flex-end; border-top: 1px solid #e8ecf4;
+    position: sticky; bottom: 0; background: white;
+}
+
+/* ── Gradients ──────────────────────────────── */
+.gradient-teal   { background: linear-gradient(135deg, #134e4a, #0d9488); }
+.gradient-cyan   { background: linear-gradient(135deg, #0c4a6e, #0369a1); }
+.gradient-indigo { background: linear-gradient(135deg, #1e1b4b, #4338ca); }
+.gradient-amber  { background: linear-gradient(135deg, #78350f, #d97706); }
+.gradient-slate  { background: linear-gradient(135deg, #0f172a, #334155); }
+
+/* ── Forms ──────────────────────────────────── */
+.form-group { margin-bottom: 20px; }
+.form-group label {
+    display: block; font-size: 13px; font-weight: 700;
+    color: #1e293b; margin-bottom: 8px;
+}
+.form-control {
+    width: 100%; padding: 10px 14px;
+    border: 1.5px solid #e2e8f0; border-radius: 10px;
+    font-size: 13px; font-family: var(--font-family);
+    box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-control:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.12); }
+
+.type-radio-label {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+    border: 1.5px solid #e2e8f0; border-radius: 10px; cursor: pointer;
+    margin: 0; font-weight: 600; font-size: 13px; color: #475569;
+    transition: all 0.2s;
+}
+.type-radio-label.active, .type-radio-label:has(input:checked) {
+    border-color: #4f46e5; background: #eef2ff; color: #3730a3;
+}
+.type-radio-label input[type="radio"] { accent-color: #4f46e5; }
+
+/* ── Duration chips ─────────────────────────── */
+.dur-chip {
+    padding: 7px 14px; border-radius: 20px;
+    border: 1.5px solid #e2e8f0; background: white;
+    font-family: var(--font-family);
+    font-size: 12px; font-weight: 700; color: #64748b; cursor: pointer;
+    transition: all 0.2s;
+}
+.dur-chip.active, .dur-chip:hover {
+    background: #4f46e5; color: white; border-color: #4f46e5;
+    box-shadow: 0 2px 8px rgba(79,70,229,0.3);
+}
+
+/* ── Primary / Cancel buttons ───────────────── */
+.btn-primary {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: white; padding: 10px 22px; border: none; border-radius: 10px;
+    font-family: var(--font-family);
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    white-space: nowrap;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(79,70,229,0.35); }
+
+.btn-cancel {
+    background: #f1f5f9; color: #64748b; padding: 10px 20px;
+    border: none; border-radius: 10px;
+    font-family: var(--font-family);
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+}
+.btn-cancel:hover { background: #e2e8f0; }
+
+/* ── Misc ───────────────────────────────────── */
+.user-avatar {
+    width: 64px; height: 64px; border-radius: 50%; background: #eef2ff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin: 0 auto 16px; overflow: hidden;
+}
+.user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.loading-placeholder { text-align: center; padding: 48px 20px; color: #94a3b8; font-size: 14px; }
+.empty-state { text-align: center; padding: 48px 20px; color: #94a3b8; font-size: 14px; }
+
+.toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    background: #1e293b; color: white; padding: 12px 20px;
+    border-radius: 12px; font-family: var(--font-family);
+    font-size: 13px; font-weight: 600;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+}
+.toast.toast-error   { background: #dc2626; }
+.toast.toast-success { background: #059669; }
+@keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; pointer-events: none; } }
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .connection-card { flex-direction: column; align-items: flex-start; }
+    .conn-actions { margin-left: 0; }
+    .swipe-arena { height: 520px; }
+    .swipe-card { width: calc(100vw - 64px); }
+    .nav-pill-track { width: 100%; }
+}
+</style>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+const state = {
+    currentTab: 'discovery',
+    discoveryView: 'swipe',
+    quickConnectUserId: null,
+    quickConnectUserName: null,
+    allConnections: [],
+    currentConnectionFilter: 'all',
+    currentMeetingFilter: 'upcoming',
+};
+
+// ═══════════════════════════════════════════════
+// TOAST UTILITY
+// ═══════════════════════════════════════════════
+function showToast(msg, type = 'info') {
+    const t = document.createElement('div');
+    t.className = 'toast' + (type === 'error' ? ' toast-error' : type === 'success' ? ' toast-success' : '');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+}
+
+// ═══════════════════════════════════════════════
+// MODAL HELPERS
+// ═══════════════════════════════════════════════
+function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
+function openModal(modalId)  { document.getElementById(modalId).classList.add('active'); }
+
+// ═══════════════════════════════════════════════
+// DURATION CHIPS
+// ═══════════════════════════════════════════════
+function setupDurationChips(chipContainerId, customInputId, hiddenId) {
+    const container   = document.getElementById(chipContainerId);
+    const customInput = document.getElementById(customInputId);
+    const hidden      = document.getElementById(hiddenId);
+    if (!container) return;
+    container.querySelectorAll('.dur-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            container.querySelectorAll('.dur-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            const min = chip.dataset.min;
+            if (min === 'custom') {
+                customInput.style.display = 'block';
+                customInput.focus();
+                hidden.value = customInput.value || 60;
+            } else {
+                customInput.style.display = 'none';
+                hidden.value = min;
+            }
+        });
+    });
+    customInput.addEventListener('input', () => { hidden.value = customInput.value; });
+}
+
+// ═══════════════════════════════════════════════
+// PILL NAV SLIDER (animates the background pill)
+// ═══════════════════════════════════════════════
+function updatePillSlider(activeBtn) {
+    const track  = document.querySelector('.nav-pill-track');
+    const slider = document.querySelector('.nav-pill-slider');
+    if (!track || !slider) return;
+    const trackRect  = track.getBoundingClientRect();
+    const btnRect    = activeBtn.getBoundingClientRect();
+    slider.style.width  = btnRect.width + 'px';
+    slider.style.transform = `translateX(${btnRect.left - trackRect.left}px)`;
+}
+
+// ═══════════════════════════════════════════════
+// DISCOVERY — TINDER SWIPE DECK
+// ═══════════════════════════════════════════════
+let discoveryMatches = [];
+let discoveryIndex   = 0;
+let _dragStartX = 0, _dragCurX = 0, _dragging = false;
+
+function getDismissedDiscoveryIds() {
+    try {
+        const raw = sessionStorage.getItem('meetings_discovery_dismissed_ids');
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr.map(v => Number(v)).filter(v => !Number.isNaN(v)) : [];
+    } catch {
+        return [];
+    }
+}
+
+function setDismissedDiscoveryIds(ids) {
+    sessionStorage.setItem('meetings_discovery_dismissed_ids', JSON.stringify(Array.from(new Set(ids))));
+}
+
+function persistDiscoveryCache() {
+    sessionStorage.setItem('meetings_discovery_matches_cache', JSON.stringify(discoveryMatches));
+    sessionStorage.setItem('meetings_discovery_matches_cache_ts', String(Date.now()));
+}
+
+function removeDiscoveredUser(userId) {
+    const numericId = Number(userId);
+    if (Number.isNaN(numericId)) return;
+
+    const dismissed = getDismissedDiscoveryIds();
+    dismissed.push(numericId);
+    setDismissedDiscoveryIds(dismissed);
+
+    discoveryMatches = discoveryMatches.filter(m => Number(m.id) !== numericId);
+    if (discoveryIndex >= discoveryMatches.length) {
+        discoveryIndex = Math.max(0, discoveryMatches.length - 1);
+    }
+    persistDiscoveryCache();
+
+    if (state.discoveryView === 'grid') {
+        renderDiscoveryList();
+    } else {
+        renderSwipeStack();
+    }
+}
+
+function applyDiscoveryView() {
+    const swipeContainer = document.getElementById('discoveryGrid');
+    const listContainer = document.getElementById('discoveryListGrid');
+    const controls = document.getElementById('swipeControls');
+    const counter = document.getElementById('swipeCounter');
+    const hint = document.getElementById('discoveryHint');
+
+    const isSwipe = state.discoveryView === 'swipe';
+    if (swipeContainer) swipeContainer.style.display = isSwipe ? '' : 'none';
+    if (listContainer) listContainer.style.display = isSwipe ? 'none' : 'grid';
+    if (controls) controls.style.display = isSwipe && discoveryMatches.length > 0 ? 'flex' : 'none';
+    if (counter) counter.style.display = isSwipe ? '' : 'none';
+    if (hint) hint.textContent = isSwipe
+        ? 'Drag the card or use the buttons'
+        : 'Browse all profiles and connect directly';
+}
+
+function resolveProfilePictureUrl(profilePicture) {
+    const raw = String(profilePicture || '').trim();
+    if (!raw) return null;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    if (raw.startsWith('/')) return raw;
+    if (raw.includes('images/profile_pictures/')) return '/' + raw.replace(/^\/+/, '');
+    return `/images/profile_pictures/${encodeURIComponent(raw)}`;
+}
+
+async function fetchJsonWithRetry(url, { timeoutMs = 12000, retries = 1 } = {}) {
+    let lastError = null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const response = await fetch(url, {
+                signal: controller.signal,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return await response.json();
+        } catch (err) {
+            clearTimeout(timeoutId);
+            lastError = err;
+            if (attempt === retries) break;
+        }
+    }
+    throw lastError || new Error('Request failed');
+}
+
+async function loadMatches(forceRefresh = false) {
+    const grid = document.getElementById('discoveryGrid');
+    const listGrid = document.getElementById('discoveryListGrid');
+    grid.innerHTML = '<div class="loading-placeholder">Loading matches…</div>';
+    if (listGrid) listGrid.innerHTML = '';
+    document.getElementById('swipeControls').style.display = 'none';
+    document.getElementById('swipeCounter').textContent = '';
+
+    try {
+        const cacheKey = 'meetings_discovery_matches_cache';
+        const cacheTsKey = 'meetings_discovery_matches_cache_ts';
+        const now = Date.now();
+
+        if (!forceRefresh) {
+            const cached = sessionStorage.getItem(cacheKey);
+            const cachedTs = Number(sessionStorage.getItem(cacheTsKey) || '0');
+            if (cached && now - cachedTs < 120000) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const dismissed = new Set(getDismissedDiscoveryIds());
+                    discoveryMatches = parsed.filter(m => !dismissed.has(Number(m.id)));
+                    discoveryIndex = 0;
+                    if (state.discoveryView === 'grid') renderDiscoveryList();
+                    else renderSwipeStack();
+                    applyDiscoveryView();
+                    return;
+                }
+            }
+        }
+
+        const query = forceRefresh ? '?refresh=1' : '';
+        const data = await fetchJsonWithRetry(`/api/discovery/matches${query}`, { timeoutMs: 12000, retries: 1 });
+
+        if (!data.ok || !data.matches || data.matches.length === 0) {
+            grid.innerHTML = '<div class="empty-state">No matches found. Set up your profile to find connections!</div>';
+            return;
+        }
+        const dismissed = new Set(getDismissedDiscoveryIds());
+        discoveryMatches = data.matches.filter(m => !dismissed.has(Number(m.id)));
+        discoveryIndex   = 0;
+        sessionStorage.setItem(cacheKey, JSON.stringify(discoveryMatches));
+        sessionStorage.setItem(cacheTsKey, String(now));
+        if (state.discoveryView === 'grid') renderDiscoveryList();
+        else renderSwipeStack();
+        applyDiscoveryView();
+    } catch (err) {
+        console.error(err);
+        grid.innerHTML = '<div class="empty-state">Error loading matches. <button class="btn-primary" style="margin-left:8px;" onclick="loadMatches(true)">Retry</button></div>';
+    }
+}
+
+function renderDiscoveryList() {
+    const list = document.getElementById('discoveryListGrid');
+    if (!list) return;
+
+    if (!discoveryMatches.length) {
+        list.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">No users left to discover.</div>';
+        return;
+    }
+
+    list.innerHTML = discoveryMatches.map(match => {
+        const imageUrl = resolveProfilePictureUrl(match.profile_picture);
+        const location = match.location ? `📍 ${escapeHtml(match.location)}` : `@${escapeHtml(match.username)}`;
+        const score = Number(match.percentage || 0);
+        return `
+            <div class="discovery-user-card">
+                <div class="discovery-user-top">
+                    <div class="discovery-user-avatar">${imageUrl ? `<img src="${imageUrl}" alt="">` : '👤'}</div>
+                    <div>
+                        <p class="discovery-user-name">${escapeHtml(match.full_name || match.username)}</p>
+                        <p class="discovery-user-username">${location}</p>
+                        <p class="discovery-user-username">${score}% Match</p>
+                    </div>
+                </div>
+                ${match.reason ? `<p class="discovery-user-username" style="color:#475569;">💫 ${escapeHtml(match.reason)}</p>` : ''}
+                <div class="discovery-user-actions">
+                    <button class="btn-view-discovery" onclick="openProfileModal('${match.id}')">View</button>
+                    <button class="btn-connect-discovery" onclick="openQuickConnect('${match.id}', '${escapeAttr(match.full_name || match.username)}', '${escapeAttr(match.profile_picture || '')}')">Connect</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderSwipeStack() {
+    const container = document.getElementById('discoveryGrid');
+    const remaining = discoveryMatches.length - discoveryIndex;
+    container.innerHTML = '';
+
+    if (remaining <= 0) {
+        container.innerHTML = `<div class="swipe-done">🎉 You've seen everyone!<br><button onclick="loadMatches(true)" class="btn-primary" style="margin-top:20px;display:inline-block;">↺ Refresh</button></div>`;
+        document.getElementById('swipeControls').style.display = 'none';
+        document.getElementById('swipeCounter').textContent = '';
+        return;
+    }
+
+    // Render back-to-front so front card is on top
+    const count = Math.min(3, remaining);
+    for (let i = count - 1; i >= 0; i--) {
+        const match = discoveryMatches[discoveryIndex + i];
+        const card  = buildSwipeCard(match, i);
+        container.appendChild(card);
+    }
+
+    const counter = document.getElementById('swipeCounter');
+    if (counter) counter.textContent = `${discoveryIndex + 1} / ${discoveryMatches.length}`;
+
+    const front = container.querySelector('[data-pos="0"]');
+    if (front) attachDrag(front);
+}
+
+function buildSwipeCard(match, pos) {
+    const div = document.createElement('div');
+    div.className = 'swipe-card';
+    div.dataset.pos = pos;
+
+    const imageUrl = resolveProfilePictureUrl(match.profile_picture);
+
+    const scoreColor = match.percentage >= 60 ? '#059669' : match.percentage >= 40 ? '#4f46e5' : '#d97706';
+
+    div.innerHTML = `
+        <div class="sc-photo" style="${imageUrl ? `background-image:url('${imageUrl}')` : 'background:linear-gradient(135deg,#667eea,#764ba2)'}">
+            ${!imageUrl ? '<div class="sc-emoji">👤</div>' : ''}
+        </div>
+        <div class="sc-body">
+            <div class="sc-match-badge" style="color:${scoreColor};border-color:${scoreColor}33;background:${scoreColor}14">${match.percentage}% Match</div>
+            <h3 class="sc-name">${escapeHtml(match.full_name || match.username)}</h3>
+            <p class="sc-location">${match.location ? `📍 ${escapeHtml(match.location)}` : `@${escapeHtml(match.username)}`}</p>
+            ${match.reason ? `<p class="sc-reason">💫 ${escapeHtml(match.reason)}</p>` : ''}
+            <div class="sc-tags">${(match.common_interests || []).slice(0,4).map(i => `<span class="sc-tag">${escapeHtml(i)}</span>`).join('')}</div>
+        </div>
+        <div class="sc-like-stamp">CONNECT 💫</div>
+        <div class="sc-nope-stamp">PASS ✕</div>
+    `;
+    return div;
+}
+
+function attachDrag(card) {
+    _dragStartX = 0; _dragCurX = 0; _dragging = false;
+
+    function onStart(e) {
+        const pt = e.touches ? e.touches[0] : e;
+        _dragStartX = pt.clientX;
+        _dragging   = true;
+        card.style.transition = 'none';
+    }
+    function onMove(e) {
+        if (!_dragging) return;
+        const pt = e.touches ? e.touches[0] : e;
+        _dragCurX  = pt.clientX - _dragStartX;
+        const rot  = _dragCurX * 0.07;
+        card.style.transform = `translateX(${_dragCurX}px) rotate(${rot}deg)`;
+        const like = card.querySelector('.sc-like-stamp');
+        const nope = card.querySelector('.sc-nope-stamp');
+        if (like) like.style.opacity = Math.max(0, Math.min(1, _dragCurX / 80));
+        if (nope) nope.style.opacity = Math.max(0, Math.min(1, -_dragCurX / 80));
+    }
+    function onEnd() {
+        if (!_dragging) return;
+        _dragging = false;
+        if (_dragCurX > 90)       { animateOut(card, 'right'); }
+        else if (_dragCurX < -90) { animateOut(card, 'left'); }
+        else {
+            card.style.transition = 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)';
+            card.style.transform  = '';
+            const like = card.querySelector('.sc-like-stamp');
+            const nope = card.querySelector('.sc-nope-stamp');
+            if (like) like.style.opacity = 0;
+            if (nope) nope.style.opacity = 0;
+        }
+    }
+
+    card.addEventListener('mousedown',  onStart);
+    card.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('mousemove',  onMove);
+    document.addEventListener('touchmove',  onMove, { passive: true });
+    document.addEventListener('mouseup',    onEnd);
+    document.addEventListener('touchend',   onEnd);
+}
+
+function animateOut(card, direction) {
+    const tx  = direction === 'right' ? '160%' : '-160%';
+    const rot = direction === 'right' ? '20deg' : '-20deg';
+    card.style.transition = 'transform 0.42s ease, opacity 0.42s ease';
+    card.style.transform  = `translateX(${tx}) rotate(${rot})`;
+    card.style.opacity    = '0';
+
+    if (direction === 'right') {
+        const match = discoveryMatches[discoveryIndex];
+        setTimeout(() => {
+            discoveryIndex++;
+            renderSwipeStack();
+            openQuickConnect(match.id, (match.full_name || '').replace(/'/g, "\\'"), (match.profile_picture || '').replace(/'/g, "\\'"));
+        }, 380);
+    } else {
+        setTimeout(() => { discoveryIndex++; renderSwipeStack(); }, 380);
+    }
+}
+
+function swipeLeft() {
+    const front = document.querySelector('.swipe-card[data-pos="0"]');
+    if (front) animateOut(front, 'left');
+}
+function swipeRight() {
+    const front = document.querySelector('.swipe-card[data-pos="0"]');
+    if (front) animateOut(front, 'right');
+}
+function viewCurrentCard() {
+    if (discoveryMatches[discoveryIndex]) openProfileModal(discoveryMatches[discoveryIndex].id);
+}
+
+function openQuickConnect(userId, name, pic) {
+    state.quickConnectUserId  = userId;
+    state.quickConnectUserName = name;
+    document.getElementById('quickConnectName').textContent = name;
+    const picUrl = resolveProfilePictureUrl(pic);
+    document.getElementById('quickConnectAvatar').innerHTML = picUrl ? `<img src="${picUrl}" alt="">` : '👤';
+    document.querySelectorAll('input[name="qc-type"]').forEach(r => {
+        r.checked = (r.value === 'general');
+        r.closest('.type-radio-label').classList.toggle('active', r.value === 'general');
+    });
+    document.getElementById('qcSkillsSection').style.display = 'none';
+    document.getElementById('qcInitiatorSkill').value = '';
+    document.getElementById('qcReceiverSkill').value  = '';
+    openModal('quickConnectModal');
+}
+
+// ═══════════════════════════════════════════════
+// PROFILE MODAL
+// ═══════════════════════════════════════════════
+async function openProfileModal(userId) {
+    openModal('profileModal');
+    document.getElementById('profileModalBody').innerHTML = '<div class="loading-placeholder">Loading profile...</div>';
+    document.getElementById('profileConnectBtn').style.display = 'none';
+
+    try {
+        const resp = await fetch(`/api/discovery/user/${userId}`);
+        const data = await resp.json();
+        if (!data.ok) { document.getElementById('profileModalBody').innerHTML = '<div class="empty-state">User not found.</div>'; return; }
+
+        const u = data.user;
+        document.getElementById('profileModalTitle').textContent = `👤 ${u.full_name || u.username}`;
+
+        const hobbiesHtml = data.hobbies.length
+            ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">${data.hobbies.map(h => `<span class="interest-tag">${escapeHtml(h)}</span>`).join('')}</div>`
+            : '<p style="color:#94a3b8;font-size:13px;">No interests listed.</p>';
+
+        const badgesHtml = data.badges.length
+            ? data.badges.map(b => `<div style="display:flex;align-items:center;gap:10px;padding:8px;background:#fefce8;border-radius:8px;margin-top:6px;"><span>🏆</span><div><div style="font-size:13px;font-weight:600;">${escapeHtml(b.badge_name)}</div><div style="font-size:11px;color:#64748b;">${escapeHtml(b.description || '')}</div></div></div>`).join('')
+            : '';
+
+        const profileImageUrl = resolveProfilePictureUrl(u.profile_picture);
+        document.getElementById('profileModalBody').innerHTML = `
+            <div style="display:flex;align-items:center;gap:16px;background:#f8fafc;border-radius:12px;padding:16px;margin-bottom:20px;">
+                <div style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:#eef2ff;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">
+                    ${profileImageUrl ? `<img src="${profileImageUrl}" style="width:100%;height:100%;object-fit:cover;">` : '👤'}
+                </div>
+                <div>
+                    <div style="font-family:var(--font-family);font-size:18px;font-weight:800;color:#1e293b;">${escapeHtml(u.full_name || u.username)}</div>
+                    <div style="font-size:13px;color:#94a3b8;">@${escapeHtml(u.username)}</div>
+                    ${u.location ? `<div style="font-size:12px;color:#4f46e5;margin-top:2px;">📍 ${escapeHtml(u.location)}</div>` : ''}
+                </div>
+            </div>
+            ${u.bio ? `<div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px;">BIO</div><p style="font-size:13px;color:#334155;margin:0;">${escapeHtml(u.bio)}</p></div>` : ''}
+            ${data.hobbies.length ? `<div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px;">INTERESTS & SKILLS</div>${hobbiesHtml}</div>` : ''}
+            ${badgesHtml ? `<div><div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:4px;">ACHIEVEMENTS</div>${badgesHtml}</div>` : ''}
+        `;
+
+        const connectBtn = document.getElementById('profileConnectBtn');
+        connectBtn.style.display = 'inline-block';
+        connectBtn.onclick = () => {
+            closeModal('profileModal');
+            openQuickConnect(u.id, u.full_name || u.username, profileImageUrl || '');
+        };
+    } catch (err) {
+        console.error(err);
+        document.getElementById('profileModalBody').innerHTML = '<div class="empty-state">Failed to load profile.</div>';
+    }
+}
+
+// ═══════════════════════════════════════════════
+// CONNECTIONS
+// ═══════════════════════════════════════════════
+async function loadConnections() {
+    try {
+        const resp = await fetch('/api/connections');
+        const data = await resp.json();
+        if (!data.ok) return;
+        state.allConnections = data.connections || [];
+        renderPending(data.pending || []);
+        renderConnections(state.allConnections, state.currentConnectionFilter);
+    } catch (err) { console.error(err); }
+}
+
+function renderPending(pending) {
+    const section = document.getElementById('pendingSection');
+    if (!pending.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    document.getElementById('pendingList').innerHTML = pending.map(c => `
+        <div class="pending-card">
+            <div class="pending-avatar">
+                ${resolveProfilePictureUrl(c.profile_picture) ? `<img src="${resolveProfilePictureUrl(c.profile_picture)}" alt="">` : '👤'}
+            </div>
+            <div class="pending-info">
+                <p class="pending-name">${escapeHtml(c.full_name || c.username || 'Unknown')}</p>
+                <p class="pending-type">Type: ${escapeHtml(c.connection_type || '')}
+                    ${c.initiator_skill ? ` · Offers: <strong>${escapeHtml(c.initiator_skill)}</strong>` : ''}
+                    ${c.receiver_skill  ? ` · Wants: <strong>${escapeHtml(c.receiver_skill)}</strong>`  : ''}
+                </p>
+            </div>
+            <div class="pending-actions">
+                <button class="btn-accept-connection" onclick="acceptConnection('${c.connection_id}')">✓ Accept</button>
+                <button class="btn-reject-connection" onclick="rejectConnection('${c.connection_id}')">✕ Reject</button>
+            </div>
+        </div>`).join('');
+}
+
+function renderConnections(connections, filter) {
+    const grid = document.getElementById('connectionsGrid');
+    let list = connections;
+
+    if (filter === 'accepted') {
+        list = connections.filter(c => (c.status || '').toLowerCase() === 'accepted');
+    } else if (['skill', 'activity', 'hobby', 'general'].includes(filter)) {
+        list = connections.filter(c => (c.connection_type || '').toLowerCase() === filter);
+    }
+
+    if (!list.length) {
+        grid.innerHTML = '<div class="empty-state">No connections match this filter.</div>';
+        return;
+    }
+
+    grid.innerHTML = list.map(c => {
+        const status     = (c.status || 'pending').toLowerCase();
+        const type       = (c.connection_type || 'general').toLowerCase();
+        const isAccepted = status === 'accepted';
+        const skillsHtml = (c.initiator_skill || c.receiver_skill)
+            ? `<div class="conn-skills">
+                ${c.initiator_skill ? `🎯 Offers: <strong>${escapeHtml(c.initiator_skill)}</strong>` : ''}
+                ${c.initiator_skill && c.receiver_skill ? ' · ' : ''}
+                ${c.receiver_skill  ? `📚 Wants: <strong>${escapeHtml(c.receiver_skill)}</strong>`  : ''}
+               </div>` : '';
+        const typeIcon = { skill: '🎯', activity: '🏃', hobby: '🎨', general: '🤝' }[type] || '🔗';
+        const borderColors = { accepted: '#4f46e5', pending: '#f59e0b', rejected: '#dc2626' };
+        return `
+        <div class="connection-card" style="border-left-color:${borderColors[status] || '#4f46e5'}">
+            <div class="conn-avatar">
+                ${resolveProfilePictureUrl(c.profile_picture) ? `<img src="${resolveProfilePictureUrl(c.profile_picture)}" alt="">` : '👤'}
+            </div>
+            <div class="conn-info">
+                <p class="conn-name">${escapeHtml(c.full_name || c.username || 'Unknown')}</p>
+                <p class="conn-username">@${escapeHtml(c.username || '')}</p>
+                <div class="conn-badges">
+                    <span class="status-badge status-${status}">${status.toUpperCase()}</span>
+                    <span class="type-badge">${typeIcon} ${escapeHtml(c.connection_type || type)}</span>
+                </div>
+                ${skillsHtml}
+            </div>
+            <div class="conn-actions">
+                ${isAccepted ? `<button class="btn-schedule" onclick="openScheduleMeetingModal('${c.connection_id}', '${escapeAttr(c.full_name || c.username || '')}')">📅 Schedule</button>` : ''}
+                <button class="btn-delete-conn" onclick="deleteConnection('${c.connection_id}')">🗑 Delete</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function acceptConnection(connId) {
+    try {
+        const resp = await fetch(`/api/connections/${connId}/accept`, { method: 'POST' });
+        const data = await resp.json();
+        if (data.ok) { showToast('Connection accepted! 🎉', 'success'); loadConnections(); }
+        else showToast(data.error || 'Failed to accept.', 'error');
+    } catch (err) { console.error(err); }
+}
+
+async function rejectConnection(connId) {
+    try {
+        const resp = await fetch(`/api/connections/${connId}/reject`, { method: 'POST' });
+        const data = await resp.json();
+        if (data.ok) { showToast('Connection rejected.'); loadConnections(); }
+        else showToast(data.error || 'Failed to reject.', 'error');
+    } catch (err) { console.error(err); }
+}
+
+async function deleteConnection(connId) {
+    if (!confirm('Are you sure you want to remove this connection?')) return;
+    try {
+        const resp = await fetch(`/api/connections/${connId}/delete`, { method: 'POST' });
+        const data = await resp.json();
+        if (data.ok) { showToast('Connection removed.'); loadConnections(); }
+        else showToast(data.error || 'Failed to delete.', 'error');
+    } catch (err) { console.error(err); }
+}
+
+// ═══════════════════════════════════════════════
+// MEETINGS
+// ═══════════════════════════════════════════════
+async function loadMeetings(filter = 'upcoming') {
+    state.currentMeetingFilter = filter;
+    try {
+        const resp = await fetch(`/api/meetings/list?filter=${encodeURIComponent(filter)}`);
+        const data = await resp.json();
+        if (!data.ok) return;
+        renderMeetings(data.meetings || [], filter);
+    } catch (err) { console.error(err); }
+}
+
+function renderMeetings(meetings, filter) {
+    const list = document.getElementById('meetingsList');
+    if (!meetings.length) {
+        list.innerHTML = '<div class="empty-state">No meetings found for this filter.</div>';
+        return;
+    }
+
+    list.innerHTML = meetings.map(m => {
+        const dt      = m.datetime ? new Date(m.datetime) : null;
+        const dateStr = dt ? dt.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) : 'TBD';
+        const timeStr = dt ? dt.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '';
+        const status  = (m.status || 'scheduled').toLowerCase();
+        const mType   = (m.type || 'virtual').toLowerCase();
+        const isPast  = dt ? dt < new Date() : false;
+
+        const canComplete = status === 'scheduled' && isPast;
+        const canEdit     = status === 'scheduled';
+        const canCancel   = status === 'scheduled';
+        const canDelete   = status === 'completed' || status === 'cancelled';
+        const hasJoinLink = mType === 'virtual' && m.google_meet_link && m.google_meet_link.startsWith('http');
+
+        const locationIcon = mType === 'virtual' ? '💻' : '📍';
+        const locationHtml = m.location ? `<p class="meeting-location">${locationIcon} ${escapeHtml(m.location)}</p>` : '';
+        const participantsHtml = m.participant_count > 0 ? `<p class="meeting-meta">👥 ${m.participant_count} participant${m.participant_count > 1 ? 's' : ''}</p>` : '';
+        const durationHtml = m.duration ? `<p class="meeting-meta">⏱ ${m.duration} min</p>` : '';
+
+        return `
+        <div class="meeting-card status-${status}">
+            <div class="meeting-inner">
+                <div class="meeting-header">
+                    <div>
+                        <div class="meeting-datetime">📅 ${dateStr}${timeStr ? ' · ' + timeStr : ''}</div>
+                        <div style="font-size:12px;color:#64748b;margin-top:2px;">${escapeHtml(m.connection_name || 'Meeting')}</div>
+                    </div>
+                    <div class="meeting-badges">
+                        <span class="status-badge status-${status}">${status.toUpperCase()}</span>
+                        <span class="type-badge type-${mType}">${mType === 'virtual' ? '💻 Virtual' : '📍 Physical'}</span>
+                    </div>
+                </div>
+                <div class="meeting-body">
+                    ${locationHtml}${durationHtml}${participantsHtml}
+                    <div class="meeting-actions">
+                        ${hasJoinLink ? `<a href="${m.google_meet_link}" target="_blank" class="btn-join">🚀 Join</a>
+                            <button class="btn-copy" onclick="copyToClipboard('${escapeAttr(m.google_meet_link)}', this)" title="Copy Meet link">📋</button>` : ''}
+                        ${canEdit     ? `<button class="btn-edit"           onclick="openEditMeetingModal('${m.id}', '${mType}', '${escapeAttr(m.location||'')}', '${escapeAttr(m.datetime||'')}', ${m.duration || 60})">✏️ Edit</button>` : ''}
+                        ${canComplete ? `<button class="btn-complete"       data-action="complete" data-id="${m.id}">✅ Complete</button>` : ''}
+                        ${canCancel   ? `<button class="btn-cancel-meeting" data-action="cancel"   data-id="${m.id}">❌ Cancel</button>`  : ''}
+                        ${canDelete   ? `<button class="btn-delete-meeting" data-action="delete"   data-id="${m.id}">🗑️ Delete</button>` : ''}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            handleMeetingAction(this.dataset.action, this.dataset.id, state.currentMeetingFilter);
+        });
+    });
+}
+
+async function handleMeetingAction(action, meetingId, currentFilter) {
+    const routes = {
+        complete: `/api/meetings/${meetingId}/mark-complete`,
+        cancel:   `/api/meetings/${meetingId}/cancel`,
+        delete:   `/api/meetings/${meetingId}/delete`,
+    };
+    if (!routes[action]) return;
+    if (!confirm(`Are you sure you want to ${action} this meeting?`)) return;
+
+    try {
+        const resp = await fetch(routes[action], { method: 'POST' });
+        const data = await resp.json();
+        if (!data.ok) {
+            if (action === 'complete' && data.scheduled_at) {
+                const scheduledDate = new Date(data.scheduled_at);
+                const formatted = scheduledDate.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) + ' ' +
+                                  scheduledDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+                showToast(`⏳ Cannot complete yet. Meeting is scheduled for ${formatted}. ${data.remaining ? '(' + data.remaining + ' remaining)' : ''}`, 'error');
+            } else {
+                showToast(data.error || `Failed to ${action} meeting.`, 'error');
+            }
+            return;
+        }
+        showToast(`Meeting ${action === 'complete' ? 'marked as completed ✅' : action === 'cancel' ? 'cancelled' : 'deleted'}.`, 'success');
+        loadMeetings(currentFilter || 'upcoming');
+    } catch (err) { console.error(err); }
+}
+
+function copyToClipboard(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✅';
+        setTimeout(() => btn.textContent = orig, 1800);
+    });
+}
+
+// ═══════════════════════════════════════════════
+// OPEN SCHEDULE-MEETING MODAL (from connection card)
+// ═══════════════════════════════════════════════
+async function openScheduleMeetingModal(connectionId, connectionName) {
+    await populateConnectionDropdown('cmConnection');
+    const sel = document.getElementById('cmConnection');
+    sel.value = connectionId;
+    resetCreateMeetingForm();
+    openModal('createMeetingModal');
+}
+
+async function populateConnectionDropdown(selectId) {
+    try {
+        const resp = await fetch('/api/connections');
+        const data = await resp.json();
+        if (!data.ok) return;
+        const select   = document.getElementById(selectId);
+        const accepted = (data.connections || []).filter(c => (c.status || '').toLowerCase() === 'accepted');
+        select.innerHTML = '<option value="">-- Select a connection --</option>';
+        accepted.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.connection_id;
+            opt.textContent = `${c.full_name || c.username || 'Unknown'} (@${c.username || ''})`;
+            select.appendChild(opt);
+        });
+    } catch (err) { console.error(err); }
+}
+
+function resetCreateMeetingForm() {
+    document.getElementById('cmDate').value = '';
+    document.getElementById('cmTime').value = '14:00';
+    document.getElementById('cmLocation').value = '';
+    const virtualField = document.getElementById('cmVirtualLocationField');
+    const physicalField = document.getElementById('cmLocationField');
+    if (physicalField) physicalField.style.display = 'none';
+    if (virtualField)  virtualField.style.display  = 'block';
+    document.getElementById('cmMapContainer').style.display = 'none';
+    document.getElementById('cmDurationValue').value = '60';
+    document.getElementById('cmDurationCustom').style.display = 'none';
+    document.getElementById('cmDurationChips').querySelectorAll('.dur-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.min === '60');
+    });
+    document.querySelectorAll('input[name="cm-type"]').forEach(r => {
+        r.checked = (r.value === 'virtual');
+        r.closest('.type-radio-label').classList.toggle('active', r.value === 'virtual');
+    });
+}
+
+// ═══════════════════════════════════════════════
+// EDIT MEETING MODAL
+// ═══════════════════════════════════════════════
+function openEditMeetingModal(meetingId, type, location, datetime, duration) {
+    document.getElementById('emMeetingId').value = meetingId;
+    document.querySelectorAll('input[name="em-type"]').forEach(r => {
+        r.checked = (r.value === type);
+        r.closest('.type-radio-label').classList.toggle('active', r.value === type);
+    });
+    document.getElementById('emLocationField').style.display = type === 'physical' ? 'block' : 'none';
+    document.getElementById('emLocation').value = type === 'physical' ? location : '';
+    if (datetime) {
+        const dt = new Date(datetime);
+        const yyyy = dt.getFullYear();
+        const mm   = String(dt.getMonth() + 1).padStart(2, '0');
+        const dd   = String(dt.getDate()).padStart(2, '0');
+        document.getElementById('emDate').value = `${yyyy}-${mm}-${dd}`;
+        const hh  = String(dt.getHours()).padStart(2, '0');
+        const min = String(dt.getMinutes()).padStart(2, '0');
+        document.getElementById('emTime').value = `${hh}:${min}`;
+    }
+    document.getElementById('emDurationValue').value = duration;
+    document.getElementById('emDurationCustom').style.display = 'none';
+    const presets = [30, 45, 60, 90, 120];
+    document.getElementById('emDurationChips').querySelectorAll('.dur-chip').forEach(c => {
+        c.classList.toggle('active', parseInt(c.dataset.min) === duration);
+    });
+    if (!presets.includes(duration)) {
+        document.getElementById('emDurationChips').querySelectorAll('.dur-chip').forEach(c => {
+            c.classList.toggle('active', c.dataset.min === 'custom');
+        });
+        document.getElementById('emDurationCustom').style.display = 'block';
+        document.getElementById('emDurationCustom').value = duration;
+    }
+    openModal('editMeetingModal');
+}
+
+// ═══════════════════════════════════════════════
+// VALIDATION HELPERS
+// ═══════════════════════════════════════════════
+function validateMeetingDatetime(dateVal, timeVal) {
+    if (!dateVal || !timeVal) return 'Please enter both date and time.';
+    const dt = new Date(`${dateVal}T${timeVal}:00`);
+    if (isNaN(dt.getTime())) return 'Invalid date or time format.';
+    if (dt <= new Date()) return 'The meeting date and time must be in the future.';
+    return null;
+}
+
+// ═══════════════════════════════════════════════
+// ESCAPE HELPERS
+// ═══════════════════════════════════════════════
+function escapeHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function escapeAttr(str) {
+    return String(str || '').replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+// ═══════════════════════════════════════════════
+// DOM READY
+// ═══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Tab switching + pill slider ──
+    const tabs   = document.querySelectorAll('.tab-btn');
+    const slider = document.querySelector('.nav-pill-slider');
+
+    function activateTab(btn) {
+        tabs.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.getElementById(btn.dataset.tab + '-tab').classList.add('active');
+        updatePillSlider(btn);
+        if (btn.dataset.tab === 'discovery')   loadMatches();
+        else if (btn.dataset.tab === 'connections') loadConnections();
+        else if (btn.dataset.tab === 'meetings')    loadMeetings(state.currentMeetingFilter);
+    }
+
+    tabs.forEach(btn => btn.addEventListener('click', () => activateTab(btn)));
+
+    // Init slider on first active tab
+    const firstActive = document.querySelector('.tab-btn.active');
+    if (firstActive) {
+        requestAnimationFrame(() => {
+            slider.style.transition = 'none';
+            updatePillSlider(firstActive);
+            requestAnimationFrame(() => { slider.style.transition = ''; });
+        });
+    }
+
+    // ── Swipe control buttons ──
+    document.getElementById('btnPass')?.addEventListener('click', swipeLeft);
+    document.getElementById('btnConnect')?.addEventListener('click', swipeRight);
+    document.getElementById('btnViewProfile')?.addEventListener('click', viewCurrentCard);
+
+    // ── Modal overlays ──
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', () => overlay.closest('.modal').classList.remove('active'));
+    });
+
+    // ── Duration chips setup ──
+    setupDurationChips('cmDurationChips', 'cmDurationCustom', 'cmDurationValue');
+    setupDurationChips('emDurationChips', 'emDurationCustom', 'emDurationValue');
+
+    // ── Set today's date as min ──
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('cmDate').min = today;
+    document.getElementById('emDate').min = today;
+
+    // ── Quick Connect type radio ──
+    document.querySelectorAll('input[name="qc-type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            document.querySelectorAll('input[name="qc-type"]').forEach(r =>
+                r.closest('.type-radio-label').classList.remove('active'));
+            this.closest('.type-radio-label').classList.add('active');
+            document.getElementById('qcSkillsSection').style.display = this.value === 'skill' ? 'block' : 'none';
+        });
+    });
+
+    document.getElementById('btnQcConfirm').addEventListener('click', async () => {
+        const type           = document.querySelector('input[name="qc-type"]:checked')?.value || 'general';
+        const initiatorSkill = document.getElementById('qcInitiatorSkill').value.trim();
+        const receiverSkill  = document.getElementById('qcReceiverSkill').value.trim();
+        if (type === 'skill' && !initiatorSkill && !receiverSkill) {
+            showToast('For a skill exchange, please specify at least one skill.', 'error'); return;
+        }
+        try {
+            const resp = await fetch('/api/connections/quick-connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ receiver_id: state.quickConnectUserId, type, initiator_skill: initiatorSkill || null, receiver_skill: receiverSkill || null }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                closeModal('quickConnectModal');
+                showToast(`Connection request sent to ${state.quickConnectUserName}! 🎉`, 'success');
+                removeDiscoveredUser(state.quickConnectUserId);
+                loadConnections();
+            } else { showToast(data.error || 'Failed to send request.', 'error'); }
+        } catch (err) { console.error(err); }
+    });
+
+    // ── Discovery view toggle (Swipe / All Users) ──
+    document.querySelectorAll('[data-discovery-view]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('[data-discovery-view]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            state.discoveryView = this.dataset.discoveryView === 'grid' ? 'grid' : 'swipe';
+            applyDiscoveryView();
+            if (state.discoveryView === 'grid') renderDiscoveryList();
+            else renderSwipeStack();
+        });
+    });
+
+    // ── Create Connection (Connections tab) ──
+    document.getElementById('btnCreateConnection').addEventListener('click', () => {
+        document.getElementById('ccUser').value = '';
+        document.getElementById('ccInitiatorSkill').value = '';
+        document.getElementById('ccReceiverSkill').value  = '';
+        document.getElementById('ccSkillsSection').style.display = 'block';
+        document.querySelectorAll('input[name="cc-type"]').forEach(r => {
+            r.checked = (r.value === 'skill');
+            r.closest('.type-radio-label').classList.toggle('active', r.value === 'skill');
+        });
+        openModal('createConnectionModal');
+    });
+
+    document.querySelectorAll('input[name="cc-type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            document.querySelectorAll('input[name="cc-type"]').forEach(r =>
+                r.closest('.type-radio-label').classList.remove('active'));
+            this.closest('.type-radio-label').classList.add('active');
+            document.getElementById('ccSkillsSection').style.display = this.value === 'skill' ? 'block' : 'none';
+        });
+    });
+
+    document.getElementById('btnCcConfirm').addEventListener('click', async () => {
+        const userId = parseInt(document.getElementById('ccUser').value);
+        if (!userId || isNaN(userId)) { showToast('Please select a user.', 'error'); return; }
+        const type           = document.querySelector('input[name="cc-type"]:checked')?.value || 'general';
+        const initiatorSkill = document.getElementById('ccInitiatorSkill').value.trim();
+        const receiverSkill  = document.getElementById('ccReceiverSkill').value.trim();
+        if (type === 'skill' && !initiatorSkill && !receiverSkill) {
+            showToast('For a skill exchange, please specify at least one skill.', 'error'); return;
+        }
+        try {
+            const resp = await fetch('/api/connections/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, type, initiator_skill: initiatorSkill || null, receiver_skill: receiverSkill || null }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                closeModal('createConnectionModal');
+                showToast('Connection request sent! 🎉', 'success');
+                loadConnections();
+            } else { showToast(data.error || 'Failed to create connection.', 'error'); }
+        } catch (err) { console.error(err); }
+    });
+
+    // ── Connection Filters ──
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            state.currentConnectionFilter = this.dataset.filter;
+            renderConnections(state.allConnections, state.currentConnectionFilter);
+        });
+    });
+
+    // ── Create Meeting ──
+    document.getElementById('btnCreateMeeting').addEventListener('click', async () => {
+        await populateConnectionDropdown('cmConnection');
+        resetCreateMeetingForm();
+        openModal('createMeetingModal');
+    });
+
+    document.querySelectorAll('input[name="cm-type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            document.querySelectorAll('input[name="cm-type"]').forEach(r =>
+                r.closest('.type-radio-label').classList.remove('active'));
+            this.closest('.type-radio-label').classList.add('active');
+            const isPhysical = this.value === 'physical';
+            document.getElementById('cmLocationField').style.display    = isPhysical ? 'block' : 'none';
+            document.getElementById('cmMapContainer').style.display     = isPhysical ? 'block' : 'none';
+            const virtualField = document.getElementById('cmVirtualLocationField');
+            if (virtualField) virtualField.style.display = isPhysical ? 'none' : 'block';
+        });
+    });
+
+    document.getElementById('btnCmConfirm').addEventListener('click', async () => {
+        const connId          = document.getElementById('cmConnection').value;
+        const type            = document.querySelector('input[name="cm-type"]:checked')?.value || 'virtual';
+        const dateVal         = document.getElementById('cmDate').value;
+        const timeVal         = document.getElementById('cmTime').value;
+        const duration        = parseInt(document.getElementById('cmDurationValue').value) || 60;
+        const location        = document.getElementById('cmLocation').value.trim();
+        const virtualLocation = document.getElementById('cmVirtualLocation')?.value?.trim() || '';
+
+        if (!connId) { showToast('Please select a connection.', 'error'); return; }
+        const dtErr = validateMeetingDatetime(dateVal, timeVal);
+        if (dtErr) { showToast(dtErr, 'error'); return; }
+        if (type === 'physical' && !location) { showToast('Please enter a location for an in-person meeting.', 'error'); return; }
+        if (type === 'virtual' && !/^https:\/\/meet\.google\.com\//.test(virtualLocation)) {
+            showToast('Please generate a real Google Meet link first.', 'error'); return;
+        }
+        if (duration <= 0 || duration > 1440) { showToast('Duration must be between 1 and 1440 minutes.', 'error'); return; }
+
+        try {
+            const resp = await fetch('/meetings/api/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ connection_id: connId, meeting_type: type, scheduled_at: `${dateVal} ${timeVal}:00`, duration, location: type === 'physical' ? location : virtualLocation }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                closeModal('createMeetingModal');
+                resetCreateMeetingForm();
+                const linkMsg = data.meet_link && data.meet_link.startsWith('http') ? ' ✅ Google Meet link auto-generated!' : '';
+                showToast(`Meeting scheduled!${linkMsg} 📅`, 'success');
+                loadMeetings(state.currentMeetingFilter);
+            } else { showToast(data.error || 'Failed to schedule meeting.', 'error'); }
+        } catch (err) { console.error('Error scheduling meeting:', err); showToast('Error scheduling meeting. Please try again.', 'error'); }
+    });
+
+    // ── Edit Meeting type toggle ──
+    document.querySelectorAll('input[name="em-type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            document.querySelectorAll('input[name="em-type"]').forEach(r =>
+                r.closest('.type-radio-label').classList.remove('active'));
+            this.closest('.type-radio-label').classList.add('active');
+            document.getElementById('emLocationField').style.display = this.value === 'physical' ? 'block' : 'none';
+        });
+    });
+
+    document.getElementById('btnEmConfirm').addEventListener('click', async () => {
+        const meetingId = document.getElementById('emMeetingId').value;
+        const type      = document.querySelector('input[name="em-type"]:checked')?.value || 'virtual';
+        const dateVal   = document.getElementById('emDate').value;
+        const timeVal   = document.getElementById('emTime').value;
+        const duration  = parseInt(document.getElementById('emDurationValue').value) || 60;
+        const location  = document.getElementById('emLocation').value.trim();
+        const dtErr = validateMeetingDatetime(dateVal, timeVal);
+        if (dtErr) { showToast(dtErr, 'error'); return; }
+        if (type === 'physical' && !location) { showToast('Please enter a location for an in-person meeting.', 'error'); return; }
+        if (duration <= 0 || duration > 1440) { showToast('Duration must be between 1 and 1440 minutes.', 'error'); return; }
+        try {
+            const resp = await fetch(`/api/meetings/${meetingId}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ meeting_type: type, scheduled_at: `${dateVal} ${timeVal}:00`, duration, location: type === 'physical' ? location : null }),
+            });
+            const data = await resp.json();
+            if (data.ok) { closeModal('editMeetingModal'); showToast('Meeting updated! ✏️', 'success'); loadMeetings(state.currentMeetingFilter); }
+            else { showToast(data.error || 'Failed to update meeting.', 'error'); }
+        } catch (err) { console.error(err); }
+    });
+
+    // ── Meeting filter select ──
+    document.getElementById('meetingFilterSelect').addEventListener('change', function () {
+        loadMeetings(this.value);
+    });
+
+    // ── Initial loads ──
+    applyDiscoveryView();
+    loadMatches();
+    loadConnections();
+    loadMeetings('upcoming');
+    loadAllUsers();
+});
+</script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════
+// LOAD ALL USERS FOR DROPDOWN
+// ═══════════════════════════════════════════════
+let cmMap = null;
+let cmMapMarker = null;
+let cmGoogleOauthInProgress = false;
+
+async function loadAllUsers() {
+    try {
+        const resp = await fetch('/meetings/api/users');
+        const data = await resp.json();
+        if (!data.ok || !data.users) return;
+        const select = document.getElementById('ccUser');
+        data.users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = `${user.fullName} (@${user.username})`;
+            select.appendChild(option);
+        });
+    } catch (err) { console.error('Error loading users:', err); }
+}
+
+// ═══════════════════════════════════════════════
+// GOOGLE MEET LINK GENERATION
+// ═══════════════════════════════════════════════
+async function generateGoogleMeetLink() {
+    const dateVal     = document.getElementById('cmDate').value;
+    const timeVal     = document.getElementById('cmTime').value;
+    const meetingType = document.querySelector('input[name="cm-type"]:checked')?.value;
+    if (meetingType !== 'virtual' || !dateVal || !timeVal) return;
+
+    try {
+        const datetime   = `${dateVal}T${timeVal}:00`;
+        const duration   = parseInt(document.getElementById('cmDurationValue').value) || 60;
+        const connectBtn = document.getElementById('btnConnectGoogleCalendar');
+        const authHint   = document.getElementById('cmGoogleAuthHint');
+        const resp = await fetch('/meetings/api/google-meet-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `datetime=${encodeURIComponent(datetime)}&duration=${duration}`
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (data.ok && data.link) {
+            document.getElementById('cmVirtualLocation').value = data.link;
+            document.getElementById('btnCopyMeetLink').style.display = 'inline-block';
+            showToast('✅ Google Meet link generated! 📞', 'success');
+            if (connectBtn) connectBtn.style.display = 'none';
+            if (authHint)   authHint.textContent = '';
+            return;
+        }
+        document.getElementById('cmVirtualLocation').value = '';
+        document.getElementById('btnCopyMeetLink').style.display = 'none';
+        if (connectBtn) connectBtn.style.display = 'inline-block';
+        const details = Array.isArray(data.details) ? data.details.filter(Boolean).join(' | ') : '';
+        if (authHint) authHint.textContent = details || 'Connect Google Calendar to generate a real Meet room automatically.';
+        showToast(data.error || 'Could not generate real Google Meet link.', 'error');
+    } catch (err) {
+        console.error('Error generating Google Meet link:', err);
+        document.getElementById('cmVirtualLocation').value = '';
+        document.getElementById('btnCopyMeetLink').style.display = 'none';
+        const connectBtn = document.getElementById('btnConnectGoogleCalendar');
+        const authHint   = document.getElementById('cmGoogleAuthHint');
+        if (connectBtn) connectBtn.style.display = 'inline-block';
+        if (authHint)   authHint.textContent = 'Google Meet generation failed. Connect Google Calendar and try again.';
+        showToast('Google Meet generation failed.', 'error');
+    }
+}
+
+function connectGoogleCalendarFromMeeting() {
+    if (cmGoogleOauthInProgress) return;
+    cmGoogleOauthInProgress = true;
+    const popup = window.open('/auth/google/calendar/connect?popup=1', 'ghrami-google-calendar-auth', 'width=560,height=760,resizable=yes,scrollbars=yes');
+    if (!popup) {
+        cmGoogleOauthInProgress = false;
+        showToast('Popup blocked. Please allow popups and try again.', 'error');
+        return;
+    }
+    const onMessage = (event) => {
+        if (event.origin !== window.location.origin) return;
+        const data = event.data || {};
+        if (data.type !== 'ghrami-google-calendar') return;
+        window.removeEventListener('message', onMessage);
+        cmGoogleOauthInProgress = false;
+        if (data.ok) { showToast('Google Calendar connected. Regenerating Meet link...', 'success'); generateGoogleMeetLink(); }
+        else { showToast('Google Calendar connection failed. Try again.', 'error'); }
+    };
+    window.addEventListener('message', onMessage);
+}
+
+// ═══════════════════════════════════════════════
+// MAP INITIALIZATION & LOCATION SELECTION
+// ═══════════════════════════════════════════════
+async function initializeMap() {
+    const container = document.getElementById('cmMap');
+    if (!container) return;
+    if (cmMap) { cmMap.setView([33.8869, 9.5375], 6); return; }
+    cmMap = L.map('cmMap').setView([33.8869, 9.5375], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(cmMap);
+
+    let searchControl = L.Control.extend({
+        onAdd: function(map) {
+            let div = L.DomUtil.create('div', 'leaflet-control leaflet-bar');
+            let searchBox = document.createElement('input');
+            searchBox.type = 'text'; searchBox.placeholder = '🔍 Search location...';
+            searchBox.style.cssText = 'padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; width: 180px; font-size: 13px;';
+            searchBox.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter') {
+                    const query = searchBox.value.trim();
+                    if (query) {
+                        try {
+                            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&bounded=1&viewbox=8.4607,30.2273,11.5641,37.3436`);
+                            const results = await resp.json();
+                            if (results.length > 0) {
+                                const place = results[0];
+                                const lat = parseFloat(place.lat), lng = parseFloat(place.lon);
+                                cmMap.setView([lat, lng], 12);
+                                if (cmMapMarker) cmMap.removeLayer(cmMapMarker);
+                                cmMapMarker = L.marker([lat, lng]).addTo(cmMap);
+                                document.getElementById('cmLocation').value = place.display_name || query;
+                                document.getElementById('cmLocationCoords').textContent = `📍 ${place.display_name || query}`;
+                            }
+                        } catch (err) { console.error('Search error:', err); }
+                    }
+                }
+            });
+            div.appendChild(searchBox);
+            return div;
+        }
+    });
+    cmMap.addControl(new searchControl({position: 'topleft'}));
+
+    cmMap.on('click', async function(e) {
+        const lat = e.latlng.lat, lng = e.latlng.lng;
+        if (cmMapMarker) cmMap.removeLayer(cmMapMarker);
+        cmMapMarker = L.marker([lat, lng]).addTo(cmMap);
+        try {
+            const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+            const data = await resp.json();
+            const placeName = data.address?.city || data.address?.town || data.address?.village || data.name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            document.getElementById('cmLocation').value = placeName;
+            document.getElementById('cmLocationCoords').textContent = `📍 ${placeName}`;
+        } catch (err) {
+            document.getElementById('cmLocation').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            document.getElementById('cmLocationCoords').textContent = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        }
+    });
+}
+
+// Wire up map visibility & location search
+document.addEventListener('DOMContentLoaded', function() {
+    const cmTypeRadios = document.querySelectorAll('input[name="cm-type"]');
+    cmTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            const isPhysical   = this.value === 'physical';
+            const mapContainer = document.getElementById('cmMapContainer');
+            const virtualField = document.getElementById('cmVirtualLocationField');
+            const physicalField = document.getElementById('cmLocationField');
+            if (isPhysical) {
+                physicalField.style.display = 'block'; mapContainer.style.display = 'block'; virtualField.style.display = 'none';
+                document.getElementById('cmLocation').placeholder = 'Click on map or search location...';
+                setTimeout(() => initializeMap(), 50);
+            } else {
+                physicalField.style.display = 'none'; mapContainer.style.display = 'none'; virtualField.style.display = 'block';
+                document.getElementById('cmLocation').placeholder = 'Click on map or search location...';
+                setTimeout(() => generateGoogleMeetLink(), 100);
+            }
+        });
+    });
+
+    document.getElementById('cmDate')?.addEventListener('change', generateGoogleMeetLink);
+    document.getElementById('cmTime')?.addEventListener('change', generateGoogleMeetLink);
+    document.getElementById('cmDurationChips')?.addEventListener('click', generateGoogleMeetLink);
+    document.getElementById('cmDurationValue')?.addEventListener('change', generateGoogleMeetLink);
+
+    const btnCopyMeetLink = document.getElementById('btnCopyMeetLink');
+    if (btnCopyMeetLink) {
+        btnCopyMeetLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            const meetLink = document.getElementById('cmVirtualLocation').value;
+            if (meetLink) {
+                navigator.clipboard.writeText(meetLink).then(() => {
+                    showToast('📋 Google Meet link copied!', 'success');
+                    const originalText = this.textContent;
+                    this.textContent = '✓ Copied!';
+                    setTimeout(() => { this.textContent = originalText; }, 2000);
+                });
+            }
+        });
+    }
+
+    const btnConnectGoogleCalendar = document.getElementById('btnConnectGoogleCalendar');
+    if (btnConnectGoogleCalendar) {
+        btnConnectGoogleCalendar.addEventListener('click', function(e) { e.preventDefault(); connectGoogleCalendarFromMeeting(); });
+    }
+});
+</script>
+{% endblock %}

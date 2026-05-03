@@ -1,0 +1,648 @@
+{% extends "base.html.twig" %}
+
+{% block title %}Notifications - Ghrami{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    .notifications-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .notification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 1rem;
+    }
+
+    .notification-header h1 {
+        margin: 0;
+        font-size: 1.8rem;
+        color: #262525;
+    }
+
+    .mark-all-read-btn {
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background 0.3s;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        font-weight: 600;
+    }
+
+    .mark-all-read-btn:hover {
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        transform: translateY(-2px);
+    }
+
+    .notifications-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .notification-item {
+        padding: 1.2rem;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        transition: all 0.3s;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .notification-item:hover {
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        transform: translateX(4px);
+    }
+
+    .notification-item.unread {
+        background: #f4f3ff;
+        border-left: 4px solid #667eea;
+        font-weight: 500;
+    }
+
+    .notification-content {
+        flex: 1;
+    }
+
+    .notification-type {
+        display: inline-block;
+        padding: 0.3rem 0.6rem;
+        background: #ede9fe;
+        color: #007bff;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+    }
+
+    .notification-message {
+        font-size: 1rem;
+        color: #333;
+        margin: 0.5rem 0;
+    }
+
+    .notification-user {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: #666;
+        margin-top: 0.3rem;
+    }
+
+    .notification-user-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+
+    .notification-time {
+        font-size: 0.8rem;
+        color: #999;
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    .notification-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-direction: column;
+    }
+
+    .notification-action-btn {
+        padding: 0.3rem 0.6rem;
+        background: none;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .notification-action-btn:hover {
+        background: #f0f0f0;
+        border-color: #999;
+    }
+
+    .notification-action-btn.delete {
+        color: #d32f2f;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #999;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .notification-animation {
+        animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .unread-badge {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #ff5252;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+
+    /* Type-specific colors */
+    .notification-type.friend-request { background: #ede9fe; color: #667eea; }
+    .notification-type.friend-accepted { background: #dcfce7; color: #22c55e; }
+    .notification-type.comment { background: #fef3c7; color: #d97706; }
+    .notification-type.like { background: #fecaca; color: #dc3545; }
+    .notification-type.message { background: #cffafe; color: #0891b2; }
+    .notification-type.badge { background: #fce7f3; color: #be185d; }
+    .notification-type.connection { background: #e0e7ff; color: #4f46e5; }
+
+    /* AI Digest Section */
+    .ai-digest-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    }
+
+    .ai-digest-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.95;
+    }
+
+    .ai-digest-header::before {
+        content: '✨';
+        font-size: 1.2rem;
+    }
+
+    .ai-digest-text {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+        font-weight: 500;
+    }
+
+    .ai-digest-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.85rem;
+        opacity: 0.9;
+        flex-wrap: wrap;
+    }
+
+    .ai-digest-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+    }
+
+    .ai-digest-priority {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .ai-digest-priority.critical {
+        background: rgba(255, 59, 48, 0.3);
+    }
+
+    .ai-digest-priority.high {
+        background: rgba(255, 152, 0, 0.3);
+    }
+
+    .ai-digest-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .ai-action-btn {
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .ai-action-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: white;
+        transform: translateY(-1px);
+    }
+
+    .activity-popup-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(17, 18, 29, 0.66);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 1rem;
+    }
+
+    .activity-popup-overlay.open {
+        display: flex;
+    }
+
+    .activity-popup-card {
+        width: min(92vw, 560px);
+        background: #fff;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+    }
+
+    .activity-popup-header {
+        padding: 1.25rem 1.5rem;
+        color: white;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .activity-popup-title {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+
+    .activity-popup-date {
+        margin-top: 0.4rem;
+        font-size: 0.9rem;
+        opacity: 0.92;
+    }
+
+    .activity-popup-body {
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .activity-popup-section {
+        padding: 0.95rem 1rem;
+        border-radius: 12px;
+        background: #f7f8ff;
+        border: 1px solid #e7eaff;
+    }
+
+    .activity-popup-label {
+        display: inline-block;
+        margin-bottom: 0.45rem;
+        padding: 0.24rem 0.6rem;
+        border-radius: 999px;
+        background: #e4e9ff;
+        color: #4353b3;
+        font-size: 0.76rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .activity-popup-text {
+        white-space: pre-line;
+        line-height: 1.6;
+        color: #223042;
+    }
+
+    .activity-popup-footer {
+        padding: 0 1.5rem 1.5rem;
+    }
+
+    .activity-popup-button {
+        width: 100%;
+        border: none;
+        border-radius: 12px;
+        padding: 0.95rem 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+</style>
+{% endblock %}
+
+{% block body %}
+{% if activitySummaryPopup and not activitySummaryPopup.is_read %}
+<div id="activitySummaryPopup" class="activity-popup-overlay open" data-notification-id="{{ activitySummaryPopup.notification_id }}">
+    <div class="activity-popup-card" role="dialog" aria-modal="true" aria-labelledby="activitySummaryTitle">
+        <div class="activity-popup-header">
+            <h2 id="activitySummaryTitle" class="activity-popup-title">Ton résumé de la semaine</h2>
+            <div class="activity-popup-date">{{ activitySummaryPopup.created_at|date('d M Y H:i') }}</div>
+        </div>
+        <div id="activitySummaryContent" class="activity-popup-body"></div>
+        <div class="activity-popup-footer">
+            <button type="button" class="activity-popup-button" onclick="acknowledgeActivitySummary()">C'est noté !</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+<div class="notifications-container">
+    <div class="notification-header">
+        <h1>📬 Notifications</h1>
+        {% if unreadCount > 0 %}
+            <button class="mark-all-read-btn" onclick="markAllAsRead()">✓ Mark all read ({{ unreadCount }})</button>
+        {% endif %}
+    </div>
+
+    {# AI Digest Section #}
+    {% if aiDigest %}
+        <div class="ai-digest-container">
+            <div class="ai-digest-header">
+                <span>AI-Powered Summary</span>
+                <span style="margin-left: 0.5rem;" title="Powered by Groq AI">🤖</span>
+            </div>
+            <div class="ai-digest-text">{{ aiDigest.digest }}</div>
+            
+            {% if aiDigest.count_total > 0 %}
+                <div class="ai-digest-meta">
+                    <div class="ai-digest-count">
+                        📊 {{ aiDigest.count_condensed }} of {{ aiDigest.count_total }} highlighted
+                    </div>
+                    <div class="ai-digest-priority {% if aiDigest.priority == 'critical' %}critical{% elseif aiDigest.priority == 'high' %}high{% endif %}">
+                        {% if aiDigest.priority == 'critical' %}⚡ Critical{% elseif aiDigest.priority == 'high' %}🔔 High{% elseif aiDigest.priority == 'medium' %}📌 Medium{% else %}💤 Low{% endif %} Priority
+                    </div>
+                </div>
+
+                {% if aiDigest.actions|length > 0 %}
+                    <div class="ai-digest-actions">
+                        {% for action in aiDigest.actions %}
+                            <a href="{{ action.url }}" class="ai-action-btn">{{ action.label }}</a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {% if notifications|length == 0 %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🔔</div>
+            <h2 style="color: #666; margin: 1rem 0 0.5rem 0; font-size: 1.3rem;">No notifications yet</h2>
+            <p>You're all caught up! Come back when you receive updates.</p>
+        </div>
+    {% else %}
+        <div class="notifications-list" id="notificationsList">
+            {% for notification in notifications %}
+                <div class="notification-item {% if not notification.is_read %}unread{% endif %} notification-animation" id="notification-{{ notification.notification_id }}">
+                    <div class="notification-content">
+                        {% if not notification.is_read %}
+                            <span class="unread-badge"></span>
+                        {% endif %}
+                        
+                        {# Notification Type Badge #}
+                        <span class="notification-type {% if notification.type == 'FRIEND_REQUEST' %}friend-request{% elseif notification.type == 'FRIEND_ACCEPTED' %}friend-accepted{% elseif notification.type == 'COMMENT' %}comment{% elseif notification.type == 'LIKE' %}like{% elseif notification.type == 'MESSAGE' %}message{% elseif notification.type == 'BADGE_EARNED' %}badge{% elseif notification.type == 'CONNECTION_REQUEST' %}connection{% endif %}">
+                            {%- if notification.type == 'FRIEND_REQUEST' -%}👥 Friend Request
+                            {%- elseif notification.type == 'FRIEND_ACCEPTED' -%}✓ Friend Added
+                            {%- elseif notification.type == 'COMMENT' -%}💬 Comment
+                            {%- elseif notification.type == 'LIKE' -%}❤️ Like
+                            {%- elseif notification.type == 'MESSAGE' -%}📨 Message
+                            {%- elseif notification.type == 'CONNECTION_REQUEST' -%}🤝 Connection
+                            {%- elseif notification.type == 'BADGE_EARNED' -%}🏆 Badge
+                            {%- else -%}📌 {{ notification.type|replace({'_': ' '}) }}
+                            {%- endif -%}
+                        </span>
+                        
+                        {# Notification Message #}
+                        <div class="notification-message">{{ notification.content }}</div>
+                        
+                        {# Related User Info #}
+                        {% if notification.related_user_id %}
+                            <div class="notification-user">
+                                <div class="notification-user-avatar">{{ notification.related_username|first|upper }}</div>
+                                <strong>{{ notification.related_full_name ?? notification.related_username }}</strong>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    {# Time and Actions #}
+                    <div style="display: flex; align-items: flex-start; gap: 1rem; flex-direction: column; align-items: flex-end;">
+                        <div class="notification-time" title="{{ notification.created_at }}">
+                            {{ notification.created_at|date('d M Y H:i') }}
+                        </div>
+                        <div class="notification-actions">
+                            {% if not notification.is_read %}
+                                <button class="notification-action-btn" onclick="markNotificationAsRead({{ notification.notification_id }})" style="border-color: #667eea; color: #667eea;">
+                                    ✓ Mark Read
+                                </button>
+                            {% endif %}
+                            <button class="notification-action-btn delete" onclick="deleteNotification({{ notification.notification_id }})">
+                                ✕ Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<script>
+const activitySummaryPayload = {{ activitySummaryPopup ? activitySummaryPopup.content|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw : 'null' }};
+
+function parseActivitySummary(content) {
+    if (!content) return [];
+
+    const labels = [
+        ['RESUME:', 'Résumé'],
+        ['POSTS:', 'Posts'],
+        ['CLASSES:', 'Classes'],
+        ['HOBBIES:', 'Hobbies'],
+        ['MEETINGS:', 'Meetings'],
+        ['COMMENTS:', 'Commentaires'],
+        ['BADGES:', 'Badges'],
+    ];
+
+    return labels.map(([token, label], index) => {
+        const start = content.indexOf(token);
+        if (start === -1) return null;
+
+        const from = start + token.length;
+        const nextStarts = labels
+            .slice(index + 1)
+            .map(([nextToken]) => content.indexOf(nextToken, from))
+            .filter(position => position !== -1);
+        const to = nextStarts.length ? Math.min(...nextStarts) : content.length;
+        const text = content.slice(from, to).trim();
+
+        return text ? { label, text } : null;
+    }).filter(Boolean);
+}
+
+function renderActivitySummaryPopup() {
+    const container = document.getElementById('activitySummaryContent');
+    if (!container || !activitySummaryPayload) return;
+
+    const sections = parseActivitySummary(activitySummaryPayload);
+    if (!sections.length) {
+        container.innerHTML = `<div class="activity-popup-section"><div class="activity-popup-text">${activitySummaryPayload.replace(/\n/g, '<br>')}</div></div>`;
+        return;
+    }
+
+    container.innerHTML = sections.map(section => `
+        <div class="activity-popup-section">
+            <div class="activity-popup-label">${section.label}</div>
+            <div class="activity-popup-text">${section.text.replace(/\n/g, '<br>')}</div>
+        </div>
+    `).join('');
+}
+
+async function acknowledgeActivitySummary() {
+    const popup = document.getElementById('activitySummaryPopup');
+    if (!popup) return;
+
+    const notificationId = popup.dataset.notificationId;
+    if (notificationId) {
+        await markNotificationAsRead(notificationId);
+    }
+
+    popup.classList.remove('open');
+}
+
+async function markNotificationAsRead(notificationId) {
+    try {
+        const response = await fetch(`/notifications/api/mark-as-read/${notificationId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await response.json();
+        if (data.ok) {
+            updateNotificationUI(notificationId, true);
+        }
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+    }
+}
+
+async function markAllAsRead() {
+    try {
+        const response = await fetch('/notifications/api/mark-all-as-read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await response.json();
+        if (data.ok) {
+            const notifItems = document.querySelectorAll('.notification-item.unread');
+            notifItems.forEach(item => {
+                item.classList.remove('unread');
+                const btn = item.querySelector('[onclick*="markNotificationAsRead"]');
+                if (btn) btn.remove();
+            });
+            document.querySelector('.mark-all-read-btn').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error marking all notifications as read:', error);
+    }
+}
+
+async function deleteNotification(notificationId) {
+    try {
+        const response = await fetch(`/notifications/api/delete/${notificationId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await response.json();
+        if (data.ok) {
+            const elem = document.getElementById(`notification-${notificationId}`);
+            if (elem) {
+                elem.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => elem.remove(), 300);
+            }
+        }
+    } catch (error) {
+        console.error('Error deleting notification:', error);
+    }
+}
+
+function updateNotificationUI(notificationId, isRead) {
+    const elem = document.getElementById(`notification-${notificationId}`);
+    if (elem) {
+        elem.classList.remove('unread');
+        const badge = elem.querySelector('.unread-badge');
+        if (badge) badge.remove();
+        const btn = elem.querySelector('[onclick*="markNotificationAsRead"]');
+        if (btn) btn.remove();
+    }
+}
+
+// Auto-refresh notification count every 10 seconds
+setInterval(() => {
+    fetch('/notifications/api/count')
+        .then(r => r.json())
+        .then(data => {
+            const badge = document.querySelector('[data-notification-count]');
+            if (badge && data.unreadCount > 0) {
+                badge.textContent = data.unreadCount;
+                badge.style.display = 'inline';
+            }
+        })
+        .catch(err => console.warn('Failed to refresh notification count:', err));
+}, 10000);
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderActivitySummaryPopup();
+});
+</script>
+
+{% endblock %}

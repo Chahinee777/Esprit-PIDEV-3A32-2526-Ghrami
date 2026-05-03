@@ -1,0 +1,865 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}My Bookings | Ghrami{% endblock %}
+
+{% block body %}
+<div style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
+
+    {# ── Header ──────────────────────────────────────────────────────────── #}
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+        <div>
+            <h1 style="font-size: 48px; font-weight: 800; color: #1c1e21; margin: 0 0 8px 0;">📃 My Bookings</h1>
+            <p style="font-size: 16px; color: #65676b; margin: 0;">Track your enrollments, watch videos, and download certificates.</p>
+        </div>
+        <a href="{{ path('app_marketplace_index') }}"
+           style="background: white; border: 2px solid #e4e6eb; color: #1c1e21; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">
+            ← Back to Marketplace
+        </a>
+    </div>
+
+    {# ── Flash messages ───────────────────────────────────────────────────── #}
+    {% for message in app.flashes('success') %}
+        <div style="background:#dcfce7;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#166534;font-weight:600;">✓ {{ message }}</div>
+    {% endfor %}
+    {% for message in app.flashes('error') %}
+        <div style="background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:16px;color:#991b1b;font-weight:600;">✕ {{ message }}</div>
+    {% endfor %}
+
+    {# ── Booking cards ────────────────────────────────────────────────────── #}
+    {% if bookings is empty %}
+        <div style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 60px 40px; text-align: center;">
+            <div style="font-size: 64px; margin-bottom: 16px;">😙</div>
+            <h3 style="font-size: 20px; color: #1c1e21; margin: 0 0 8px 0;">No bookings yet</h3>
+            <p style="font-size: 14px; color: #65676b; margin: 0 0 24px 0;">Enroll in courses from our marketplace to get started.</p>
+            <a href="{{ path('app_marketplace_index') }}"
+               style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">
+                🛍 Browse Courses
+            </a>
+        </div>
+    {% else %}
+        <div style="display: grid; gap: 16px;">
+            {% for b in bookings %}
+                {% set statusLower = b.status|lower %}
+                {% set payLower    = b.payment_status|lower %}
+                {% set isCompleted = statusLower == 'completed' %}
+                {% set isPaid      = payLower == 'paid' %}
+                {% set isPending   = statusLower in ['pending','scheduled'] %}
+
+                <div style="background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); overflow: hidden;
+                            border-left: 4px solid {% if isCompleted %}#22c55e{% elseif isPaid %}#667eea{% elseif isPending %}#ffc107{% else %}#dc3545{% endif %};">
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 24px; padding: 20px;">
+
+                        {# Booking info #}
+                        <div>
+                            <p style="font-size: 12px; color: #8a8d91; text-transform: uppercase; font-weight: 600; margin: 0 0 8px 0;"># Booking</p>
+                            <div style="font-size: 16px; font-weight: 700; color: #1c1e21;">#{{ b.booking_id }}</div>
+                            <p style="font-size: 13px; color: #65676b; margin: 4px 0 0 0;">{{ b.booking_date }}</p>
+                        </div>
+
+                        {# Course details — clickable (FIX: was causing openClassDetail undefined error) #}
+                        <div style="cursor: pointer;" onclick="openClassDetail({{ b.class_id }})">
+                            <p style="font-size: 12px; color: #8a8d91; text-transform: uppercase; font-weight: 600; margin: 0 0 8px 0;">📄 Course</p>
+                            <div style="font-size: 15px; font-weight: 700; color: #667eea; margin-bottom: 4px; text-decoration: underline;">{{ b.class_title }}</div>
+                            <p style="font-size: 13px; color: #65676b; margin: 0;">{{ b.class_category ?: 'General' }} • {{ b.class_duration ?: 0 }} min</p>
+                        </div>
+
+                        {# Provider #}
+                        <div>
+                            <p style="font-size: 12px; color: #8a8d91; text-transform: uppercase; font-weight: 600; margin: 0 0 8px 0;">👤 Provider</p>
+                            <div style="font-size: 15px; font-weight: 700; color: #1c1e21;">{{ b.provider_name ?: '-' }}</div>
+                        </div>
+
+                        {# Payment status #}
+                        <div>
+                            <p style="font-size: 12px; color: #8a8d91; text-transform: uppercase; font-weight: 600; margin: 0 0 8px 0;">💳 Payment</p>
+                            <div style="background: {% if isPaid %}#d1fae5{% elseif payLower == 'pending' %}#fef3c7{% else %}#fee2e2{% endif %};
+                                        color: {% if isPaid %}#065f46{% elseif payLower == 'pending' %}#92400e{% else %}#7f1d1d{% endif %};
+                                        padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 13px; text-align: center; display: inline-block;">
+                                {{ b.payment_status|upper }}
+                            </div>
+                        </div>
+
+                        {# Amount + watch progress #}
+                        <div>
+                            <p style="font-size: 12px; color: #8a8d91; text-transform: uppercase; font-weight: 600; margin: 0 0 8px 0;">💲 Amount</p>
+                            <div style="font-size: 18px; font-weight: 700; color: #22c55e;">{{ b.total_amount }} TND</div>
+                            <p style="font-size: 12px; color: #65676b; margin: 4px 0 0 0;">
+                                Status: <strong>{{ b.status|upper }}</strong>
+                            </p>
+                            {% if b.watch_progress is defined and b.watch_progress is not null %}
+                                <div style="margin-top: 6px;">
+                                    <div style="background: #e5e7eb; border-radius: 4px; height: 6px; overflow: hidden;">
+                                        <div style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: {{ b.watch_progress }}%;"></div>
+                                    </div>
+                                    <p style="font-size: 11px; color: #8a8d91; margin: 3px 0 0 0;">{{ b.watch_progress }}% watched</p>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {# Rating #}
+                        <div>
+                            <p style="font-size: 12px; color: #8a8d91; text-transform: uppercase; font-weight: 600; margin: 0 0 8px 0;">⭐ Rating</p>
+                            {% if b.rating %}
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    {% for i in 1..5 %}
+                                        <span style="font-size: 16px; color: {% if i <= b.rating %}#f59e0b{% else %}#d1d5db{% endif %};">★</span>
+                                    {% endfor %}
+                                    <span style="font-size: 13px; font-weight: 700; color: #fbbf24; margin-left: 2px;">{{ b.rating }}/5</span>
+                                </div>
+                                <button type="button"
+                                        onclick="viewRating({{ b.booking_id }}, '{{ b.class_title|escape('js') }}', {{ b.rating }}, '{{ (b.review ?? '')|escape('js') }}')"
+                                        style="margin-top: 6px; background: white; border: 1px solid #e5e7eb; color: #667eea; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 11px; cursor: pointer;">
+                                    View Review
+                                </button>
+                            {% else %}
+                                <p style="font-size: 13px; color: #8a8d91; margin: 0;">Not rated yet</p>
+                                {% if isCompleted %}
+                                    <button type="button"
+                                            onclick="openRatingModal({{ b.booking_id }}, '{{ b.class_title|escape('js') }}')"
+                                            style="margin-top: 6px; background: #fbbf24; border: none; color: #78350f; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 11px; cursor: pointer;">
+                                        ⭐ Rate now
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {# ── Action buttons strip ─────────────────────────────── #}
+                    <div style="background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 12px 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+
+                        {# ▶️ Watch Video — for paid bookings (ported from desktop "Watch Class" button) #}
+                        {% if isPaid %}
+                            <button type="button"
+                                    onclick="watchVideoFromBooking({{ b.class_id }}, '{{ b.class_title|escape('js') }}')"
+                                    style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 8px 18px; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;">
+                                ▶️ Watch Video
+                            </button>
+                        {% elseif isPending %}
+                            {# Complete payment for pending bookings #}
+                            <button type="button"
+                                    onclick="completePayment({{ b.booking_id }}, {{ b.class_id }})"
+                                    style="background: linear-gradient(135deg, #635bff 0%, #4f46e5 100%); color: white; padding: 8px 18px; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;">
+                                💳 Complete Payment
+                            </button>
+                        {% endif %}
+
+                        {# 🧠 Take Quiz — answer questions and get smart feedback #}
+                        {% if isPaid %}
+                            <button type="button"
+                                    onclick="openQuizModal({{ b.class_id }}, '{{ b.class_title|escape('js') }}', '{{ b.class_category|escape('js') }}')"
+                                    style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 8px 18px; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;">
+                                🧠 Test Knowledge
+                            </button>
+                        {% endif %}
+
+                        {# 📄 Certificate — for completed bookings #}
+                        {% if isCompleted %}
+                            <a href="{{ path('app_marketplace_certificate_download', {bookingId: b.booking_id}) }}"
+                               style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 18px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px;">
+                                📄 Certificate
+                            </a>
+                        {% endif %}
+
+                        {# ⭐ Rate — completed, not rated #}
+                        {% if isCompleted and not b.rating %}
+                            <button type="button"
+                                    onclick="openRatingModal({{ b.booking_id }}, '{{ b.class_title|escape('js') }}')"
+                                    style="background: #fef3c7; color: #78350f; border: 1px solid #fbbf24; padding: 8px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;">
+                                ⭐ Rate Class
+                            </button>
+                        {% endif %}
+
+                        {# 🔍 View Details — always available #}
+                        <button type="button"
+                                onclick="openClassDetail({{ b.class_id }})"
+                                style="background: white; border: 1px solid #e5e7eb; color: #667eea; padding: 8px 18px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer;">
+                            🔍 View Details
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+{# ════════════════════ MODALS ════════════════════ #}
+
+{# ── Video Player Modal (ported from desktop showInAppVideoPlayer) ─────────── #}
+<div id="videoPlayerModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.95); z-index:1002; align-items:center; justify-content:center;">
+    <div style="background:black; border-radius:12px; max-width:90vw; width:100%; max-height:90vh; display:flex; flex-direction:column;" onclick="event.stopPropagation()">
+        <div style="padding:16px; background:#1c1e21; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333; border-radius:12px 12px 0 0;">
+            <h3 id="videoPlayerTitle" style="margin:0; font-size:16px; color:white; font-weight:600;">▶️ Class Video</h3>
+            <button onclick="closeVideoPlayer()" style="background:none; border:none; font-size:24px; cursor:pointer; color:white;">✕</button>
+        </div>
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; background:black; position:relative; min-height:400px;">
+            <div id="resumeIndicator" style="position:absolute; top:20px; left:20px; background:rgba(0,0,0,0.8); padding:8px 16px; border-radius:20px; color:#4CAF50; font-weight:600; font-size:13px; display:none; z-index:10;">
+                ⏩ Resuming from <span id="resumeTime">0:00</span>
+            </div>
+            <video id="videoPlayer" style="width:100%; height:100%; object-fit:contain; max-height:60vh;" controls controlsList="nodownload">
+                <source id="videoPlayerSource" type="video/mp4">
+                Your browser does not support HTML5 video.
+            </video>
+        </div>
+        <div style="padding:12px 16px; background:#1c1e21; border-top:1px solid #333; border-radius:0 0 12px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <div id="videoProgress" style="color:#65676b; font-size:12px;">0:00 / 0:00</div>
+            <div style="display:flex; gap:8px;">
+                <button onclick="downloadCertificate()" id="certificateBtn" style="background:#10b981; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:600; display:none;">📜 Download Certificate</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Class Detail Modal (same as marketplace, for clicking class titles) ────── #}
+<div id="classDetailModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; max-width:600px; width:90%; max-height:85vh; overflow-y:auto;" onclick="event.stopPropagation()">
+        <div style="padding:20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:white; z-index:10;">
+            <h2 id="detailTitle" style="margin:0; font-size:20px; color:#1c1e21;"></h2>
+            <button onclick="closeModal('classDetailModal')" style="background:none; border:none; font-size:24px; cursor:pointer; color:#65676b;">✕</button>
+        </div>
+        <div style="padding:20px;">
+            <div id="detailThumbnail" style="height:200px; border-radius:8px; margin-bottom:20px; display:flex; align-items:center; justify-content:center; color:white; font-size:64px; overflow:hidden;"></div>
+
+            <div id="videoSectionDetail" style="margin-bottom:20px; display:none;">
+                <button onclick="playVideoFromDetail()"
+                        style="background:linear-gradient(135deg,#ef4444 0%,#dc2626 100%); color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer;">
+                    ▶️ Watch Class Video
+                </button>
+            </div>
+
+            <div style="margin-bottom:16px;">
+                <h3 style="font-size:12px; color:#8a8d91; text-transform:uppercase; font-weight:600; margin-bottom:8px;">Description</h3>
+                <p id="detailDescription" style="margin:0; font-size:14px; color:#65676b; line-height:1.5;">-</p>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                <div>
+                    <h3 style="font-size:12px; color:#8a8d91; text-transform:uppercase; font-weight:600; margin-bottom:8px;">Duration</h3>
+                    <p id="detailDuration" style="margin:0; font-size:16px; font-weight:700; color:#1c1e21;">-</p>
+                </div>
+                <div>
+                    <h3 style="font-size:12px; color:#8a8d91; text-transform:uppercase; font-weight:600; margin-bottom:8px;">Price</h3>
+                    <p id="detailPrice" style="margin:0; font-size:16px; font-weight:700; color:#667eea;">-</p>
+                </div>
+            </div>
+            <button onclick="closeModal('classDetailModal')" style="width:100%; padding:10px 16px; border:1px solid #e5e7eb; background:white; border-radius:6px; font-weight:600; cursor:pointer; color:#1c1e21;">Close</button>
+        </div>
+    </div>
+</div>
+
+{# ── Rating Modal ─────────────────────────────────────────────────────────── #}
+<div id="ratingModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; max-width:420px; width:90%;" onclick="event.stopPropagation()">
+        <div style="background:linear-gradient(to right,#667eea,#764ba2); padding:20px; border-radius:12px 12px 0 0; display:flex; justify-content:space-between; align-items:center;">
+            <h2 style="margin:0; font-size:18px; font-weight:700; color:white;">⭐ How was the class?</h2>
+            <button onclick="closeRatingModal()" style="background:none; border:none; font-size:22px; cursor:pointer; color:rgba(255,255,255,0.8);">✕</button>
+        </div>
+        <div style="padding:20px 24px 16px;">
+            <p id="ratingClassTitle" style="font-size:13px; color:#65676b; font-style:italic; margin:0 0 20px 0;"></p>
+            <div style="display:flex; justify-content:center; gap:4px; margin-bottom:20px;" id="starRow">
+                {% for i in 1..5 %}
+                    <button class="star-btn" data-star="{{ i }}" onclick="selectRating({{ i }})" onmouseenter="hoverStars({{ i }})" onmouseleave="unhoverStars()">★</button>
+                {% endfor %}
+            </div>
+            <div>
+                <label style="display:block; font-size:12px; font-weight:600; color:#65676b; margin-bottom:6px; text-transform:uppercase;">Your Review (Optional)</label>
+                <textarea id="reviewText" placeholder="Share your experience..." rows="4"
+                          style="width:100%; padding:8px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:14px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px;">
+                <button onclick="closeRatingModal()" style="padding:10px 16px; border:1px solid #e5e7eb; background:white; border-radius:6px; font-weight:600; cursor:pointer; color:#1c1e21;">Skip</button>
+                <button onclick="submitRating()" style="padding:10px 16px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;">Submit Rating</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── View Rating Modal ────────────────────────────────────────────────────── #}
+<div id="viewRatingModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1001; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; max-width:400px; width:90%;" onclick="event.stopPropagation()">
+        <div style="padding:20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">
+            <h2 style="margin:0; font-size:20px; color:#1c1e21;">Your Rating</h2>
+            <button onclick="closeViewRatingModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#65676b;">✕</button>
+        </div>
+        <div style="padding:20px;">
+            <p id="viewRatingClassTitle" style="margin:0 0 16px 0; font-size:14px; color:#65676b; font-weight:600; font-style:italic;"></p>
+            <div style="background:#fef3c7; padding:16px; border-radius:8px; margin-bottom:16px; text-align:center;">
+                <div id="viewRatingStars" style="display:flex; justify-content:center; gap:4px; font-size:28px; margin-bottom:8px;"></div>
+                <p id="viewRatingText" style="margin:0; font-size:14px; color:#92400e; font-weight:700;"></p>
+            </div>
+            <div style="background:#f3f4f6; padding:12px; border-radius:8px; margin-bottom:16px;">
+                <p style="margin:0 0 8px 0; font-size:12px; font-weight:600; color:#65676b; text-transform:uppercase;">Your Review</p>
+                <p id="viewReviewText" style="margin:0; font-size:14px; color:#65676b; line-height:1.5;"></p>
+            </div>
+            <button onclick="closeViewRatingModal()" style="width:100%; padding:10px 16px; background:#f3f4f6; border:none; border-radius:6px; font-weight:600; cursor:pointer; color:#1c1e21;">Close</button>
+        </div>
+    </div>
+</div>
+
+{# ── Smart Feedback / Quiz Modal ──────────────────────────────────────────── #}
+<div id="quizModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; max-width:700px; width:90%; max-height:85vh; overflow-y:auto;" onclick="event.stopPropagation()">
+        
+        {# Header #}
+        <div style="background:linear-gradient(to right, #8b5cf6, #7c3aed); padding:20px; border-radius:12px 12px 0 0; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h2 style="margin:0; font-size:20px; font-weight:700; color:white;">🧠 Test Your Knowledge</h2>
+                <p id="quizSubtitle" style="margin:4px 0 0 0; font-size:13px; color:rgba(255,255,255,0.9);"></p>
+            </div>
+            <button onclick="closeQuizModal()" style="background:none; border:none; font-size:26px; cursor:pointer; color:white;">✕</button>
+        </div>
+
+        {# Content #}
+        <div style="padding:24px;">
+            
+            {# Question display #}
+            <div id="quizContent" style="margin-bottom:20px;">
+                <div id="questionDisplay" style="background:#f3f4f6; padding:16px; border-radius:8px; margin-bottom:20px; border-left:4px solid #8b5cf6;">
+                    <p id="currentQuestion" style="margin:0; font-size:15px; font-weight:600; color:#1c1e21; line-height:1.6;"></p>
+                </div>
+
+                {# Answer input #}
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:12px; font-weight:600; color:#65676b; margin-bottom:8px; text-transform:uppercase;">
+                        Your Answer
+                    </label>
+                    <textarea id="studentAnswer" placeholder="Type your answer here..." rows="4"
+                              style="width:100%; padding:10px 12px; border:2px solid #e5e7eb; border-radius:6px; font-size:14px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
+                </div>
+
+                {# Submit button #}
+                <button onclick="submitAnswer()" style="width:100%; padding:12px 16px; background:linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color:white; border:none; border-radius:6px; font-weight:600; font-size:14px; cursor:pointer;">
+                    ✓ Get Feedback
+                </button>
+            </div>
+
+            {# Feedback display (hidden initially) #}
+            <div id="feedbackContent" style="display:none;">
+                <div id="feedbackBox" style="background:#f0fdf4; border:2px solid #86efac; border-radius:8px; padding:16px; margin-bottom:20px;">
+                    
+                    {# Result badge #}
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+                        <div id="resultBadge" style="font-size:24px; font-weight:700;"></div>
+                        <div>
+                            <p id="resultText" style="margin:0; font-size:15px; font-weight:700; color:#065f46;"></p>
+                            <p id="scoreBadge" style="margin:2px 0 0 0; font-size:12px; color:#059669; font-weight:600;"></p>
+                        </div>
+                    </div>
+
+                    {# Main feedback #}
+                    <div style="background:white; padding:12px; border-radius:6px; margin-bottom:12px;">
+                        <p id="feedbackText" style="margin:0; font-size:14px; color:#1c1e21; line-height:1.6;"></p>
+                    </div>
+
+                    {# Reasoning #}
+                    <div style="background:white; padding:12px; border-radius:6px; margin-bottom:12px; border-left:3px solid #10b981;">
+                        <p style="margin:0 0 4px 0; font-size:11px; font-weight:600; color:#059669; text-transform:uppercase;">Why</p>
+                        <p id="reasoningText" style="margin:0; font-size:13px; color:#65676b;"></p>
+                    </div>
+
+                    {# Suggestions #}
+                    <div style="background:white; padding:12px; border-radius:6px; margin-bottom:12px;">
+                        <p style="margin:0 0 8px 0; font-size:11px; font-weight:600; color:#059669; text-transform:uppercase;">💡 Tips to improve</p>
+                        <ul id="suggestionsList" style="margin:0; padding-left:20px; color:#65676b; font-size:13px;">
+                        </ul>
+                    </div>
+
+                    {# Next lesson hint #}
+                    <div style="background:linear-gradient(135deg, #dbeafe, #e0f2fe); padding:12px; border-radius:6px; border-left:3px solid #0ea5e9;">
+                        <p style="margin:0 0 4px 0; font-size:11px; font-weight:600; color:#0369a1; text-transform:uppercase;">📚 Next topic</p>
+                        <p id="nextLessonText" style="margin:0; font-size:13px; color:#0c4a6e;"></p>
+                    </div>
+                </div>
+
+                {# Action buttons #}
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <button onclick="closeQuizModal()" style="padding:12px 16px; border:1px solid #e5e7eb; background:white; border-radius:6px; font-weight:600; cursor:pointer; color:#1c1e21;">
+                        Close
+                    </button>
+                    <button onclick="tryAnotherQuestion()" style="padding:12px 16px; background:linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer;">
+                        🔄 Try Another Question
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media (max-width: 1200px) {
+        div[style*="grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr"] { grid-template-columns: 1fr 1fr 1fr !important; }
+    }
+    @media (max-width: 768px) {
+        div[style*="grid-template-columns: 1fr 1fr 1fr"] { grid-template-columns: 1fr !important; }
+        h1 { font-size: 32px !important; }
+    }
+    .star-btn {
+        font-size: 40px; background: none; border: none; cursor: pointer; color: #d0d0d0;
+        transition: color 0.1s, transform 0.1s; padding: 0 4px; line-height: 1;
+    }
+    .star-btn:hover, .star-btn.hovered { color: #f39c12; transform: scale(1.15); }
+    .star-btn.selected { color: #f39c12; }
+</style>
+
+<script>
+    let currentBookingId      = null;
+    let currentClassId        = null;   // FIX: needed for openClassDetail + watch progress saving
+    let currentVideoBookingId = null;
+    let currentRating         = 0;
+    let videoAutoSaveInterval = null;
+
+    // ── Category helpers (ported from desktop, same as marketplace page) ────
+    function categoryGradient(cat) {
+        if (!cat) return 'linear-gradient(135deg, #667eea, #764ba2)';
+        const c = cat.toLowerCase();
+        if (['fitness','sport','yoga','health'].includes(c))          return 'linear-gradient(135deg, #f093fb, #f5576c)';
+        if (['tech','programming','coding','it','technology'].includes(c)) return 'linear-gradient(135deg, #4facfe, #00f2fe)';
+        if (['art','design','music'].includes(c))                     return 'linear-gradient(135deg, #43e97b, #38f9d7)';
+        if (['business','finance','marketing'].includes(c))           return 'linear-gradient(135deg, #fa709a, #fee140)';
+        if (['cooking','food'].includes(c))                           return 'linear-gradient(135deg, #f6d365, #fda085)';
+        if (['language','languages'].includes(c))                     return 'linear-gradient(135deg, #a18cd1, #fbc2eb)';
+        return 'linear-gradient(135deg, #667eea, #764ba2)';
+    }
+    function categoryEmoji(cat) {
+        if (!cat) return '📚';
+        const c = cat.toLowerCase();
+        if (['fitness','sport','yoga','health'].includes(c))          return '🏋️';
+        if (['tech','programming','coding','it','technology'].includes(c)) return '💻';
+        if (['art','design'].includes(c)) return '🎨';
+        if (c === 'music')                return '🎵';
+        if (['business','finance','marketing'].includes(c)) return '💼';
+        if (['cooking','food'].includes(c)) return '🍳';
+        return '📚';
+    }
+
+    // ── FIX: openClassDetail was called from the bookings page but was not defined here ──
+    function openClassDetail(classId) {
+        currentClassId = classId;
+        const url = '{{ path('app_marketplace_class_detail', {classId: 'CLASSID'}) }}'.replace('CLASSID', classId);
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('detailTitle').textContent       = data.title;
+                document.getElementById('detailDescription').textContent = data.description || '-';
+                document.getElementById('detailDuration').textContent    = data.duration + ' minutes';
+                document.getElementById('detailPrice').textContent       = data.price + ' TND';
+
+                const thumb = document.getElementById('detailThumbnail');
+                if (data.imageUrl) {
+                    thumb.innerHTML = `<img src="${data.imageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
+                } else {
+                    thumb.style.background = categoryGradient(data.category);
+                    thumb.innerHTML = `<span style="font-size:64px;">${categoryEmoji(data.category)}</span>`;
+                }
+
+                const vs = document.getElementById('videoSectionDetail');
+                if (data.isPaid && data.videoUrl) {
+                    currentVideoBookingId = data.bookingId;
+                    vs.style.display = 'block';
+                } else {
+                    vs.style.display = 'none';
+                }
+
+                document.getElementById('classDetailModal').style.display = 'flex';
+            })
+            .catch(e => console.error('Error loading class detail:', e));
+    }
+
+    function playVideoFromDetail() {
+        if (!currentClassId) return;
+        const url = '{{ path('app_marketplace_class_detail', {classId: 'CLASSID'}) }}'.replace('CLASSID', currentClassId);
+        fetch(url).then(r => r.json()).then(data => {
+            if (!data.videoUrl) { alert('❌ No video available for this class yet.'); return; }
+            closeModal('classDetailModal');
+            openVideoPlayer(data.title, data.videoUrl, data.bookingId, data.watchProgress);
+        });
+    }
+
+    // ── Watch video directly from a booking row ──────────────────────────────
+    function watchVideoFromBooking(classId, classTitle) {
+        currentClassId = classId;
+        const url = '{{ path('app_marketplace_class_detail', {classId: 'CLASSID'}) }}'.replace('CLASSID', classId);
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.videoUrl) {
+                    alert('❌ No video has been uploaded for this class yet.\n\nThe instructor will add the video shortly.');
+                    return;
+                }
+                openVideoPlayer(data.title, data.videoUrl, data.bookingId, data.watchProgress);
+            })
+            .catch(e => { console.error(e); alert('❌ Could not load video. Please try again.'); });
+    }
+
+    // ── Complete payment for a pending booking ───────────────────────────────
+    function completePayment(bookingId, classId) {
+        // Redirect to marketplace with the booking — let Stripe handle the rest
+        window.location.href = '{{ path('app_marketplace_index') }}';
+    }
+
+    // ── Video Player (ported from desktop showInAppVideoPlayer) ─────────────
+    function openVideoPlayer(title, videoUrl, bookingId, watchProgress) {
+        currentVideoBookingId = bookingId;
+        document.getElementById('videoPlayerTitle').textContent = '▶️ ' + title;
+        document.getElementById('videoPlayerSource').src = videoUrl;
+
+        const vp = document.getElementById('videoPlayer');
+        vp.load();
+
+        if (watchProgress > 0) {
+            vp.addEventListener('loadedmetadata', () => {
+                const secs = (vp.duration * watchProgress) / 100;
+                vp.currentTime = secs;
+                const m = Math.floor(secs / 60), s = Math.floor(secs % 60);
+                document.getElementById('resumeTime').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+                document.getElementById('resumeIndicator').style.display = 'block';
+                setTimeout(() => document.getElementById('resumeIndicator').style.display = 'none', 3000);
+            }, { once: true });
+        }
+
+        vp.addEventListener('timeupdate', () => {
+            const cur = Math.floor(vp.currentTime), tot = Math.floor(vp.duration || 0);
+            document.getElementById('videoProgress').textContent =
+                Math.floor(cur/60)+':'+(cur%60<10?'0':'')+cur%60+' / '+Math.floor(tot/60)+':'+(tot%60<10?'0':'')+tot%60;
+        });
+
+        clearInterval(videoAutoSaveInterval);
+        videoAutoSaveInterval = setInterval(() => {
+            if (vp.duration > 0) saveVideoProgress(Math.round((vp.currentTime / vp.duration) * 100));
+        }, 15000);
+
+        vp.addEventListener('ended', () => {
+            clearInterval(videoAutoSaveInterval);
+            saveVideoProgress(100);
+            markBookingComplete();
+            document.getElementById('certificateBtn').style.display = 'block';
+            alert('🎉 You\'ve finished the class! Your certificate is ready to download.');
+        }, { once: true });
+
+        document.getElementById('videoPlayerModal').style.display = 'flex';
+        vp.play();
+    }
+
+    function closeVideoPlayer() {
+        clearInterval(videoAutoSaveInterval);
+        const vp = document.getElementById('videoPlayer');
+        if (vp.duration > 0) saveVideoProgress(Math.round((vp.currentTime / vp.duration) * 100));
+        vp.pause();
+        document.getElementById('videoPlayerModal').style.display = 'none';
+        document.getElementById('certificateBtn').style.display = 'none';
+    }
+
+    function saveVideoProgress(progress) {
+        if (!currentClassId) return;
+        fetch('{{ path('app_marketplace_save_progress', {classId: 'CLASSID'}) }}'.replace('CLASSID', currentClassId), {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({ progress })
+        }).catch(e => console.error('Progress save error:', e));
+    }
+
+    function markBookingComplete() {
+        if (!currentVideoBookingId) return;
+        fetch('{{ path('app_marketplace_booking_complete') }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({ booking_id: currentVideoBookingId })
+        }).catch(e => console.error('Complete error:', e));
+    }
+
+    function downloadCertificate() {
+        if (!currentVideoBookingId) return;
+        window.location.href = '{{ path('app_marketplace_certificate_download', {bookingId: 'BOOKINGID'}) }}'.replace('BOOKINGID', currentVideoBookingId);
+    }
+
+    // ── Rating modal (ported from desktop showRatingDialog) ─────────────────
+    function hoverStars(n) {
+        document.querySelectorAll('#starRow .star-btn').forEach((btn, i) => btn.classList.toggle('hovered', i < n));
+    }
+    function unhoverStars() {
+        document.querySelectorAll('#starRow .star-btn').forEach(btn => btn.classList.remove('hovered'));
+        renderSelectedStars();
+    }
+    function selectRating(n) { currentRating = n; renderSelectedStars(); }
+    function renderSelectedStars() {
+        document.querySelectorAll('#starRow .star-btn').forEach((btn, i) => {
+            btn.classList.toggle('selected', i < currentRating);
+            btn.style.color = i < currentRating ? '#f39c12' : '#d0d0d0';
+        });
+    }
+
+    function openRatingModal(bookingId, className) {
+        currentBookingId = bookingId; currentRating = 0;
+        document.getElementById('ratingClassTitle').textContent = className;
+        document.getElementById('reviewText').value = '';
+        renderSelectedStars();
+        document.getElementById('ratingModal').style.display = 'flex';
+    }
+    function closeRatingModal() { document.getElementById('ratingModal').style.display = 'none'; }
+
+    function submitRating() {
+        if (currentRating === 0) { alert('⭐ Please select at least 1 star.'); return; }
+        const form = new FormData();
+        form.append('booking_id', currentBookingId);
+        form.append('rating', currentRating);
+        form.append('review', document.getElementById('reviewText').value);
+        fetch('{{ path('app_marketplace_booking_rate') }}', { method: 'POST', body: form })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) { alert('✅ Thank you! Your rating has been submitted.'); closeRatingModal(); location.reload(); }
+            })
+            .catch(e => { console.error(e); alert('❌ Failed to submit rating.'); });
+    }
+
+    function viewRating(bookingId, className, rating, review) {
+        document.getElementById('viewRatingClassTitle').textContent = className;
+        document.getElementById('viewRatingStars').innerHTML = [1,2,3,4,5].map(i =>
+            `<span style="color:${i<=rating?'#f59e0b':'#d1d5db'}">★</span>`).join('');
+        document.getElementById('viewRatingText').textContent = rating + ' out of 5 stars';
+        document.getElementById('viewReviewText').textContent = review || 'No written review provided.';
+        document.getElementById('viewRatingModal').style.display = 'flex';
+    }
+    function closeViewRatingModal() { document.getElementById('viewRatingModal').style.display = 'none'; }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // ── Smart Feedback / Quiz Functions ───────────────────────────────────────
+    const sampleQuestions = {
+        'coding': [
+            'What is Object-Oriented Programming and its main principles?',
+            'Explain the difference between a class and an object.',
+            'What is inheritance in programming?',
+            'How do you handle exceptions in code?',
+            'What is the difference between a function and a method?',
+        ],
+        'docker': [
+            'What is Docker and what problem does it solve?',
+            'Explain the difference between a Docker image and a container.',
+            'What is a Dockerfile and what does it contain?',
+            'How do you run a container from an image?',
+            'What are Docker volumes and why are they important?',
+        ],
+        'kubernetes': [
+            'What is Kubernetes and why is it used?',
+            'Explain what a Pod is in Kubernetes.',
+            'What is a Service in Kubernetes?',
+            'How do you deploy an application to Kubernetes?',
+            'What is a ConfigMap?',
+        ],
+        'football': [
+            'What are the main positions in football and their responsibilities?',
+            'Explain the offside rule and why it exists.',
+            'What makes an effective passing strategy?',
+            'How do defensive formations impact game play?',
+            'What are the key skills needed to be a good goalkeeper?',
+        ],
+        'music': [
+            'What are the basic music notes and their durations?',
+            'Explain the difference between major and minor scales.',
+            'What is rhythm and how does it relate to tempo?',
+            'How do you read sheet music?',
+            'What are the main instruments in an orchestra?',
+        ],
+        'web development': [
+            'What is the difference between HTML, CSS, and JavaScript?',
+            'Explain the concept of responsive design.',
+            'What is a REST API?',
+            'How does the DOM work in web browsers?',
+            'What is the difference between server-side and client-side rendering?',
+        ],
+        'symfony': [
+            'What is the Symfony framework and what are its main components?',
+            'Explain the MVC architecture used in Symfony.',
+            'What is a Symfony bundle?',
+            'How do Symfony controllers work?',
+            'What is dependency injection in Symfony?',
+        ],
+        'general': [
+            'Summarize what you learned from this lesson.',
+            'How would you apply this to a real-world scenario?',
+            'What was the most important concept from this section?',
+            'Explain one key takeaway in your own words.',
+        ]
+    };
+
+    let currentQuizClassId = null;
+    let currentQuizClassName = null;
+    let currentQuizCategory = null;
+
+    // Extract knowledge domain from class name/category
+    function getKnowledgeDomain(className, category) {
+        const combined = (className + ' ' + (category || '')).toLowerCase();
+        
+        // Check class name keywords
+        if (combined.includes('coding') || combined.includes('code') || combined.includes('programming')) return 'coding';
+        if (combined.includes('docker')) return 'docker';
+        if (combined.includes('kubernetes')) return 'kubernetes';
+        if (combined.includes('football') || combined.includes('soccer')) return 'football';
+        if (combined.includes('music') || combined.includes('violin') || combined.includes('guitar') || combined.includes('piano')) return 'music';
+        if (combined.includes('web') || combined.includes('html') || combined.includes('css') || combined.includes('javascript') || combined.includes('react')) return 'web development';
+        if (combined.includes('symfony') || combined.includes('php')) return 'symfony';
+        
+        return null;
+    }
+
+    function openQuizModal(classId, className, category) {
+        currentQuizClassId = classId;
+        currentQuizClassName = className;
+        currentQuizCategory = category || '';
+        
+        // Determine knowledge domain from class name/category
+        const domain = getKnowledgeDomain(className, category);
+        
+        const quizSubtitle = document.getElementById('quizSubtitle');
+        if (domain) {
+            quizSubtitle.textContent = `${className} - ${domain.charAt(0).toUpperCase() + domain.slice(1)} Knowledge`;
+        } else {
+            quizSubtitle.textContent = `${className} - General Knowledge`;
+        }
+        
+        // Select a random question - use domain-specific or general fallback
+        const questions = domain ? sampleQuestions[domain] : sampleQuestions['general'];
+        const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+        
+        document.getElementById('currentQuestion').textContent = randomQuestion;
+        document.getElementById('studentAnswer').value = '';
+        document.getElementById('quizContent').style.display = 'block';
+        document.getElementById('feedbackContent').style.display = 'none';
+        document.getElementById('quizModal').style.display = 'flex';
+    }
+
+    function closeQuizModal() {
+        document.getElementById('quizModal').style.display = 'none';
+    }
+
+    async function submitAnswer() {
+        const question = document.getElementById('currentQuestion').textContent;
+        const answer = document.getElementById('studentAnswer').value.trim();
+
+        if (!answer) {
+            alert('⚠️ Please enter an answer.');
+            return;
+        }
+
+        // Show loading state
+        const submitBtn = event.target;
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = '🔄 Analyzing...';
+        submitBtn.disabled = true;
+
+        try {
+            // Build detailed context including class name and category for AI validation
+            const domain = getKnowledgeDomain(currentQuizClassName, currentQuizCategory);
+            const contextDetails = `${currentQuizClassName}${currentQuizCategory ? ' (' + currentQuizCategory + ')' : ''}`;
+            const contextTopic = domain ? domain.charAt(0).toUpperCase() + domain.slice(1) : 'General Knowledge';
+            
+            const response = await fetch('{{ path('api_smart_feedback_analyze') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: question,
+                    answer: answer,
+                    context: `${contextDetails} - ${contextTopic} Test`,
+                    className: currentQuizClassName,
+                    category: currentQuizCategory
+                })
+            });
+
+            const data = await response.json();
+
+            if (!data.ok) {
+                alert('❌ ' + (data.error || 'Failed to get feedback.'));
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                return;
+            }
+
+            displayFeedback(data.feedback);
+        } catch (error) {
+            console.error('Feedback error:', error);
+            alert('❌ Error getting feedback. Please try again.');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+
+    function displayFeedback(feedback) {
+        const score = feedback.score;
+        
+        // Result badge and message based on SCORE
+        const resultBadge = document.getElementById('resultBadge');
+        const resultText = document.getElementById('resultText');
+        const scoreBadge = document.getElementById('scoreBadge');
+
+        if (score >= 85) {
+            resultBadge.textContent = '✅';
+            resultBadge.style.color = '#22c55e';
+            resultText.textContent = 'Excellent!';
+            resultText.style.color = '#065f46';
+        } else if (score >= 60) {
+            resultBadge.textContent = '⚠️';
+            resultBadge.style.color = '#f59e0b';
+            resultText.textContent = 'Acceptable';
+            resultText.style.color = '#92400e';
+        } else if (score >= 40) {
+            resultBadge.textContent = '❌';
+            resultBadge.style.color = '#ef4444';
+            resultText.textContent = 'Inadequate';
+            resultText.style.color = '#7f1d1d';
+        } else if (score >= 20) {
+            resultBadge.textContent = '💥';
+            resultBadge.style.color = '#dc2626';
+            resultText.textContent = 'Unacceptable';
+            resultText.style.color = '#7f1d1d';
+        } else {
+            resultBadge.textContent = '🚫';
+            resultBadge.style.color = '#991b1b';
+            resultText.textContent = 'FAILURE';
+            resultText.style.color = '#7f1d1d';
+        }
+
+        scoreBadge.textContent = `Score: ${score}/100`;
+
+        // Feedback text
+        document.getElementById('feedbackText').textContent = feedback.feedback;
+        document.getElementById('reasoningText').textContent = feedback.reasoning;
+
+        // Suggestions list
+        const suggestionsList = document.getElementById('suggestionsList');
+        suggestionsList.innerHTML = feedback.suggestions
+            .map(s => `<li style="margin-bottom:4px;">${s}</li>`)
+            .join('');
+
+        // Next lesson hint
+        document.getElementById('nextLessonText').textContent = feedback.nextLessonHint;
+
+        // Show feedback, hide question
+        document.getElementById('quizContent').style.display = 'none';
+        document.getElementById('feedbackContent').style.display = 'block';
+    }
+
+    function tryAnotherQuestion() {
+        const domain = getKnowledgeDomain(currentQuizClassName, currentQuizCategory);
+        const questions = domain ? sampleQuestions[domain] : sampleQuestions['general'];
+        const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+        
+        document.getElementById('currentQuestion').textContent = randomQuestion;
+        document.getElementById('studentAnswer').value = '';
+        document.getElementById('quizContent').style.display = 'block';
+        document.getElementById('feedbackContent').style.display = 'none';
+        
+        const submitBtn = document.querySelector('#quizContent button');
+        submitBtn.textContent = '✓ Get Feedback';
+        submitBtn.disabled = false;
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // Click-outside-to-close
+    ['ratingModal','viewRatingModal','classDetailModal','videoPlayerModal','quizModal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', e => {
+            if (e.target.id === id) id === 'videoPlayerModal' ? closeVideoPlayer() : closeModal(id);
+        });
+    });
+</script>
+{% endblock %}

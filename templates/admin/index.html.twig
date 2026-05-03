@@ -1,0 +1,2324 @@
+{% extends 'admin_layout.html.twig' %}
+
+{% block title %}Admin Dashboard | Ghrami{% endblock %}
+
+{% block body %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --c-primary:   #5a3fb8;
+    --c-primary-l: #7c5cff;
+    --c-primary-bg:#ede9fb;
+    --c-surface:   #ffffff;
+    --c-bg:        #f4f5f9;
+    --c-border:    #e8eaf0;
+    --c-text:      #1a1d23;
+    --c-muted:     #6b7280;
+    --c-danger:    #e53935;
+    --c-success:   #2e7d32;
+    --c-warn:      #e65100;
+    --sidebar-w:   240px;
+    --header-h:    64px;
+    --radius-lg:   16px;
+    --radius-md:   10px;
+    --shadow-sm:   0 1px 4px rgba(0,0,0,.07);
+    --shadow-md:   0 4px 20px rgba(0,0,0,.09);
+    --shadow-lg:   0 10px 40px rgba(0,0,0,.13);
+  }
+
+  /* ── Base ── */
+  .ad-root {
+    font-family: 'Sora', sans-serif;
+    background: var(--c-bg);
+    min-height: 100vh;
+    display: flex;
+    color: var(--c-text);
+  }
+
+  /* ════════════════════════════════════════
+     SIDEBAR
+  ════════════════════════════════════════ */
+  .ad-sidebar {
+    width: var(--sidebar-w);
+    min-height: 100vh;
+    background: var(--c-surface);
+    border-right: 1px solid var(--c-border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 200;
+    transition: transform .3s ease;
+  }
+
+  /* Logo */
+  .ad-sidebar-logo {
+    padding: 0 20px;
+    height: var(--header-h);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--c-border);
+    flex-shrink: 0;
+  }
+  .ad-logo-mark {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--c-primary), var(--c-primary-l));
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .ad-logo-mark svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ad-logo-text { line-height: 1; }
+  .ad-logo-name { font-size: 15px; font-weight: 800; color: var(--c-primary); letter-spacing: -.3px; }
+  .ad-logo-role { font-size: 10px; color: var(--c-muted); font-weight: 500; margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
+
+  /* Nav label */
+  .ad-nav-section {
+    padding: 20px 20px 6px;
+    font-size: 10px; font-weight: 700;
+    color: var(--c-muted);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+  }
+
+  /* Nav items */
+  .ad-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 12px;
+    scrollbar-width: none;
+  }
+  .ad-nav::-webkit-scrollbar { display: none; }
+
+  .ad-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--c-muted);
+    transition: background .15s, color .15s;
+    position: relative;
+    margin-bottom: 2px;
+    white-space: nowrap;
+  }
+  .ad-nav-item:hover {
+    background: var(--c-bg);
+    color: var(--c-text);
+  }
+  .ad-nav-item.active {
+    background: var(--c-primary-bg);
+    color: var(--c-primary);
+    font-weight: 700;
+  }
+  .ad-nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 6px; bottom: 6px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--c-primary);
+  }
+  .ad-nav-icon {
+    width: 20px; height: 20px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ad-nav-icon svg {
+    width: 17px; height: 17px;
+    stroke: currentColor; fill: none;
+    stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+  }
+
+  /* Sidebar footer */
+  .ad-sidebar-footer {
+    padding: 16px 12px;
+    border-top: 1px solid var(--c-border);
+  }
+  .ad-sidebar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    background: var(--c-bg);
+  }
+  .ad-sidebar-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--c-primary), var(--c-primary-l));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; color: #fff;
+    flex-shrink: 0;
+  }
+  .ad-sidebar-uname { font-size: 12px; font-weight: 700; color: var(--c-text); }
+  .ad-sidebar-urole { font-size: 10px; color: var(--c-muted); margin-top: 1px; }
+  .ad-sidebar-logout {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 8px;
+    padding: 9px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid #fecdd3;
+    background: #fff5f5;
+    color: var(--c-danger);
+    font-family: 'Sora', sans-serif;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background .15s;
+  }
+  .ad-sidebar-logout:hover { background: #fee2e2; }
+  .ad-sidebar-logout svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ════════════════════════════════════════
+     WORKSPACE (right of sidebar)
+  ════════════════════════════════════════ */
+  .ad-workspace {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── Top Header ── */
+  .ad-header {
+    position: sticky; top: 0; z-index: 100;
+    height: var(--header-h);
+    background: var(--c-surface);
+    border-bottom: 1px solid var(--c-border);
+    padding: 0 32px;
+    display: flex; align-items: center; gap: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .ad-header-title {
+    font-size: 17px; font-weight: 800;
+    color: var(--c-text); letter-spacing: -.3px;
+    flex: 1;
+  }
+  .ad-header-sub {
+    font-size: 12px; color: var(--c-muted);
+    font-weight: 400; margin-top: 1px;
+  }
+  .ad-header-right { display: flex; align-items: center; gap: 12px; }
+
+  /* ── Main ── */
+  .ad-main { padding: 28px 32px 48px; flex: 1; }
+
+  /* ── KPI Cards ── */
+  .ad-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .ad-kpi {
+    background: var(--c-surface);
+    border-radius: var(--radius-lg);
+    padding: 20px 18px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--c-border);
+    display: flex; align-items: center; gap: 14px;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .ad-kpi:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .ad-kpi-icon {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .ad-kpi-icon svg {
+    width: 20px; height: 20px;
+    stroke: #fff; fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .ad-kpi-icon-1 { background: linear-gradient(135deg,#667eea,#764ba2); }
+  .ad-kpi-icon-2 { background: linear-gradient(135deg,#f093fb,#f5576c); }
+  .ad-kpi-icon-3 { background: linear-gradient(135deg,#ffa726,#fb8c00); }
+  .ad-kpi-icon-4 { background: linear-gradient(135deg,#4CAF50,#2e7d32); }
+  .ad-kpi-icon-5 { background: linear-gradient(135deg,#26c6da,#00838f); }
+  .ad-kpi-icon-6 { background: linear-gradient(135deg,#ab47bc,#7b1fa2); }
+  .ad-kpi-icon-7 { background: linear-gradient(135deg,#ef5350,#b71c1c); }
+  .ad-kpi-icon-8 { background: linear-gradient(135deg,#42a5f5,#1565c0); }
+  .ad-kpi-value { font-size: 28px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+  .ad-kpi-value-1 { color: #667eea; }
+  .ad-kpi-value-2 { color: #f5576c; }
+  .ad-kpi-value-3 { color: #fb8c00; }
+  .ad-kpi-value-4 { color: #4CAF50; }
+  .ad-kpi-value-5 { color: #00838f; }
+  .ad-kpi-value-6 { color: #7b1fa2; }
+  .ad-kpi-value-7 { color: #b71c1c; }
+  .ad-kpi-value-8 { color: #1565c0; }
+  .ad-kpi-label { font-size: 11.5px; color: var(--c-muted); font-weight: 600; margin-top: 4px; }
+  .ad-kpi-detail { font-size: 10.5px; color: #adb0bb; margin-top: 3px; }
+
+  /* ── Tab Content ── */
+  .ad-content-card {
+    background: var(--c-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--c-border);
+    overflow: hidden;
+  }
+
+  /* Keep the old tab system hidden — tabs are now driven by sidebar */
+  .ad-tab-nav { display: none; }
+  .ad-tab-pane { display: none; padding: 28px 24px; }
+  .ad-tab-pane.active { display: block; }
+  /* Wrap tabs-wrap styling */
+  .ad-tabs-wrap {
+    background: var(--c-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--c-border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  /* ── Section header ── */
+  .ad-section-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 20px; flex-wrap: wrap; gap: 14px;
+  }
+  .ad-section-title { font-size: 18px; font-weight: 800; color: var(--c-text); letter-spacing: -.3px; }
+  .ad-section-sub { font-size: 12px; color: var(--c-muted); margin-top: 3px; }
+  .ad-section-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* ── Search ── */
+  .ad-search {
+    padding: 9px 16px;
+    background: var(--c-bg);
+    border: 1.5px solid var(--c-border);
+    border-radius: 8px;
+    font-size: 13px; font-family: 'Sora', sans-serif;
+    color: var(--c-text); outline: none; min-width: 200px;
+    transition: all .2s;
+  }
+  .ad-search::placeholder { color: #adb0bb; }
+  .ad-search:focus { background: white; border-color: var(--c-primary); box-shadow: 0 0 0 3px rgba(90,63,184,.1); }
+
+  /* ── Buttons ── */
+  .ad-btn {
+    padding: 9px 18px; border: none; border-radius: 8px;
+    font-size: 12.5px; font-weight: 700; font-family: 'Sora', sans-serif;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: filter .15s, transform .15s, box-shadow .15s;
+    white-space: nowrap;
+  }
+  .ad-btn:hover { filter: brightness(1.07); transform: translateY(-1px); }
+  .ad-btn:active { transform: translateY(0); filter: brightness(.97); }
+  .ad-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .ad-btn-purple { background: var(--c-primary); color: white; box-shadow: 0 2px 8px rgba(90,63,184,.3); }
+  .ad-btn-green  { background: #2e7d32; color: white; box-shadow: 0 2px 8px rgba(46,125,50,.3); }
+  .ad-btn-blue   { background: #1565c0; color: white; box-shadow: 0 2px 8px rgba(21,101,192,.3); }
+  .ad-btn-orange { background: #e65100; color: white; box-shadow: 0 2px 8px rgba(230,81,0,.3); }
+  .ad-btn-red    { background: #c62828; color: white; box-shadow: 0 2px 8px rgba(198,40,40,.3); }
+  .ad-btn-teal   { background: #00838f; color: white; box-shadow: 0 2px 8px rgba(0,131,143,.3); }
+  .ad-btn-sm { padding: 6px 12px; font-size: 11.5px; }
+  .ad-btn-icon { padding: 9px 11px; }
+
+  /* ── Tooltip ── */
+  [data-tip] { position: relative; }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 7px); left: 50%;
+    transform: translateX(-50%) scale(0.85);
+    background: #1c1e21; color: #fff;
+    padding: 5px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 600; white-space: nowrap;
+    pointer-events: none; opacity: 0;
+    transition: opacity .18s, transform .18s;
+    z-index: 300;
+  }
+  [data-tip]::before {
+    content: '';
+    position: absolute; bottom: calc(100% + 3px); left: 50%;
+    transform: translateX(-50%) scale(0.85);
+    border: 5px solid transparent; border-top-color: #1c1e21;
+    pointer-events: none; opacity: 0;
+    transition: opacity .18s, transform .18s;
+    z-index: 300;
+  }
+  [data-tip]:hover::after,
+  [data-tip]:hover::before { opacity: 1; transform: translateX(-50%) scale(1); }
+
+  /* ── Tables ── */
+  .ad-table-wrap {
+    background: var(--c-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--c-border);
+    overflow: hidden;
+    overflow-x: auto;
+  }
+  .ad-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+  .ad-table thead { background: var(--c-surface); }
+  .ad-table th {
+    padding: 13px 16px; font-size: 10.5px; font-weight: 700;
+    color: var(--c-primary); text-align: left; text-transform: uppercase;
+    letter-spacing: .7px; border-bottom: 1px solid var(--c-border);
+    cursor: pointer; user-select: none; white-space: nowrap;
+    transition: background .15s;
+  }
+  .ad-table th:hover { background: rgba(90,63,184,.04); }
+  .ad-table th.sort-asc::after  { content: ' ▲'; font-size: 9px; opacity:.7; }
+  .ad-table th.sort-desc::after { content: ' ▼'; font-size: 9px; opacity:.7; }
+  .ad-table th.no-sort { cursor: default; }
+  .ad-table th.no-sort:hover { background: none; }
+  .ad-table td {
+    padding: 11px 16px; font-size: 13px; color: #3d4049;
+    border-bottom: 1px solid #eef0f6; vertical-align: middle;
+  }
+  .ad-table tbody tr { background: var(--c-surface); transition: background .15s; }
+  .ad-table tbody tr:hover { background: #fafbff; }
+  .ad-table tbody tr:last-child td { border-bottom: none; }
+  .ad-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    object-fit: cover; background: #e0e0e0;
+    border: 2px solid var(--c-border);
+  }
+
+  /* ── Badges ── */
+  .ad-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 700;
+  }
+  .ad-badge-online    { background: #dcfce7; color: #166534; }
+  .ad-badge-offline   { background: #f3f4f6; color: #6b7280; }
+  .ad-badge-verified  { background: #dcfce7; color: #166534; }
+  .ad-badge-unverified{ background: #fff7ed; color: #c2410c; }
+  .ad-badge-google    { background: #eff6ff; color: #1d4ed8; }
+  .ad-badge-local     { background: #ede9fb; color: var(--c-primary); }
+  .ad-badge-accepted  { background: #dcfce7; color: #166534; }
+  .ad-badge-pending   { background: #fefce8; color: #854d0e; }
+  .ad-badge-rejected  { background: #fef2f2; color: #991b1b; }
+  .ad-badge-banned    { background: #fef2f2; color: #991b1b; }
+
+  .ad-action-group { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  /* ── Charts ── */
+  .ad-charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 18px; margin-top: 4px;
+  }
+  .ad-chart-card {
+    background: var(--c-surface); border-radius: var(--radius-lg);
+    padding: 20px; border: 1px solid var(--c-border);
+    box-shadow: var(--shadow-sm);
+  }
+  .ad-chart-card h4 { font-size: 13px; font-weight: 700; color: var(--c-text); margin-bottom: 16px; }
+  .ad-chart-wrap { position: relative; height: 260px; }
+  .ad-chart-wide { grid-column: 1 / -1; }
+
+  /* ── Analytics Detail Cards ── */
+  .ad-detail-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .ad-detail-card {
+    background: var(--c-surface); border-radius: var(--radius-lg);
+    border: 1px solid var(--c-border);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow .2s, transform .2s;
+  }
+  .ad-detail-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .ad-detail-card-head {
+    padding: 14px 18px;
+    font-size: 12.5px; font-weight: 800;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ad-detail-card-body { padding: 6px 0 10px; }
+  .ad-detail-stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 18px;
+    border-bottom: 1px solid #f5f6fa;
+    font-size: 13px;
+  }
+  .ad-detail-stat-row:last-child { border-bottom: none; }
+  .ad-detail-stat-label { color: var(--c-muted); font-weight: 500; }
+  .ad-detail-stat-value { font-weight: 800; }
+
+  .dcard-purple .ad-detail-card-head { background: #ede9fb22; color: var(--c-primary); border-bottom: 1px solid #e4ddfa; }
+  .dcard-purple .ad-detail-stat-value { color: var(--c-primary); }
+  .dcard-pink   .ad-detail-card-head { background: #fdf2f8; color: #be185d; border-bottom: 1px solid #fbdaef; }
+  .dcard-pink   .ad-detail-stat-value { color: #be185d; }
+  .dcard-orange .ad-detail-card-head { background: #fff7ed; color: #c2410c; border-bottom: 1px solid #fed7aa; }
+  .dcard-orange .ad-detail-stat-value { color: #c2410c; }
+  .dcard-green  .ad-detail-card-head { background: #f0fdf4; color: #166534; border-bottom: 1px solid #bbf7d0; }
+  .dcard-green  .ad-detail-stat-value { color: #166534; }
+  .dcard-teal   .ad-detail-card-head { background: #f0fdfa; color: #0f766e; border-bottom: 1px solid #99f6e4; }
+  .dcard-teal   .ad-detail-stat-value { color: #0f766e; }
+  .dcard-violet .ad-detail-card-head { background: #faf5ff; color: #7e22ce; border-bottom: 1px solid #e9d5ff; }
+  .dcard-violet .ad-detail-stat-value { color: #7e22ce; }
+  .dcard-red    .ad-detail-card-head { background: #fef2f2; color: #991b1b; border-bottom: 1px solid #fecaca; }
+  .dcard-red    .ad-detail-stat-value { color: #991b1b; }
+
+  /* ── Footer ── */
+  .ad-footer {
+    padding: 20px 32px;
+    font-size: 12px; font-weight: 500; color: var(--c-muted);
+    border-top: 1px solid var(--c-border);
+    background: var(--c-surface);
+  }
+
+  /* ── Modals ── */
+  .ad-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,8,40,0.5); z-index: 500;
+    align-items: center; justify-content: center;
+    overflow-y: auto; padding: 20px 0; backdrop-filter: blur(3px);
+  }
+  .ad-modal-overlay.show { display: flex; }
+  .ad-modal {
+    background: white; border-radius: 18px;
+    padding: 30px; width: 90%; max-width: 480px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    position: relative; margin: auto;
+  }
+  .ad-modal-lg { max-width: 580px; }
+  .ad-modal-close {
+    position: absolute; top: 16px; right: 18px;
+    background: var(--c-bg); border: none; border-radius: 6px;
+    font-size: 14px; width: 28px; height: 28px;
+    cursor: pointer; color: var(--c-muted); transition: color .2s, background .2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ad-modal-close:hover { color: var(--c-text); background: var(--c-border); }
+  .ad-modal-title { font-size: 18px; font-weight: 800; color: var(--c-text); margin-bottom: 20px; }
+
+  .ad-detail-row {
+    display: flex; justify-content: space-between;
+    padding: 9px 0; border-bottom: 1px solid #f0f2f5;
+    font-size: 13px;
+  }
+  .ad-detail-row:last-child { border-bottom: none; }
+  .ad-detail-label { font-weight: 700; color: var(--c-text); }
+  .ad-detail-value { color: var(--c-muted); }
+
+  .ad-form-group { margin-bottom: 16px; }
+  .ad-form-group label {
+    display: block; font-size: 11px; font-weight: 700;
+    color: var(--c-primary); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .ad-form-input {
+    width: 100%; padding: 10px 14px;
+    background: var(--c-bg); border: 1.5px solid var(--c-border);
+    border-radius: 8px; font-size: 13px; font-family: 'Sora', sans-serif;
+    color: var(--c-text); outline: none; transition: border-color .2s, box-shadow .2s;
+  }
+  .ad-form-input:focus { border-color: var(--c-primary); box-shadow: 0 0 0 3px rgba(90,63,184,.1); background: white; }
+  .ad-form-select {
+    width: 100%; padding: 10px 14px;
+    background: var(--c-bg); border: 1.5px solid var(--c-border);
+    border-radius: 8px; font-size: 13px; font-family: 'Sora', sans-serif;
+    color: var(--c-text); outline: none; cursor: pointer; appearance: none;
+    transition: border-color .2s;
+  }
+  .ad-form-select:focus { border-color: var(--c-primary); }
+  .ad-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .ad-form-actions { display: flex; gap: 10px; margin-top: 22px; justify-content: flex-end; }
+
+  /* ── Mobile ── */
+  .ad-sidebar-toggle {
+    display: none;
+    background: none; border: none; cursor: pointer;
+    width: 36px; height: 36px; border-radius: 8px;
+    align-items: center; justify-content: center;
+    color: var(--c-text);
+  }
+  .ad-sidebar-toggle svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+
+  @media (max-width: 900px) {
+    .ad-sidebar { transform: translateX(-100%); }
+    .ad-sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
+    .ad-workspace { margin-left: 0; }
+    .ad-sidebar-toggle { display: flex; }
+    .ad-main { padding: 20px 16px 40px; }
+    .ad-header { padding: 0 16px; }
+    .ad-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .ad-charts-grid { grid-template-columns: 1fr; }
+    .ad-form-row { grid-template-columns: 1fr; }
+    .ad-detail-cards-grid { grid-template-columns: 1fr; }
+    .ad-footer { padding: 16px; }
+  }
+</style>
+
+<div class="ad-root">
+
+  <!-- ════ Sidebar ════ -->
+  <aside class="ad-sidebar" id="adSidebar">
+
+    <div class="ad-sidebar-logo">
+      <div class="ad-logo-mark">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <div class="ad-logo-text">
+        <div class="ad-logo-name">Ghrami</div>
+        <div class="ad-logo-role">Admin Panel</div>
+      </div>
+    </div>
+
+    <div class="ad-nav" id="adNav">
+      <div class="ad-nav-section">Management</div>
+
+      <button class="ad-nav-item active" onclick="switchTab('users',this)">
+        <span class="ad-nav-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
+        Users
+      </button>
+
+      <button class="ad-nav-item" onclick="switchTab('providers',this)">
+        <span class="ad-nav-icon"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg></span>
+        Instructors
+      </button>
+
+      <button class="ad-nav-item" onclick="switchTab('classes',this)">
+        <span class="ad-nav-icon"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>
+        Classes
+      </button>
+
+      <button class="ad-nav-item" onclick="switchTab('hobbies',this)">
+        <span class="ad-nav-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+        Hobbies
+      </button>
+
+      <button class="ad-nav-item" onclick="switchTab('meetings',this)">
+        <span class="ad-nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+        Meetings
+      </button>
+
+      <button class="ad-nav-item" onclick="switchTab('friendships',this)">
+        <span class="ad-nav-icon"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></span>
+        Friendships
+      </button>
+
+      <button class="ad-nav-item" onclick="switchTab('badges',this)">
+        <span class="ad-nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></span>
+        Badges
+      </button>
+
+      <button class="ad-nav-item" onclick="switchTab('social',this)">
+        <span class="ad-nav-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
+        Social Media
+      </button>
+
+      <div class="ad-nav-section" style="margin-top:8px;">Insights</div>
+
+      <button class="ad-nav-item" onclick="switchTab('analytics',this)">
+        <span class="ad-nav-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>
+        Analytics
+      </button>
+    </div>
+
+    <div class="ad-sidebar-footer">
+      <div class="ad-sidebar-user">
+        <div class="ad-sidebar-avatar">{{ app.user.username|default('A')|slice(0, 1)|upper }}</div>
+        <div>
+          <div class="ad-sidebar-uname">{{ app.user.username|default('Admin') }}</div>
+          <div class="ad-sidebar-urole">Administrator</div>
+        </div>
+      </div>
+      <a href="{{ path('app_logout') }}" class="ad-sidebar-logout">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <!-- ════ Workspace ════ -->
+  <div class="ad-workspace">
+
+    <!-- Top Header -->
+    <header class="ad-header">
+      <button class="ad-sidebar-toggle" onclick="document.getElementById('adSidebar').classList.toggle('open')" aria-label="Toggle sidebar">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div>
+        <div class="ad-header-title" id="adPageTitle">Users</div>
+        <div class="ad-header-sub" id="adPageSub">Manage platform users</div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="ad-main">
+
+      <!-- KPI Grid -->
+      <div class="ad-kpi-grid">
+        <div class="ad-kpi">
+          <div class="ad-kpi-icon ad-kpi-icon-1">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+          <div>
+            <div class="ad-kpi-value ad-kpi-value-1">{{ stats.users }}</div>
+            <div class="ad-kpi-label">Total Users</div>
+            <div class="ad-kpi-detail">Online: {{ stats.active_users }}</div>
+          </div>
+        </div>
+        <div class="ad-kpi">
+          <div class="ad-kpi-icon ad-kpi-icon-2">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          </div>
+          <div>
+            <div class="ad-kpi-value ad-kpi-value-2">{{ stats.friendships ?? 0 }}</div>
+            <div class="ad-kpi-label">Friendships</div>
+            <div class="ad-kpi-detail">Active connections</div>
+          </div>
+        </div>
+        <div class="ad-kpi">
+          <div class="ad-kpi-icon ad-kpi-icon-3">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+          </div>
+          <div>
+            <div class="ad-kpi-value ad-kpi-value-3">{{ stats.badges ?? 13 }}</div>
+            <div class="ad-kpi-label">Badges</div>
+            <div class="ad-kpi-detail">Unique types</div>
+          </div>
+        </div>
+        <div class="ad-kpi">
+          <div class="ad-kpi-icon ad-kpi-icon-4">
+            <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+          </div>
+          <div>
+            <div class="ad-kpi-value ad-kpi-value-4">{{ stats.classes }}</div>
+            <div class="ad-kpi-label">Classes</div>
+            <div class="ad-kpi-detail">Bookings: {{ stats.bookings }}</div>
+          </div>
+        </div>
+        <div class="ad-kpi">
+          <div class="ad-kpi-icon ad-kpi-icon-5">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div>
+            <div class="ad-kpi-value ad-kpi-value-5">{{ stats.meetings ?? 22 }}</div>
+            <div class="ad-kpi-label">Meetings</div>
+            <div class="ad-kpi-detail">Scheduled</div>
+          </div>
+        </div>
+        <div class="ad-kpi">
+          <div class="ad-kpi-icon ad-kpi-icon-6">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div>
+            <div class="ad-kpi-value ad-kpi-value-6">{{ stats.hobbies ?? 18 }}</div>
+            <div class="ad-kpi-label">Hobbies</div>
+            <div class="ad-kpi-detail">Active tracked</div>
+          </div>
+        </div>
+        <div class="ad-kpi">
+          <div class="ad-kpi-icon ad-kpi-icon-7">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          </div>
+          <div>
+            <div class="ad-kpi-value ad-kpi-value-7">{{ stats.posts }}</div>
+            <div class="ad-kpi-label">Posts</div>
+            <div class="ad-kpi-detail">Comments: {{ stats.comments ?? 0 }}</div>
+          </div>
+        </div>
+        <div class="ad-kpi">
+          <div class="ad-kpi-icon ad-kpi-icon-8">
+            <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+          </div>
+          <div>
+            <div class="ad-kpi-value ad-kpi-value-8">{{ providers|length }}</div>
+            <div class="ad-kpi-label">Instructors</div>
+            <div class="ad-kpi-detail">Applications</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="ad-tabs-wrap">
+        <nav class="ad-tab-nav">
+          <button class="ad-tab-btn active" onclick="switchTab('users', this)">Users</button>
+          <button class="ad-tab-btn" onclick="switchTab('providers', this)">Instructors</button>
+          <button class="ad-tab-btn" onclick="switchTab('classes', this)">Classes</button>
+          <button class="ad-tab-btn" onclick="switchTab('hobbies', this)">Hobbies</button>
+          <button class="ad-tab-btn" onclick="switchTab('meetings', this)">Meetings</button>
+          <button class="ad-tab-btn" onclick="switchTab('friendships', this)">Friendships</button>
+          <button class="ad-tab-btn" onclick="switchTab('badges', this)">Badges</button>
+          <button class="ad-tab-btn" onclick="switchTab('social', this)">Social Media</button>
+          <button class="ad-tab-btn" onclick="switchTab('analytics', this)">Analytics</button>
+        </nav>
+
+        {# ════════════════════════ USERS TAB ════════════════════════ #}
+        <div id="tab-users" class="ad-tab-pane active">
+          <div class="ad-section-header">
+            <div>
+              <div class="ad-section-title">All Users</div>
+              <div class="ad-section-sub">Manage your platform users</div>
+            </div>
+            <div class="ad-section-actions">
+              <input class="ad-search" id="userSearch" type="text" placeholder="Search users...">
+            </div>
+          </div>
+          <div class="ad-table-wrap">
+            <table class="ad-table" id="usersTable">
+              <thead>
+                <tr>
+                  <th onclick="sortTable('usersTable',0,this)">ID</th>
+                  <th class="no-sort">Avatar</th>
+                  <th onclick="sortTable('usersTable',2,this)">Username</th>
+                  <th onclick="sortTable('usersTable',3,this)">Email</th>
+                  <th onclick="sortTable('usersTable',4,this)">Location</th>
+                  <th onclick="sortTable('usersTable',5,this)">Auth</th>
+                  <th onclick="sortTable('usersTable',6,this)">Status</th>
+                  <th class="no-sort">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for u in users %}
+                  <tr class="user-row"
+                      data-username="{{ u.username|lower }}"
+                      data-email="{{ u.email|lower }}"
+                      data-location="{{ u.location|default('')|lower }}">
+                    <td style="color:#adb0bb;font-size:12px;">{{ u.user_id }}</td>
+                    <td>
+                      <img src="" class="ad-avatar" alt="avatar"
+                           onerror="this.src='https://ui-avatars.com/api/?name={{ u.username|url_encode }}&background=667eea&color=fff&size=38'">
+                    </td>
+                    <td><strong>{{ u.username }}</strong></td>
+                    <td style="color:#65676b;">{{ u.email }}</td>
+                    <td style="color:#65676b;font-size:12px;">{{ u.location|default('—') }}</td>
+                    <td>
+                      <span class="ad-badge {% if u.auth_provider == 'google' %}ad-badge-google{% else %}ad-badge-local{% endif %}">
+                        {{ u.auth_provider == 'google' ? 'Google' : 'Local' }}
+                      </span>
+                    </td>
+                    <td>
+                      {% if u.is_banned %}
+                        <span class="ad-badge ad-badge-banned">Banned</span>
+                      {% elseif u.is_online %}
+                        <span class="ad-badge ad-badge-online">Online</span>
+                      {% else %}
+                        <span class="ad-badge ad-badge-offline">Offline</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div class="ad-action-group">
+                        <button class="ad-btn ad-btn-blue ad-btn-sm" data-tip="View user details"
+                                onclick="viewUser({{ u.user_id }}, '{{ u.username }}', '{{ u.email }}', {{ u.is_banned ? 1 : 0 }}, '{{ u.location|default('') }}', '{{ u.auth_provider }}')">
+                          View
+                        </button>
+                        <button class="ad-btn ad-btn-orange ad-btn-sm" data-tip="Edit this user"
+                                onclick="openEditUser({{ u.user_id }}, '{{ u.username }}', '{{ u.email }}', '{{ u.location|default('') }}')">
+                          Edit
+                        </button>
+                        <button class="ad-btn {% if u.is_banned %}ad-btn-green{% else %}ad-btn-purple{% endif %} ad-btn-sm"
+                                data-tip="{{ u.is_banned ? 'Unban this user' : 'Ban this user' }}"
+                                onclick="banUser({{ u.user_id }}, '{{ u.username }}')">
+                          {{ u.is_banned ? 'Unban' : 'Ban' }}
+                        </button>
+                        <button class="ad-btn ad-btn-red ad-btn-sm" data-tip="Permanently delete user"
+                                onclick="deleteUser({{ u.user_id }}, '{{ u.username }}')">
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="8" style="text-align:center;padding:40px;color:#adb0bb;">No users found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {# ════════════════════════ PROVIDERS TAB ════════════════════════ #}
+        <div id="tab-providers" class="ad-tab-pane">
+          <div class="ad-section-header">
+            <div>
+              <div class="ad-section-title">Instructor Applications</div>
+              <div class="ad-section-sub">Review and verify instructor applications</div>
+            </div>
+            <div class="ad-section-actions">
+              <input class="ad-search" id="providerSearch" type="text" placeholder="Search instructors...">
+            </div>
+          </div>
+          <div class="ad-table-wrap">
+            <table class="ad-table" id="providersTable">
+              <thead>
+                <tr>
+                  <th onclick="sortTable('providersTable',0,this)">ID</th>
+                  <th onclick="sortTable('providersTable',1,this)">Username</th>
+                  <th onclick="sortTable('providersTable',2,this)">Email</th>
+                  <th onclick="sortTable('providersTable',3,this)">Company / Studio</th>
+                  <th onclick="sortTable('providersTable',4,this)">Expertise</th>
+                  <th onclick="sortTable('providersTable',5,this)">Rating</th>
+                  <th onclick="sortTable('providersTable',6,this)">Status</th>
+                  <th class="no-sort">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in providers %}
+                  <tr class="provider-row"
+                      data-username="{{ p.username|lower }}"
+                      data-company="{{ p.company_name|default('')|lower }}"
+                      data-expertise="{{ p.expertise|default('')|lower }}">
+                    <td style="color:#adb0bb;font-size:12px;">{{ p.provider_id }}</td>
+                    <td><strong>{{ p.username }}</strong></td>
+                    <td style="color:#65676b;font-size:12px;">{{ p.email ?? '—' }}</td>
+                    <td>{{ p.company_name ?? '—' }}</td>
+                    <td>
+                      {% if p.expertise %}
+                        <span class="ad-badge ad-badge-local">{{ p.expertise }}</span>
+                      {% else %}
+                        <span style="color:#adb0bb;">—</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ p.rating ?? '0.0' }}</td>
+                    <td>
+                      <span class="ad-badge {% if p.is_verified %}ad-badge-verified{% else %}ad-badge-unverified{% endif %}">
+                        {{ p.is_verified ? 'Verified' : 'Pending' }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="ad-action-group">
+                        <form method="post" action="{{ path('app_admin_toggle_provider_verify') }}" style="display:inline;">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_provider_toggle') }}">
+                          <input type="hidden" name="provider_id" value="{{ p.provider_id }}">
+                          <button type="submit"
+                                  class="ad-btn {% if p.is_verified %}ad-btn-red{% else %}ad-btn-green{% endif %} ad-btn-sm"
+                                  data-tip="{{ p.is_verified ? 'Revoke verification' : 'Approve this instructor' }}">
+                            {{ p.is_verified ? 'Unverify' : 'Verify' }}
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="8" style="text-align:center;padding:40px;color:#adb0bb;">No providers found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {# ════════════════════════ CLASSES TAB ════════════════════════ #}
+        <div id="tab-classes" class="ad-tab-pane">
+          <div class="ad-section-header">
+            <div>
+              <div class="ad-section-title">Classes</div>
+              <div class="ad-section-sub">Manage all platform classes</div>
+            </div>
+            <div class="ad-section-actions">
+              <input class="ad-search" id="classSearch" type="text" placeholder="Search classes...">
+            </div>
+          </div>
+          <div class="ad-table-wrap">
+            <table class="ad-table" id="classesTable">
+              <thead>
+                <tr>
+                  <th onclick="sortTable('classesTable',0,this)">Title</th>
+                  <th onclick="sortTable('classesTable',1,this)">Provider</th>
+                  <th onclick="sortTable('classesTable',2,this)">Category</th>
+                  <th onclick="sortTable('classesTable',3,this)">Price</th>
+                  <th onclick="sortTable('classesTable',4,this)">Bookings</th>
+                  <th class="no-sort">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in classes %}
+                  <tr class="class-row"
+                      data-title="{{ c.title|lower }}"
+                      data-provider="{{ c.provider_username|lower }}">
+                    <td><strong>{{ c.title }}</strong></td>
+                    <td>{{ c.provider_username }}</td>
+                    <td><span class="ad-badge ad-badge-local">{{ c.category ?? 'General' }}</span></td>
+                    <td><strong>{{ c.price }} TND</strong></td>
+                    <td>{{ c.booking_count }}</td>
+                    <td>
+                      <form method="post" action="{{ path('app_admin_class_delete') }}"
+                            style="display:inline;"
+                            onsubmit="return confirm('Delete this class?');">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_class_delete') }}">
+                        <input type="hidden" name="class_id" value="{{ c.class_id }}">
+                        <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Delete this class permanently">Delete</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="6" style="text-align:center;padding:40px;color:#adb0bb;">No classes found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {# ════════════════════════ HOBBIES TAB ════════════════════════ #}
+        <div id="tab-hobbies" class="ad-tab-pane">
+          <div class="ad-section-header">
+            <div>
+              <div class="ad-section-title">Hobbies</div>
+              <div class="ad-section-sub">Manage user hobbies and logged hours</div>
+            </div>
+            <div class="ad-section-actions">
+              <input class="ad-search" id="hobbySearch" type="text" placeholder="Search hobbies...">
+            </div>
+          </div>
+          <div class="ad-table-wrap">
+            <table class="ad-table" id="hobbiesTable">
+              <thead>
+                <tr>
+                  <th onclick="sortTable('hobbiesTable',0,this)">ID</th>
+                  <th onclick="sortTable('hobbiesTable',1,this)">User</th>
+                  <th onclick="sortTable('hobbiesTable',2,this)">Hobby</th>
+                  <th onclick="sortTable('hobbiesTable',3,this)">Category</th>
+                  <th onclick="sortTable('hobbiesTable',4,this)">Hours</th>
+                  <th class="no-sort">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for h in hobbies %}
+                  <tr class="hobby-row"
+                      data-user="{{ h.username|lower }}"
+                      data-name="{{ h.name|lower }}"
+                      data-category="{{ (h.category ?? '')|lower }}">
+                    <td style="color:#adb0bb;font-size:12px;">{{ h.hobby_id }}</td>
+                    <td><strong>{{ h.username }}</strong></td>
+                    <td>{{ h.name }}</td>
+                    <td><span class="ad-badge ad-badge-local">{{ h.category ?? 'Other' }}</span></td>
+                    <td><strong>{{ h.total_hours|default(0)|round(1) }}h</strong></td>
+                    <td>
+                      <form method="post" action="{{ path('app_admin_hobby_delete') }}"
+                            style="display:inline;"
+                            onsubmit="return confirm('Delete hobby {{ h.name }} for {{ h.username }}?');">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_hobby_delete') }}">
+                        <input type="hidden" name="hobby_id" value="{{ h.hobby_id }}">
+                        <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Delete this hobby permanently">Delete</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="6" style="text-align:center;padding:40px;color:#adb0bb;">No hobbies found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {# ════════════════════════ MEETINGS TAB ════════════════════════ #}
+        <div id="tab-meetings" class="ad-tab-pane">
+          <div class="ad-section-header">
+            <div>
+              <div class="ad-section-title">Meetings</div>
+              <div class="ad-section-sub">Manage scheduled virtual and physical meetings</div>
+            </div>
+            <div class="ad-section-actions">
+              <input class="ad-search" id="meetingSearch" type="text" placeholder="Search meetings...">
+            </div>
+          </div>
+          <div class="ad-table-wrap">
+            <table class="ad-table" id="meetingsTable">
+              <thead>
+                <tr>
+                  <th onclick="sortTable('meetingsTable',0,this)">ID</th>
+                  <th onclick="sortTable('meetingsTable',1,this)">Organizer</th>
+                  <th onclick="sortTable('meetingsTable',2,this)">Type</th>
+                  <th onclick="sortTable('meetingsTable',3,this)">Status</th>
+                  <th onclick="sortTable('meetingsTable',4,this)">Scheduled</th>
+                  <th onclick="sortTable('meetingsTable',5,this)">Participants</th>
+                  <th class="no-sort">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for m in meetings %}
+                  <tr class="meeting-row"
+                      data-organizer="{{ m.organizer_username|lower }}"
+                      data-type="{{ m.meeting_type|lower }}"
+                      data-status="{{ (m.status ?? 'scheduled')|lower }}"
+                      data-location="{{ (m.location ?? '')|lower }}">
+                    <td style="color:#adb0bb;font-size:12px;">{{ m.meeting_id }}</td>
+                    <td><strong>{{ m.organizer_username }}</strong></td>
+                    <td><span class="ad-badge ad-badge-local">{{ m.meeting_type|capitalize }}</span></td>
+                    <td>
+                      {% set ms = (m.status ?? 'scheduled')|lower %}
+                      <span class="ad-badge {% if ms == 'completed' %}ad-badge-accepted{% elseif ms == 'cancelled' %}ad-badge-rejected{% else %}ad-badge-pending{% endif %}">
+                        {{ ms|capitalize }}
+                      </span>
+                    </td>
+                    <td style="color:#65676b;font-size:12px;">{{ m.scheduled_at ?? '—' }}</td>
+                    <td>{{ m.participant_count|default(0) }}</td>
+                    <td>
+                      <form method="post" action="{{ path('app_admin_meeting_delete') }}"
+                            style="display:inline;"
+                            onsubmit="return confirm('Delete meeting {{ m.meeting_id }}?');">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_meeting_delete') }}">
+                        <input type="hidden" name="meeting_id" value="{{ m.meeting_id }}">
+                        <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Delete this meeting permanently">Delete</button>
+                      </form>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="7" style="text-align:center;padding:40px;color:#adb0bb;">No meetings found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {# ════════════════════════ FRIENDSHIPS TAB ════════════════════════ #}
+        <div id="tab-friendships" class="ad-tab-pane">
+          <div class="ad-section-header">
+            <div>
+              <div class="ad-section-title">Friendship Management</div>
+              <div class="ad-section-sub">View, edit and remove user friendships</div>
+            </div>
+            <div class="ad-section-actions">
+              <input class="ad-search" id="friendshipSearch" type="text" placeholder="Search friendships...">
+              <select class="ad-form-select" id="friendshipFilter" onchange="filterFriendships()" style="min-width:130px;padding:9px 14px;border-radius:8px;">
+                <option value="">All Statuses</option>
+                <option value="accepted">Accepted</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+          <div class="ad-table-wrap">
+            <table class="ad-table" id="friendshipsTable">
+              <thead>
+                <tr>
+                  <th onclick="sortTable('friendshipsTable',0,this)">ID</th>
+                  <th onclick="sortTable('friendshipsTable',1,this)">User 1</th>
+                  <th onclick="sortTable('friendshipsTable',2,this)">User 2</th>
+                  <th onclick="sortTable('friendshipsTable',3,this)">Status</th>
+                  <th onclick="sortTable('friendshipsTable',4,this)">Created At</th>
+                  <th class="no-sort">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for f in friendships %}
+                  <tr class="friendship-row"
+                      data-user1="{{ f.user1_username|default(f.user1_id)|lower }}"
+                      data-user2="{{ f.user2_username|default(f.user2_id)|lower }}"
+                      data-status="{{ f.status|lower }}">
+                    <td style="color:#adb0bb;font-size:12px;">{{ f.friendship_id }}</td>
+                    <td><strong>{{ f.user1_username ?? f.user1_id }}</strong></td>
+                    <td><strong>{{ f.user2_username ?? f.user2_id }}</strong></td>
+                    <td>
+                      {% set st = f.status|lower %}
+                      <span class="ad-badge
+                        {% if st == 'accepted' %}ad-badge-accepted
+                        {% elseif st == 'pending' %}ad-badge-pending
+                        {% else %}ad-badge-rejected{% endif %}">
+                        {% if st == 'accepted' %}Accepted
+                        {% elseif st == 'pending' %}Pending
+                        {% else %}Rejected{% endif %}
+                      </span>
+                    </td>
+                    <td style="color:#65676b;font-size:12px;">{{ f.created_at ?? '—' }}</td>
+                    <td>
+                      <div class="ad-action-group">
+                        <button class="ad-btn ad-btn-orange ad-btn-sm" data-tip="Edit friendship status"
+                                onclick="openEditFriendship({{ f.friendship_id }}, '{{ f.user1_username ?? f.user1_id }}', '{{ f.user2_username ?? f.user2_id }}', '{{ f.status }}')">
+                          Edit
+                        </button>
+                        <form method="post" action="{{ path('app_admin_friendship_delete') }}"
+                              style="display:inline;"
+                              onsubmit="return confirm('Delete this friendship?');">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_friendship_delete') }}">
+                          <input type="hidden" name="friendship_id" value="{{ f.friendship_id }}">
+                          <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Remove this friendship">Delete</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="6" style="text-align:center;padding:40px;color:#adb0bb;">No friendships found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {# ════════════════════════ BADGES TAB ════════════════════════ #}
+        <div id="tab-badges" class="ad-tab-pane">
+          <div class="ad-section-header">
+            <div>
+              <div class="ad-section-title">Badge Management</div>
+              <div class="ad-section-sub">Create, edit and remove user badges</div>
+            </div>
+            <div class="ad-section-actions">
+              <input class="ad-search" id="badgeSearch" type="text" placeholder="Search badges...">
+              <button class="ad-btn ad-btn-purple" onclick="openAwardBadgeModal()" data-tip="Award a badge to a user">Award Badge</button>
+            </div>
+          </div>
+
+          {# Badge distribution mini-chart #}
+          <div style="background:var(--c-bg);border-radius:var(--radius-md);border:1px solid var(--c-border);padding:20px;margin-bottom:20px;">
+            <h4 style="font-size:13px;font-weight:700;color:var(--c-text);margin-bottom:14px;">Badge Distribution</h4>
+            <div style="position:relative;height:220px;"><canvas id="chartBadgeTab"></canvas></div>
+          </div>
+
+          {# Badge award statistics by name #}
+          {% if badgeStats is defined and badgeStats is not empty %}
+          <div style="background:var(--c-bg);border-radius:var(--radius-md);border:1px solid var(--c-border);padding:20px;margin-bottom:24px;">
+            <h4 style="font-size:13px;font-weight:700;color:var(--c-text);margin-bottom:14px;">Badge Catalog — Award Counts</h4>
+            <div class="ad-table-wrap" style="box-shadow:none;border:none;">
+              <table class="ad-table" id="badgeCatalogTable">
+                <thead>
+                  <tr>
+                    <th onclick="sortTable('badgeCatalogTable',0,this)">Badge Name</th>
+                    <th onclick="sortTable('badgeCatalogTable',1,this)" style="text-align:center;">Times Awarded</th>
+                    <th onclick="sortTable('badgeCatalogTable',2,this)">Last Awarded</th>
+                    <th class="no-sort">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for bs in badgeStats %}
+                    <tr>
+                      <td><span class="ad-badge ad-badge-local">{{ bs.name }}</span></td>
+                      <td style="text-align:center;font-weight:700;color:var(--c-primary);">{{ bs.total_awarded }}</td>
+                      <td style="color:#65676b;font-size:12px;">{{ bs.last_awarded }}</td>
+                      <td>
+                        <form method="post" action="{{ path('app_admin_badge_revoke_by_name') }}" style="display:inline;"
+                              onsubmit="return confirm('Revoke ALL «{{ bs.name }}» badges from every user? This cannot be undone.');">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_badge_revoke_name') }}">
+                          <input type="hidden" name="badge_name" value="{{ bs.name }}">
+                          <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Remove this badge from all users">Revoke All</button>
+                        </form>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="ad-table-wrap">
+            <table class="ad-table" id="badgesTable">
+              <thead>
+                <tr>
+                  <th onclick="sortTable('badgesTable',0,this)">ID</th>
+                  <th onclick="sortTable('badgesTable',1,this)">User</th>
+                  <th onclick="sortTable('badgesTable',2,this)">Badge Name</th>
+                  <th onclick="sortTable('badgesTable',3,this)">Description</th>
+                  <th onclick="sortTable('badgesTable',4,this)">Awarded At</th>
+                  <th class="no-sort">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for b in badges %}
+                  <tr class="badge-row"
+                      data-name="{{ b.badge_name|lower }}"
+                      data-user="{{ b.username|default('')|lower }}">
+                    <td style="color:#adb0bb;font-size:12px;">{{ b.badge_id }}</td>
+                    <td><strong>{{ b.username ?? b.user_id }}</strong></td>
+                    <td><span class="ad-badge ad-badge-local">{{ b.badge_name }}</span></td>
+                    <td style="color:#65676b;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                      {{ b.description ?? '—' }}
+                    </td>
+                    <td style="color:#65676b;font-size:12px;">{{ b.awarded_at ?? '—' }}</td>
+                    <td>
+                      <div class="ad-action-group">
+                        <button class="ad-btn ad-btn-blue ad-btn-sm" data-tip="View badge details"
+                                onclick="viewBadge({{ b.badge_id }}, '{{ b.badge_name }}', '{{ b.description ?? '' }}', '{{ b.username ?? b.user_id }}')">
+                          View
+                        </button>
+                        <button class="ad-btn ad-btn-orange ad-btn-sm" data-tip="Edit this badge"
+                                onclick="openEditBadgeModal({{ b.badge_id }}, '{{ b.badge_name|e('js') }}', '{{ (b.description ?? '')|e('js') }}')">
+                          Edit
+                        </button>
+                        <form method="post" action="{{ path('app_admin_badge_delete') }}"
+                              style="display:inline;"
+                              onsubmit="return confirm('Remove this badge from {{ b.username ?? b.user_id }}?');">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_badge_delete') }}">
+                          <input type="hidden" name="badge_id" value="{{ b.badge_id }}">
+                          <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Remove badge from user">Remove</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="6" style="text-align:center;padding:40px;color:#adb0bb;">No badges found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {# ════════════════════════ SOCIAL MEDIA TAB ════════════════════════ #}
+        <div id="tab-social" class="ad-tab-pane">
+
+          {# Posts sub-section #}
+          <div class="ad-section-header">
+            <div>
+              <div class="ad-section-title">Posts Moderation</div>
+              <div class="ad-section-sub">Review posts and open the comments list for each post</div>
+            </div>
+            <div class="ad-section-actions">
+              <input class="ad-search" id="postSearch" type="text" placeholder="Search posts or comments...">
+              <a href="{{ path('app_admin_post_export') }}" class="ad-btn ad-btn-green" data-tip="Export all posts to CSV">Export CSV</a>
+            </div>
+          </div>
+
+          <div class="ad-table-wrap" style="margin-bottom:36px;">
+            <table class="ad-table" id="postsTable">
+              <thead>
+                <tr>
+                  <th onclick="sortTable('postsTable',0,this)">ID</th>
+                  <th onclick="sortTable('postsTable',1,this)">Author</th>
+                  <th onclick="sortTable('postsTable',2,this)">Content</th>
+                  <th onclick="sortTable('postsTable',3,this)">Comments</th>
+                  <th onclick="sortTable('postsTable',4,this)">Likes</th>
+                  <th onclick="sortTable('postsTable',5,this)">Created</th>
+                  <th class="no-sort">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in posts %}
+                  <tr class="post-row" data-content="{{ p.content|lower }}" data-author="{{ p.username|lower }}" data-comments="{{ (p.comments_search ?? '')|lower }}">
+                    <td style="color:#adb0bb;font-size:12px;">{{ p.post_id }}</td>
+                    <td><strong>{{ p.username }}</strong></td>
+                    <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#444;">
+                      {% if p.image_url %}<span title="Has image">[img] </span>{% endif %}
+                      {{ p.content|slice(0,100) }}{% if p.content|length > 100 %}…{% endif %}
+                    </td>
+                    <td style="text-align:center;">
+                      <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+                        <span class="ad-badge ad-badge-local">{{ p.comment_count }}</span>
+                        <button type="button"
+                                class="ad-btn ad-btn-blue ad-btn-sm"
+                                onclick="togglePostComments({{ p.post_id }}, this)"
+                                data-tip="Open this post comments">
+                          {{ p.comment_count > 0 ? 'View comments' : 'No comments' }}
+                        </button>
+                      </div>
+                    </td>
+                    <td style="text-align:center;">
+                      <span class="ad-badge ad-badge-accepted">{{ p.like_count }}</span>
+                    </td>
+                    <td style="color:#65676b;font-size:12px;">{{ p.created_at }}</td>
+                    <td>
+                      <div class="ad-action-group">
+                        <button class="ad-btn ad-btn-blue ad-btn-sm" data-tip="View full post"
+                                onclick="viewPost({{ p.post_id }}, {{ p.content|json_encode }}, '{{ p.username }}', '{{ p.created_at }}', {{ p.comment_count }}, {{ p.like_count }}, '{{ p.image_url ?? '' }}')">
+                          View
+                        </button>
+                        <button class="ad-btn ad-btn-orange ad-btn-sm" data-tip="Edit post content"
+                                onclick="openEditPostModal({{ p.post_id }}, {{ p.content|json_encode }})">
+                          Edit
+                        </button>
+                        <form method="post" action="{{ path('app_admin_post_delete') }}" style="display:inline;"
+                              onsubmit="return confirm('Delete this post by {{ p.username }}? This also removes its comments and likes.');">
+                          <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_post_delete') }}">
+                          <input type="hidden" name="post_id" value="{{ p.post_id }}">
+                          <button type="submit" class="ad-btn ad-btn-red ad-btn-sm" data-tip="Delete post permanently">Delete</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr id="post-comments-{{ p.post_id }}" class="post-comments-row" style="display:none;">
+                    <td colspan="7" style="background:#fafbff;padding:0;">
+                      <div style="padding:18px 22px;border-top:1px solid #edf0f6;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
+                          <div style="font-size:13px;font-weight:700;color:#1c1e21;">Comments for post #{{ p.post_id }}</div>
+                          <div style="font-size:12px;color:#9095a0;">{{ p.comment_count }} total</div>
+                        </div>
+                        {% if p.comments_list is not empty %}
+                          <div style="display:flex;flex-direction:column;gap:12px;">
+                            {% for c in p.comments_list %}
+                              <div style="background:#fff;border:1px solid #e8ebf2;border-radius:12px;padding:14px 16px;">
+                                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+                                  <div style="min-width:0;flex:1;">
+                                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+                                      <strong style="color:#1c1e21;">{{ c.username }}</strong>
+                                      <span style="font-size:12px;color:#9095a0;">#{{ c.comment_id }}</span>
+                                      <span style="font-size:12px;color:#9095a0;">{{ c.created_at }}</span>
+                                    </div>
+                                    <div style="font-size:13px;line-height:1.55;color:#444;white-space:pre-wrap;word-break:break-word;">
+                                      {{ c.content ?: '—' }}
+                                    </div>
+                                  </div>
+                                  <div class="ad-action-group">
+                                    <button class="ad-btn ad-btn-orange ad-btn-sm"
+                                            type="button"
+                                            onclick="openEditCommentModal({{ c.comment_id }}, {{ c.content|json_encode }})">
+                                      Edit
+                                    </button>
+                                    <form method="post" action="{{ path('app_admin_comment_delete') }}" style="display:inline;"
+                                          onsubmit="return confirm('Delete this comment by {{ c.username }}?');">
+                                      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_comment_delete') }}">
+                                      <input type="hidden" name="comment_id" value="{{ c.comment_id }}">
+                                      <button type="submit" class="ad-btn ad-btn-red ad-btn-sm">Delete</button>
+                                    </form>
+                                  </div>
+                                </div>
+                              </div>
+                            {% endfor %}
+                          </div>
+                        {% else %}
+                          <div style="padding:14px 16px;background:#fff;border:1px dashed #dde3ee;border-radius:12px;color:#9095a0;font-size:13px;text-align:center;">
+                            No comments for this post.
+                          </div>
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr><td colspan="7" style="text-align:center;padding:40px;color:#adb0bb;">No posts found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {# ════════════════════════ ANALYTICS TAB ════════════════════════ #}
+        <div id="tab-analytics" class="ad-tab-pane">
+          <div class="ad-section-header">
+            <div>
+              <div class="ad-section-title">Platform Analytics</div>
+              <div class="ad-section-sub">Charts, breakdowns and performance overview</div>
+            </div>
+            <div class="ad-section-actions">
+              <button class="ad-btn ad-btn-purple" onclick="exportAnalyticsPDF()" data-tip="Download full analytics as PDF">Export PDF</button>
+            </div>
+          </div>
+
+          <!-- AI Insights Section -->
+          <div style="margin: 20px 0 30px 0; padding: 20px; background: white; border-radius: 12px; border: 1px solid var(--c-border); box-shadow: var(--shadow-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="margin: 0; color: var(--c-primary);">🤖 AI Platform Insights</h3>
+              <button id="load-ai-insights-btn" style="padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                💡 Load Insights
+              </button>
+            </div>
+            <div id="ai-insights-container" style="min-height: 100px; padding: 16px; background: #f9fafb; border-radius: 8px; border-left: 4px solid #667eea; display: none;">
+              <div style="color: #999; text-align: center; padding: 20px;">Click the button above to generate AI-powered insights...</div>
+            </div>
+            <div id="ai-insights-loading" style="display: none; text-align: center; padding: 20px;">
+              <p style="color: #667eea; font-weight: 600;">⏳ Generating insights...</p>
+            </div>
+          </div>
+
+          {# 7 Detail Cards #}
+          <div class="ad-detail-cards-grid">
+            <div class="ad-detail-card dcard-purple">
+              <div class="ad-detail-card-head">Users Analytics</div>
+              <div class="ad-detail-card-body">
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Total Users</span><span class="ad-detail-stat-value">{{ stats.users }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Online Now</span><span class="ad-detail-stat-value">{{ stats.active_users }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Banned</span><span class="ad-detail-stat-value">{{ stats.banned_users ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Google Sign-In</span><span class="ad-detail-stat-value">{{ stats.google_users ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Local Accounts</span><span class="ad-detail-stat-value">{{ stats.local_users ?? 0 }}</span></div>
+              </div>
+            </div>
+            <div class="ad-detail-card dcard-pink">
+              <div class="ad-detail-card-head">Social Stats</div>
+              <div class="ad-detail-card-body">
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Total Posts</span><span class="ad-detail-stat-value">{{ stats.posts }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Comments</span><span class="ad-detail-stat-value">{{ stats.comments ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Likes</span><span class="ad-detail-stat-value">{{ stats.likes ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Stories</span><span class="ad-detail-stat-value">{{ stats.stories ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Active Friendships</span><span class="ad-detail-stat-value">{{ stats.accepted_friendships ?? 0 }}</span></div>
+              </div>
+            </div>
+            <div class="ad-detail-card dcard-orange">
+              <div class="ad-detail-card-head">Classes &amp; Revenue</div>
+              <div class="ad-detail-card-body">
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Total Classes</span><span class="ad-detail-stat-value">{{ stats.classes }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Total Bookings</span><span class="ad-detail-stat-value">{{ stats.bookings }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Completed</span><span class="ad-detail-stat-value">{{ stats.completed_bookings ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Pending</span><span class="ad-detail-stat-value">{{ stats.pending_bookings ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Total Revenue</span><span class="ad-detail-stat-value">{{ stats.total_revenue ?? '0.00' }} TND</span></div>
+              </div>
+            </div>
+            <div class="ad-detail-card dcard-green">
+              <div class="ad-detail-card-head">Hobbies Details</div>
+              <div class="ad-detail-card-body">
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Total Hobbies</span><span class="ad-detail-stat-value">{{ stats.hobbies ?? 18 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Total Hours</span><span class="ad-detail-stat-value">{{ stats.hobby_hours ?? '0.0' }} hrs</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Milestones</span><span class="ad-detail-stat-value">{{ stats.milestones ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Achieved</span><span class="ad-detail-stat-value">{{ stats.achieved_milestones ?? 0 }}</span></div>
+              </div>
+            </div>
+            <div class="ad-detail-card dcard-teal">
+              <div class="ad-detail-card-head">Meetings Breakdown</div>
+              <div class="ad-detail-card-body">
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Total Meetings</span><span class="ad-detail-stat-value">{{ stats.meetings ?? 22 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Scheduled</span><span class="ad-detail-stat-value">{{ stats.scheduled_meetings ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Completed</span><span class="ad-detail-stat-value">{{ stats.completed_meetings ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Cancelled</span><span class="ad-detail-stat-value">{{ stats.cancelled_meetings ?? 0 }}</span></div>
+              </div>
+            </div>
+            <div class="ad-detail-card dcard-violet">
+              <div class="ad-detail-card-head">Badges Distribution</div>
+              <div class="ad-detail-card-body">
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Total Badges</span><span class="ad-detail-stat-value">{{ stats.badges ?? 13 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Unique Types</span><span class="ad-detail-stat-value">{{ stats.unique_badge_types ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Social Butterfly</span><span class="ad-detail-stat-value">{{ stats.badge_social ?? 45 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Class Hero</span><span class="ad-detail-stat-value">{{ stats.badge_class ?? 38 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Hobby Master</span><span class="ad-detail-stat-value">{{ stats.badge_hobby ?? 32 }}</span></div>
+              </div>
+            </div>
+            <div class="ad-detail-card dcard-red">
+              <div class="ad-detail-card-head">Friendships Status</div>
+              <div class="ad-detail-card-body">
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Total</span><span class="ad-detail-stat-value">{{ stats.friendships ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Accepted</span><span class="ad-detail-stat-value">{{ stats.accepted_friendships ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Pending</span><span class="ad-detail-stat-value">{{ stats.pending_friendships ?? 0 }}</span></div>
+                <div class="ad-detail-stat-row"><span class="ad-detail-stat-label">Rejected</span><span class="ad-detail-stat-value">{{ stats.rejected_friendships ?? 0 }}</span></div>
+              </div>
+            </div>
+          </div>{# /detail-cards-grid #}
+
+          {# Charts #}
+          <div class="ad-charts-grid">
+            <div class="ad-chart-card ad-chart-wide">
+              <h4>Full Platform Overview — All 10 Modules</h4>
+              <div class="ad-chart-wrap" style="height:320px;"><canvas id="chartPopulation"></canvas></div>
+            </div>
+            <div class="ad-chart-card">
+              <h4>Bookings Status</h4>
+              <div class="ad-chart-wrap"><canvas id="chartBookings"></canvas></div>
+            </div>
+            <div class="ad-chart-card">
+              <h4>Meetings Status</h4>
+              <div class="ad-chart-wrap"><canvas id="chartMeetings"></canvas></div>
+            </div>
+            <div class="ad-chart-card">
+              <h4>Top Badges</h4>
+              <div class="ad-chart-wrap"><canvas id="chartBadges"></canvas></div>
+            </div>
+            <div class="ad-chart-card">
+              <h4>Friendship Status Split</h4>
+              <div class="ad-chart-wrap"><canvas id="chartFriendships"></canvas></div>
+            </div>
+          </div>{# /charts-grid #}
+        </div>{# /analytics #}
+
+      </div>{# /tabs-wrap #}
+
+    </div>{# /main #}
+
+    <footer class="ad-footer">© 2026 Ghrami by OPGG — Admin Control Panel</footer>
+
+  </div>{# /workspace #}
+</div>{# /root #}
+
+{# ════════════════ MODALS ════════════════ #}
+
+{# ── View User ── #}
+<div id="userModal" class="ad-modal-overlay">
+  <div class="ad-modal">
+    <button class="ad-modal-close" onclick="closeModal('userModal')">✕</button>
+    <div class="ad-modal-title">👤 User Details</div>
+    <div class="ad-detail-row"><span class="ad-detail-label">User ID</span><span class="ad-detail-value" id="modalUserId">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Username</span><span class="ad-detail-value" id="modalUsername">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Email</span><span class="ad-detail-value" id="modalEmail">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Location</span><span class="ad-detail-value" id="modalLocation">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Auth</span><span class="ad-detail-value" id="modalAuth">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Status</span><span class="ad-detail-value" id="modalStatus">-</span></div>
+  </div>
+</div>
+
+{# ── Edit User ── #}
+<div id="editUserModal" class="ad-modal-overlay">
+  <div class="ad-modal ad-modal-lg">
+    <button class="ad-modal-close" onclick="closeModal('editUserModal')">✕</button>
+    <div class="ad-modal-title">✏️ Edit User</div>
+    <form method="post" action="{{ path('app_admin_user_edit') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_user_edit') }}">
+      <input type="hidden" name="user_id" id="editUserId">
+      <div class="ad-form-row">
+        <div class="ad-form-group">
+          <label>Username</label>
+          <input type="text" name="username" id="editUsername" class="ad-form-input" required placeholder="Username">
+        </div>
+        <div class="ad-form-group">
+          <label>Email</label>
+          <input type="email" name="email" id="editEmail" class="ad-form-input" required placeholder="Email">
+        </div>
+      </div>
+      <div class="ad-form-group">
+        <label>Location</label>
+        <input type="text" name="location" id="editLocation" class="ad-form-input" placeholder="City, Country">
+      </div>
+      <div class="ad-form-group">
+        <label>New Password <span style="font-weight:400;color:#adb0bb;">(leave blank to keep current)</span></label>
+        <input type="password" name="password" class="ad-form-input" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="ad-form-actions">
+        <button type="button" class="ad-btn ad-btn-red" onclick="closeModal('editUserModal')">✕ Cancel</button>
+        <button type="submit" class="ad-btn ad-btn-green">💾 Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Edit Friendship ── #}
+<div id="editFriendshipModal" class="ad-modal-overlay">
+  <div class="ad-modal">
+    <button class="ad-modal-close" onclick="closeModal('editFriendshipModal')">✕</button>
+    <div class="ad-modal-title">✏️ Edit Friendship</div>
+    <form method="post" action="{{ path('app_admin_friendship_edit') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_friendship_edit') }}">
+      <input type="hidden" name="friendship_id" id="editFriendshipId">
+      <div class="ad-form-group">
+        <label>User 1</label>
+        <input type="text" id="editFriendshipUser1" class="ad-form-input" disabled>
+      </div>
+      <div class="ad-form-group">
+        <label>User 2</label>
+        <input type="text" id="editFriendshipUser2" class="ad-form-input" disabled>
+      </div>
+      <div class="ad-form-group">
+        <label>Status</label>
+        <select name="status" id="editFriendshipStatus" class="ad-form-select">
+          <option value="ACCEPTED">✅ Accepted</option>
+          <option value="PENDING">⏳ Pending</option>
+          <option value="REJECTED">❌ Rejected</option>
+        </select>
+      </div>
+      <div class="ad-form-actions">
+        <button type="button" class="ad-btn ad-btn-red" onclick="closeModal('editFriendshipModal')">✕ Cancel</button>
+        <button type="submit" class="ad-btn ad-btn-green">💾 Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── View Badge ── #}
+<div id="badgeModal" class="ad-modal-overlay">
+  <div class="ad-modal">
+    <button class="ad-modal-close" onclick="closeModal('badgeModal')">✕</button>
+    <div class="ad-modal-title">🏆 Badge Details</div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Badge ID</span><span class="ad-detail-value" id="modalBadgeId">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Badge Name</span><span class="ad-detail-value" id="modalBadgeName">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Awarded To</span><span class="ad-detail-value" id="modalBadgeUser">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Description</span><span class="ad-detail-value" id="modalBadgeDesc">-</span></div>
+  </div>
+</div>
+
+{# ── Award Badge ── #}
+<div id="awardBadgeModal" class="ad-modal-overlay">
+  <div class="ad-modal">
+    <button class="ad-modal-close" onclick="closeModal('awardBadgeModal')">✕</button>
+    <div class="ad-modal-title">🏆 Award Badge</div>
+    <form method="post" action="{{ path('app_admin_badge_award') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_badge_award') }}">
+      <div class="ad-form-group">
+        <label>User</label>
+        <select name="user_id" class="ad-form-select" required>
+          <option value="">— Select a user —</option>
+          {% for u in users %}
+            <option value="{{ u.user_id }}">{{ u.username }} ({{ u.email }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ad-form-group">
+        <label>Badge Name</label>
+        {% if badgeNames is not empty %}
+          <select name="badge_name" id="awardBadgeNameSelect" class="ad-form-select" onchange="syncBadgeNameInput(this)" required>
+            <option value="">— Pick existing or type below —</option>
+            {% for bn in badgeNames %}
+              <option value="{{ bn }}">{{ bn }}</option>
+            {% endfor %}
+            <option value="__custom__">✏️ Custom…</option>
+          </select>
+          <input type="text" id="awardBadgeNameCustom" class="ad-form-input" placeholder="Or type a new badge name…"
+                 style="margin-top:8px;display:none;" maxlength="100">
+        {% else %}
+          <input type="text" name="badge_name" class="ad-form-input" required placeholder="Badge name…" maxlength="100">
+        {% endif %}
+      </div>
+      <div class="ad-form-group">
+        <label>Note <span style="font-weight:400;color:#adb0bb;">(optional)</span></label>
+        <input type="text" name="description" class="ad-form-input" placeholder="Reason for awarding…">
+      </div>
+      <div class="ad-form-actions">
+        <button type="button" class="ad-btn ad-btn-red" onclick="closeModal('awardBadgeModal')">✕ Cancel</button>
+        <button type="submit" class="ad-btn ad-btn-purple" onclick="return prepareAwardSubmit(this.form)">🏆 Award</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Edit Badge ── #}
+<div id="editBadgeModal" class="ad-modal-overlay">
+  <div class="ad-modal">
+    <button class="ad-modal-close" onclick="closeModal('editBadgeModal')">✕</button>
+    <div class="ad-modal-title">✏️ Edit Badge</div>
+    <form method="post" action="{{ path('app_admin_badge_edit') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_badge_edit') }}">
+      <input type="hidden" name="badge_id" id="editBadgeId">
+      <div class="ad-form-group">
+        <label>Badge Name</label>
+        <input type="text" name="name" id="editBadgeName" class="ad-form-input" required maxlength="100" placeholder="Badge name">
+      </div>
+      <div class="ad-form-group">
+        <label>Description <span style="font-weight:400;color:#adb0bb;">(optional)</span></label>
+        <input type="text" name="description" id="editBadgeDesc" class="ad-form-input" placeholder="Short description…">
+      </div>
+      <div class="ad-form-actions">
+        <button type="button" class="ad-btn ad-btn-red" onclick="closeModal('editBadgeModal')">✕ Cancel</button>
+        <button type="submit" class="ad-btn ad-btn-green">💾 Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ══════════════════ SOCIAL MEDIA MODALS ══════════════════ #}
+
+{# ── View Post ── #}
+<div id="viewPostModal" class="ad-modal-overlay">
+  <div class="ad-modal ad-modal-lg">
+    <button class="ad-modal-close" onclick="closeModal('viewPostModal')">✕</button>
+    <div class="ad-modal-title">📝 Post Details</div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Post ID</span><span class="ad-detail-value" id="vPostId">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Author</span><span class="ad-detail-value" id="vPostAuthor">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Created</span><span class="ad-detail-value" id="vPostDate">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Likes</span><span class="ad-detail-value" id="vPostLikes">-</span></div>
+    <div class="ad-detail-row"><span class="ad-detail-label">Comments</span><span class="ad-detail-value" id="vPostComments">-</span></div>
+    <div class="ad-detail-row" id="vPostImageRow" style="display:none;">
+      <span class="ad-detail-label">Image</span>
+      <span class="ad-detail-value"><a id="vPostImageLink" href="#" target="_blank">🔗 View image</a></span>
+    </div>
+    <div style="margin-top:16px;">
+      <div style="font-size:12px;font-weight:700;color:#9095a0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Content</div>
+      <div id="vPostContent" style="background:#f8f9fe;border-radius:12px;padding:16px;font-size:14px;line-height:1.6;color:#1c1e21;white-space:pre-wrap;word-break:break-word;max-height:300px;overflow-y:auto;border:1px solid #eaecf2;"></div>
+    </div>
+  </div>
+</div>
+
+{# ── Edit Post ── #}
+<div id="editPostModal" class="ad-modal-overlay">
+  <div class="ad-modal ad-modal-lg">
+    <button class="ad-modal-close" onclick="closeModal('editPostModal')">✕</button>
+    <div class="ad-modal-title">✏️ Edit Post</div>
+    <form method="post" action="{{ path('app_admin_post_edit') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_post_edit') }}">
+      <input type="hidden" name="post_id" id="editPostId">
+      <div class="ad-form-group">
+        <label>Content</label>
+        <textarea name="content" id="editPostContent" class="ad-form-input"
+                  rows="6" required maxlength="2000"
+                  style="resize:vertical;font-family:inherit;line-height:1.5;"></textarea>
+      </div>
+      <div class="ad-form-actions">
+        <button type="button" class="ad-btn ad-btn-red" onclick="closeModal('editPostModal')">✕ Cancel</button>
+        <button type="submit" class="ad-btn ad-btn-green">💾 Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Edit Comment ── #}
+<div id="editCommentModal" class="ad-modal-overlay">
+  <div class="ad-modal">
+    <button class="ad-modal-close" onclick="closeModal('editCommentModal')">✕</button>
+    <div class="ad-modal-title">✏️ Edit Comment</div>
+    <form method="post" action="{{ path('app_admin_comment_edit') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_comment_edit') }}">
+      <input type="hidden" name="comment_id" id="editCommentId">
+      <div class="ad-form-group">
+        <label>Content</label>
+        <textarea name="content" id="editCommentContent" class="ad-form-input"
+                  rows="4" required maxlength="1000"
+                  style="resize:vertical;font-family:inherit;line-height:1.5;"></textarea>
+      </div>
+      <div class="ad-form-actions">
+        <button type="button" class="ad-btn ad-btn-red" onclick="closeModal('editCommentModal')">✕ Cancel</button>
+        <button type="submit" class="ad-btn ad-btn-green">💾 Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<script>
+/* ════════════════════════════════════════
+   TAB SWITCHING
+════════════════════════════════════════ */
+const tabMeta = {
+  users:       { title: 'Users',               sub: 'Manage platform users' },
+  providers:   { title: 'Instructors',          sub: 'Review instructor applications' },
+  classes:     { title: 'Classes',              sub: 'Manage all platform classes' },
+  hobbies:     { title: 'Hobbies',              sub: 'Manage user hobbies and logged hours' },
+  meetings:    { title: 'Meetings',             sub: 'Manage scheduled meetings' },
+  friendships: { title: 'Friendships',          sub: 'View and manage user friendships' },
+  badges:      { title: 'Badges',               sub: 'Create, edit and remove user badges' },
+  social:      { title: 'Social Media',         sub: 'Moderate posts and comments' },
+  analytics:   { title: 'Analytics',            sub: 'Charts, breakdowns and performance overview' },
+};
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.ad-tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.ad-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ad-nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  // Sync header
+  const meta = tabMeta[name];
+  if (meta) {
+    const t = document.getElementById('adPageTitle');
+    const s = document.getElementById('adPageSub');
+    if (t) t.textContent = meta.title;
+    if (s) s.textContent = meta.sub;
+  }
+  if (name === 'analytics') initCharts();
+  if (name === 'badges')    initBadgeTabChart();
+  // Close mobile sidebar
+  if (window.innerWidth <= 900) {
+    document.getElementById('adSidebar').classList.remove('open');
+  }
+}
+
+/* ════════════════════════════════════════
+   SEARCH / FILTER
+════════════════════════════════════════ */
+function bindSearch(inputId, rowClass, dataAttrs) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  el.addEventListener('keyup', () => {
+    const q = el.value.toLowerCase();
+    document.querySelectorAll(rowClass).forEach(r => {
+      const text = dataAttrs
+        ? dataAttrs.map(a => (r.dataset[a] || '')).join(' ')
+        : r.textContent.toLowerCase();
+      r.style.display = text.includes(q) ? '' : 'none';
+    });
+  });
+}
+
+bindSearch('userSearch',       '.user-row',       ['username','email','location']);
+bindSearch('providerSearch',   '.provider-row',   ['username','company','expertise']);
+bindSearch('classSearch',      '.class-row',      ['title','provider']);
+bindSearch('hobbySearch',      '.hobby-row',      ['user','name','category']);
+bindSearch('meetingSearch',    '.meeting-row',    ['organizer','type','status','location']);
+bindSearch('friendshipSearch', '.friendship-row', ['user1','user2','status']);
+bindSearch('badgeSearch',      '.badge-row',      ['name','user']);
+bindSearch('postSearch',       '.post-row',       ['content','author','comments']);
+
+document.getElementById('postSearch')?.addEventListener('keyup', () => {
+  document.querySelectorAll('.post-row').forEach(row => {
+    const detailsRow = row.nextElementSibling;
+    if (detailsRow && detailsRow.classList.contains('post-comments-row') && row.style.display === 'none') {
+      detailsRow.style.display = 'none';
+      const toggleBtn = row.querySelector('button[onclick*="togglePostComments"]');
+      if (toggleBtn && !toggleBtn.textContent.toLowerCase().includes('no comments')) {
+        toggleBtn.textContent = 'View comments';
+      }
+    }
+  });
+});
+
+function filterFriendships() {
+  const val = document.getElementById('friendshipFilter').value.toLowerCase();
+  const q   = document.getElementById('friendshipSearch').value.toLowerCase();
+  document.querySelectorAll('.friendship-row').forEach(r => {
+    const matchFilter = !val || r.dataset.status === val;
+    const matchSearch = !q || (r.dataset.user1 + r.dataset.user2 + r.dataset.status).includes(q);
+    r.style.display = (matchFilter && matchSearch) ? '' : 'none';
+  });
+}
+
+/* ════════════════════════════════════════
+   MODALS
+════════════════════════════════════════ */
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.ad-modal-overlay').forEach(o => {
+  o.addEventListener('click', function(e) { if (e.target === this) closeModal(this.id); });
+});
+
+function viewUser(id, username, email, isBanned, location, auth) {
+  document.getElementById('modalUserId').textContent   = id;
+  document.getElementById('modalUsername').textContent = username;
+  document.getElementById('modalEmail').textContent    = email;
+  document.getElementById('modalLocation').textContent = location || '—';
+  document.getElementById('modalAuth').textContent     = auth === 'google' ? '🔵 Google' : '🔐 Local';
+  document.getElementById('modalStatus').textContent   = isBanned ? '🚫 Banned' : '✅ Active';
+  document.getElementById('userModal').classList.add('show');
+}
+
+function openEditUser(id, username, email, location) {
+  document.getElementById('editUserId').value       = id;
+  document.getElementById('editUsername').value     = username;
+  document.getElementById('editEmail').value        = email;
+  document.getElementById('editLocation').value     = location;
+  document.getElementById('editUserModal').classList.add('show');
+}
+
+function openEditFriendship(id, user1, user2, status) {
+  document.getElementById('editFriendshipId').value     = id;
+  document.getElementById('editFriendshipUser1').value  = user1;
+  document.getElementById('editFriendshipUser2').value  = user2;
+  const sel = document.getElementById('editFriendshipStatus');
+  const up  = status.toUpperCase();
+  for (let opt of sel.options) { if (opt.value === up) { opt.selected = true; break; } }
+  document.getElementById('editFriendshipModal').classList.add('show');
+}
+
+function viewBadge(id, name, desc, user) {
+  document.getElementById('modalBadgeId').textContent   = id;
+  document.getElementById('modalBadgeName').textContent = name;
+  document.getElementById('modalBadgeUser').textContent = user;
+  document.getElementById('modalBadgeDesc').textContent = desc || '—';
+  document.getElementById('badgeModal').classList.add('show');
+}
+
+function openAwardBadgeModal() {
+  document.getElementById('awardBadgeModal').classList.add('show');
+}
+
+function openEditBadgeModal(id, name, desc) {
+  document.getElementById('editBadgeId').value   = id;
+  document.getElementById('editBadgeName').value = name;
+  document.getElementById('editBadgeDesc').value = desc;
+  document.getElementById('editBadgeModal').classList.add('show');
+}
+
+/* Award modal: sync custom text input when user picks "Custom..." */
+function syncBadgeNameInput(sel) {
+  const custom = document.getElementById('awardBadgeNameCustom');
+  if (!custom) return;
+  if (sel.value === '__custom__') {
+    custom.style.display = 'block';
+    custom.required = true;
+    sel.name = '';
+    custom.name = 'badge_name';
+  } else {
+    custom.style.display = 'none';
+    custom.required = false;
+    custom.name = '';
+    sel.name = 'badge_name';
+  }
+}
+
+function prepareAwardSubmit(form) {
+  const sel = document.getElementById('awardBadgeNameSelect');
+  if (sel && sel.value === '__custom__') {
+    const txt = document.getElementById('awardBadgeNameCustom');
+    if (!txt || !txt.value.trim()) { alert('Please enter a badge name.'); return false; }
+  }
+  return true;
+}
+
+/* ════════════════════════════════════════
+   TABLE SORTING
+════════════════════════════════════════ */
+const _sortState = {};
+
+function sortTable(tableId, colIdx, thEl) {
+  const table  = document.getElementById(tableId);
+  const tbody  = table.querySelector('tbody');
+  const rows   = Array.from(tbody.querySelectorAll('tr'));
+  const key    = tableId + ':' + colIdx;
+  const asc    = _sortState[key] !== true;
+  _sortState[key] = asc;
+
+  // Update header indicators
+  table.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc','sort-desc'));
+  thEl.classList.add(asc ? 'sort-asc' : 'sort-desc');
+
+  rows.sort((a, b) => {
+    const ca = a.cells[colIdx]?.textContent.trim() ?? '';
+    const cb = b.cells[colIdx]?.textContent.trim() ?? '';
+    // Numeric sort if both look like numbers
+    const na = parseFloat(ca.replace(/[^0-9.\-]/g, ''));
+    const nb = parseFloat(cb.replace(/[^0-9.\-]/g, ''));
+    if (!isNaN(na) && !isNaN(nb)) return asc ? na - nb : nb - na;
+    return asc ? ca.localeCompare(cb) : cb.localeCompare(ca);
+  });
+
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+/* ════════════════════════════════════════
+   BAN / DELETE USER
+════════════════════════════════════════ */
+function banUser(userId, username) {
+  if (!confirm('Toggle ban for ' + username + '?')) return;
+  const form = document.createElement('form');
+  form.method  = 'POST';
+  form.action  = '{{ path("app_admin_toggle_user_ban") }}';
+  form.innerHTML = `<input type="hidden" name="user_id" value="${userId}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_user_toggle') }}">`;
+  document.body.appendChild(form);
+  form.submit();
+}
+
+function deleteUser(userId, username) {
+  if (!confirm('Permanently delete user "' + username + '"? This cannot be undone.')) return;
+  const form = document.createElement('form');
+  form.method  = 'POST';
+  form.action  = '{{ path("app_admin_user_delete") }}';
+  form.innerHTML = `<input type="hidden" name="user_id" value="${userId}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_user_delete') }}">`;
+  document.body.appendChild(form);
+  form.submit();
+}
+
+/* ════════════════════════════════════════
+   PDF EXPORT  (jsPDF + autoTable)
+════════════════════════════════════════ */
+function exportAnalyticsPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const now = new Date();
+  const dateStr = now.toLocaleString('en-GB');
+
+  // Brand colours (RGB)
+  const purple  = [90, 63, 184];
+  const purpleL = [116, 96, 194];
+  const dark    = [28, 30, 33];
+  const gray    = [100, 101, 107];
+  const white   = [255, 255, 255];
+
+  /* ── Cover strip ── */
+  doc.setFillColor(...purple);
+  doc.rect(0, 0, 210, 42, 'F');
+
+  // Accent bar
+  doc.setFillColor(...purpleL);
+  doc.rect(0, 38, 210, 4, 'F');
+
+  doc.setTextColor(...white);
+  doc.setFontSize(18); doc.setFont('helvetica', 'bold');
+  doc.text('GHRAMI PLATFORM', 105, 16, { align: 'center' });
+  doc.setFontSize(11); doc.setFont('helvetica', 'normal');
+  doc.text('Analytics Report', 105, 24, { align: 'center' });
+  doc.setFontSize(9);
+  doc.text('Generated: ' + dateStr, 105, 33, { align: 'center' });
+
+  doc.setTextColor(...dark);
+  let y = 54;
+
+  /* ── Section helper ── */
+  function addSection(title, head, rows, color) {
+    // Page-break guard (leave 60 mm for a section minimum)
+    if (y > 240) { doc.addPage(); y = 20; }
+
+    // Section title pill
+    doc.setFillColor(...color);
+    doc.roundedRect(14, y - 5, 182, 9, 2, 2, 'F');
+    doc.setTextColor(...white);
+    doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+    doc.text(title, 18, y + 1.5);
+    doc.setTextColor(...dark);
+    y += 10;
+
+    doc.autoTable({
+      startY: y,
+      head: [head],
+      body: rows,
+      theme: 'striped',
+      headStyles: {
+        fillColor: color,
+        textColor: white,
+        fontStyle: 'bold',
+        fontSize: 9,
+        cellPadding: { top: 4, bottom: 4, left: 5, right: 5 },
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [50, 50, 50],
+        cellPadding: { top: 3, bottom: 3, left: 5, right: 5 },
+      },
+      alternateRowStyles: { fillColor: [248, 249, 254] },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 90 },
+        1: { cellWidth: 'auto' },
+      },
+      margin: { left: 14, right: 14 },
+      tableLineColor: [234, 236, 242],
+      tableLineWidth: 0.3,
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  /* ── Sections — plain ASCII only (Helvetica has no emoji glyphs) ── */
+  addSection('USERS', ['Metric', 'Value'], [
+    ['Total Users',     '{{ stats.users }}'],
+    ['Online Now',      '{{ stats.active_users }}'],
+    ['Banned',          '{{ stats.banned_users ?? 0 }}'],
+    ['Google Sign-In',  '{{ stats.google_users ?? 0 }}'],
+    ['Local Accounts',  '{{ stats.local_users ?? 0 }}'],
+  ], [90, 63, 184]);
+
+  addSection('SOCIAL FEED', ['Metric', 'Value'], [
+    ['Total Posts',        '{{ stats.posts }}'],
+    ['Comments',           '{{ stats.comments ?? 0 }}'],
+    ['Likes',              '{{ stats.likes ?? 0 }}'],
+    ['Stories',            '{{ stats.stories ?? 0 }}'],
+    ['Active Friendships', '{{ stats.accepted_friendships ?? 0 }}'],
+  ], [194, 24, 91]);
+
+  addSection('CLASSES & REVENUE', ['Metric', 'Value'], [
+    ['Total Classes',  '{{ stats.classes }}'],
+    ['Total Bookings', '{{ stats.bookings }}'],
+    ['Completed',      '{{ stats.completed_bookings ?? 0 }}'],
+    ['Pending',        '{{ stats.pending_bookings ?? 0 }}'],
+    ['Cancelled',      '{{ stats.cancelled_bookings ?? 0 }}'],
+    ['Total Revenue',  '{{ stats.total_revenue ?? "0.00" }} TND'],
+  ], [230, 101, 0]);
+
+  addSection('HOBBIES', ['Metric', 'Value'], [
+    ['Total Hobbies',  '{{ stats.hobbies }}'],
+    ['Total Hours',    '{{ stats.hobby_hours ?? "0.0" }} hrs'],
+    ['Milestones',     '{{ stats.milestones ?? 0 }}'],
+    ['Achieved',       '{{ stats.achieved_milestones ?? 0 }}'],
+  ], [46, 125, 50]);
+
+  addSection('MEETINGS', ['Metric', 'Value'], [
+    ['Total Meetings', '{{ stats.meetings ?? 0 }}'],
+    ['Scheduled',      '{{ stats.scheduled_meetings ?? 0 }}'],
+    ['Completed',      '{{ stats.completed_meetings ?? 0 }}'],
+    ['Cancelled',      '{{ stats.cancelled_meetings ?? 0 }}'],
+  ], [0, 105, 122]);
+
+  addSection('BADGES', ['Metric', 'Value'], [
+    ['Total Badges',      '{{ stats.badges }}'],
+    ['Unique Types',      '{{ stats.unique_badge_types ?? 0 }}'],
+    ['Social Butterfly',  '{{ stats.badge_social ?? 0 }}'],
+    ['Class Hero',        '{{ stats.badge_class ?? 0 }}'],
+    ['Hobby Master',      '{{ stats.badge_hobby ?? 0 }}'],
+  ], [123, 31, 162]);
+
+  addSection('FRIENDSHIPS', ['Metric', 'Value'], [
+    ['Total',    '{{ stats.friendships ?? 0 }}'],
+    ['Accepted', '{{ stats.accepted_friendships ?? 0 }}'],
+    ['Pending',  '{{ stats.pending_friendships ?? 0 }}'],
+    ['Rejected', '{{ stats.rejected_friendships ?? 0 }}'],
+  ], [183, 28, 28]);
+
+  /* ── Footer on every page ── */
+  const pCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pCount; i++) {
+    doc.setPage(i);
+    // Bottom rule
+    doc.setDrawColor(...purpleL);
+    doc.setLineWidth(0.4);
+    doc.line(14, 284, 196, 284);
+    doc.setFontSize(8); doc.setTextColor(...gray);
+    doc.text('(c) 2026 Ghrami by OPGG', 14, 289);
+    doc.text('Page ' + i + ' / ' + pCount, 196, 289, { align: 'right' });
+  }
+
+  const stamp = now.getFullYear()
+    + String(now.getMonth() + 1).padStart(2, '0')
+    + String(now.getDate()).padStart(2, '0');
+  doc.save('Ghrami_Analytics_' + stamp + '.pdf');
+}
+
+/* ════════════════════════════════════════
+   CHARTS
+════════════════════════════════════════ */
+let chartsInited = false;
+let badgeTabInited = false;
+
+function initCharts() {
+  if (chartsInited) return;
+  chartsInited = true;
+
+  const palette = ['#667eea','#f5576c','#4CAF50','#FF9800','#00BCD4','#9C27B0','#ef5350','#42a5f5','#26c6da','#ffa726'];
+
+  // ── 10-module horizontal bar ──
+  new Chart(document.getElementById('chartPopulation').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Users','Friendships','Badges','Classes','Bookings','Hobbies','Meetings','Posts','Comments','Stories'],
+      datasets: [{
+        label: 'Count',
+        data: [
+          {{ stats.users }},
+          {{ stats.friendships ?? 0 }},
+          {{ stats.badges ?? 13 }},
+          {{ stats.classes }},
+          {{ stats.bookings }},
+          {{ stats.hobbies ?? 18 }},
+          {{ stats.meetings ?? 22 }},
+          {{ stats.posts }},
+          {{ stats.comments ?? 0 }},
+          {{ stats.stories ?? 0 }}
+        ],
+        backgroundColor: palette,
+        borderRadius: 8,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => '  ' + ctx.parsed.x.toLocaleString() } } },
+      scales: {
+        x: { beginAtZero: true, grid: { color: '#f0f2f5' },
+             ticks: { font: { family: 'Sora', size: 11 } } },
+        y: { grid: { display: false },
+             ticks: { font: { family: 'Sora', size: 12, weight: '600' } } }
+      }
+    }
+  });
+
+  // ── Bookings doughnut ──
+  new Chart(document.getElementById('chartBookings').getContext('2d'), {
+    type: 'doughnut',
+    data: { labels: ['Completed','Pending','Cancelled'],
+      datasets: [{ data: [65,25,10], backgroundColor: ['#4CAF50','#2196F3','#f44336'],
+        borderColor: '#fff', borderWidth: 3 }] },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins: { legend: { position:'bottom' } }, cutout: '65%' }
+  });
+
+  // ── Meetings doughnut ──
+  new Chart(document.getElementById('chartMeetings').getContext('2d'), {
+    type: 'doughnut',
+    data: { labels: ['Completed','Scheduled','Cancelled'],
+      datasets: [{ data: [45,35,20], backgroundColor: ['#4CAF50','#2196F3','#FF9800'],
+        borderColor: '#fff', borderWidth: 3 }] },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins: { legend: { position:'bottom' } }, cutout: '65%' }
+  });
+
+  // ── Top Badges horizontal ──
+  new Chart(document.getElementById('chartBadges').getContext('2d'), {
+    type: 'bar',
+    data: { labels: ['Social Butterfly','Class Hero','Hobby Master','Connector','Early Adopter'],
+      datasets: [{ label: 'Count', data: [45,38,32,28,21],
+        backgroundColor: ['#667eea','#f5576c','#4CAF50','#FF9800','#00BCD4'], borderRadius: 8 }] },
+    options: { indexAxis: 'y', responsive:true, maintainAspectRatio:false,
+      plugins: { legend: { display:false } },
+      scales: { x: { beginAtZero:true, grid: { color:'#f0f2f5' } }, y: { grid: { display:false } } } }
+  });
+
+  // ── Friendships doughnut ──
+  new Chart(document.getElementById('chartFriendships').getContext('2d'), {
+    type: 'doughnut',
+    data: { labels: ['Accepted','Pending','Rejected'],
+      datasets: [{ data: [
+          {{ stats.accepted_friendships ?? 0 }},
+          {{ stats.pending_friendships ?? 0 }},
+          {{ stats.rejected_friendships ?? 0 }}
+        ],
+        backgroundColor: ['#4CAF50','#FF9800','#f44336'],
+        borderColor: '#fff', borderWidth: 3 }] },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins: { legend: { position:'bottom' } }, cutout: '65%' }
+  });
+}
+
+function initBadgeTabChart() {
+  if (badgeTabInited) return;
+  badgeTabInited = true;
+  new Chart(document.getElementById('chartBadgeTab').getContext('2d'), {
+    type: 'bar',
+    data: { labels: ['Social Butterfly','Class Hero','Hobby Master','Connector','Early Adopter','Top Rated','Community Leader'],
+      datasets: [{ label: 'Count', data: [45,38,32,28,21,17,12],
+        backgroundColor: ['#667eea','#f5576c','#4CAF50','#FF9800','#00BCD4','#9C27B0','#ef5350'],
+        borderRadius: 8, borderSkipped: false }] },
+    options: { indexAxis: 'y', responsive:true, maintainAspectRatio:false,
+      plugins: { legend: { display:false } },
+      scales: { x: { beginAtZero:true, grid: { color:'#f0f2f5' } }, y: { grid: { display:false } } } }
+  });
+}
+
+/* ════════════════════════════════════════
+   SOCIAL MEDIA MODERATION
+════════════════════════════════════════ */
+
+function viewPost(id, content, author, date, comments, likes, imageUrl) {
+  document.getElementById('vPostId').textContent       = id;
+  document.getElementById('vPostAuthor').textContent   = author;
+  document.getElementById('vPostDate').textContent     = date;
+  document.getElementById('vPostLikes').textContent    = likes;
+  document.getElementById('vPostComments').textContent = comments;
+  document.getElementById('vPostContent').textContent  = content;
+  const imgRow  = document.getElementById('vPostImageRow');
+  const imgLink = document.getElementById('vPostImageLink');
+  if (imageUrl) {
+    imgRow.style.display = '';
+    imgLink.href = imageUrl;
+  } else {
+    imgRow.style.display = 'none';
+  }
+  document.getElementById('viewPostModal').classList.add('show');
+}
+
+function openEditPostModal(id, content) {
+  document.getElementById('editPostId').value      = id;
+  document.getElementById('editPostContent').value = content;
+  document.getElementById('editPostModal').classList.add('show');
+}
+
+function openEditCommentModal(id, content) {
+  document.getElementById('editCommentId').value      = id;
+  document.getElementById('editCommentContent').value = content;
+  document.getElementById('editCommentModal').classList.add('show');
+}
+
+function togglePostComments(postId, btn) {
+  const row = document.getElementById('post-comments-' + postId);
+  if (!row) return;
+
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'table-row';
+
+  if (btn) {
+    const hasComments = btn.textContent.toLowerCase().includes('no comments');
+    if (!hasComments) {
+      btn.textContent = isOpen ? 'View comments' : 'Hide comments';
+    }
+  }
+}
+
+// AI Insights Event Handler
+document.getElementById('load-ai-insights-btn')?.addEventListener('click', async function() {
+  const btn = this;
+  const container = document.getElementById('ai-insights-container');
+  const loading = document.getElementById('ai-insights-loading');
+  
+  btn.disabled = true;
+  btn.textContent = '⏳ Loading...';
+  loading.style.display = 'block';
+  container.style.display = 'none';
+
+  try {
+    const response = await fetch('{{ path("app_admin_analytics_insights") }}', {
+      method: 'GET',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    
+    const data = await response.json();
+    
+    loading.style.display = 'none';
+    
+    if (data.ok && data.insights) {
+      container.innerHTML = `<div style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 16px; border-radius: 4px; margin-top: 12px;"><pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: 'Segoe UI', sans-serif;">${data.insights}</pre></div>`;
+      container.style.display = 'block';
+    } else {
+      container.innerHTML = '<div style="color: #d32f2f; padding: 12px;">Failed to load insights</div>';
+      container.style.display = 'block';
+    }
+  } catch (err) {
+    loading.style.display = 'none';
+    container.innerHTML = `<div style="color: #d32f2f; padding: 12px;">Error loading insights: ${err.message}</div>`;
+    container.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💡 Load Insights';
+  }
+});
+</script>
+{% endblock %}

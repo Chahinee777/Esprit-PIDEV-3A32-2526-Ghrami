@@ -1,0 +1,741 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mon Profil - Ghrami{% endblock %}
+
+{% block body %}
+<!-- Profile Header with Cover -->
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 40px 30px; margin-bottom: 30px; color: white; position: relative; overflow: hidden;">
+    <div style="position: absolute; top: -50px; right: -50px; width: 300px; height: 300px; background: rgba(255, 255, 255, 0.1); border-radius: 50%;"></div>
+    <div style="position: relative; z-index: 1; display: flex; align-items: flex-end; gap: 30px;">
+        <div style="width: 150px; height: 150px; border-radius: 50%; background: rgba(255, 255, 255, 0.3); border: 4px solid white; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: all 0.3s ease; position: relative;" id="profilePicContainer" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'" onclick="document.getElementById('headerProfilePicture').click();" title="Cliquez pour changer votre photo">
+            {% if profile.profilePicture %}
+                {% if profile.profilePicture starts with 'http://' or profile.profilePicture starts with 'https://' %}
+                    {# Remote URL (e.g., from Google OAuth) #}
+                    <img src="{{ profile.profilePicture }}" alt="Photo de profil" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    {# Local file stored in public/images/profile_pictures/ #}
+                    <img src="{{ asset('images/profile_pictures/' ~ profile.profilePicture) }}" alt="Photo de profil" style="width: 100%; height: 100%; object-fit: cover;">
+                {% endif %}
+            {% else %}
+                <div style="font-size: 60px;">👤</div>
+            {% endif %}
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 50%; color: white; font-size: 24px; opacity: 0; transition: opacity 0.3s;" id="profilePicOverlay">📷</div>
+        </div>
+        <input type="file" id="headerProfilePicture" accept="image/jpeg,image/png,image/webp" style="display: none;">
+        <div>
+            <h1 style="margin: 0 0 8px 0; color: white;">{{ profile.fullName ?: profile.username }}</h1>
+            <p style="margin: 0; opacity: 0.9;">@{{ profile.username }}</p>
+            {% if profileLocation %}
+            <p style="margin: 4px 0 0 0; opacity: 0.8; font-size: 14px;">📍 {{ profileLocation }}</p>
+            {% endif %}
+        </div>
+    </div>
+    <a href="{{ path('app_dashboard') }}" style="position: absolute; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.9); color: #667eea; padding: 8px 16px; border-radius: 20px; text-decoration: none; font-weight: 600; font-size: 14px;">Retour →</a>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 350px; gap: 30px;">
+    
+    <!-- Main Content -->
+    <main>
+        {% if app.flashes('success') %}
+        <div class="alert alert-success" role="alert" style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 8px 0;">✅ Succès</h4>
+            {% for message in app.flashes('success') %}
+                <div>{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if errors is not empty %}
+        <div class="alert alert-danger" role="alert">
+            <h4>Erreurs</h4>
+            <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+                {% for item in errors %}
+                    <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Edit Profile Section -->
+        <div class="card">
+            <h3 style="margin-top: 0; display: flex; align-items: center; gap: 12px;">✏️ Modifier mes Informations</h3>
+            
+            <form method="post" action="{{ path('app_profile') }}" enctype="multipart/form-data" style="display: grid; gap: 20px;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('profile') }}">
+                
+                <!-- Full Name -->
+                <div class="form-group">
+                    <label for="full_name" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Nom Complet</label>
+                    <input id="full_name" type="text" name="full_name" value="{{ profile.fullName ?? '' }}" placeholder="Entrez votre nom complet" maxlength="100" style="width: 100%; padding: 12px 16px; border: 2px solid #e4e6eb; border-radius: 8px; font-size: 14px; transition: all 0.3s ease;" onfocus="this.style.borderColor='#667eea'">
+                </div>
+                
+                <!-- Username (Read-only) -->
+                <div class="form-group">
+                    <label for="username" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Nom d'utilisateur</label>
+                    <input id="username" type="text" name="username" value="{{ profile.username }}" required minlength="3" maxlength="50" style="width: 100%; padding: 12px 16px; border: 2px solid #e4e6eb; border-radius: 8px; font-size: 14px; transition: all 0.3s ease;" onfocus="this.style.borderColor='#667eea'">
+                </div>
+                
+                <!-- Email (Read-only) -->
+                <div class="form-group">
+                    <label for="email" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Email</label>
+                    <input id="email" type="email" name="email_display" value="{{ profile.email }}" required maxlength="100" style="width: 100%; padding: 12px 16px; border: 2px solid #e4e6eb; border-radius: 8px; font-size: 14px; background: #f5f5f5; cursor: not-allowed;" disabled>
+                    <input type="hidden" name="email" value="{{ profile.email }}">
+                </div>
+                
+                <!-- Location -->
+                <div class="form-group">
+                    <label for="location" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">📍 Localisation</label>
+                    <input id="location" type="text" name="location" value="{{ profileLocation|default('') }}" placeholder="Ville, Pays" maxlength="100" style="width: 100%; padding: 12px 16px; border: 2px solid #e4e6eb; border-radius: 8px; font-size: 14px; transition: all 0.3s ease;" onfocus="this.style.borderColor='#667eea'">
+                </div>
+                
+                <!-- Bio -->
+                <div class="form-group">
+                    <label for="bio" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">À propos de moi</label>
+                    <textarea id="bio" name="bio" rows="5" placeholder="Parlez-nous de vos passions, hobbies..." maxlength="500" style="width: 100%; padding: 12px 16px; border: 2px solid #e4e6eb; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; transition: all 0.3s ease;" onfocus="this.style.borderColor='#667eea'">{{ profile.bio ?? '' }}</textarea>
+                    <div style="font-size: 12px; color: #65676b; margin-top: 4px;">{{ (profile.bio ?? '')|length }}/500 caractères</div>
+                </div>
+                
+                <!-- Profile Picture -->
+                <div class="form-group">
+                    <label for="profile_picture" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">📷 Photo de Profil</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <!-- Upload Zone -->
+                        <div style="border: 2px dashed #667eea; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;" id="upload-zone">
+                            <input id="profile_picture" type="file" name="profile_picture" accept="image/jpeg,image/png,image/webp" style="display: none;">
+                            <div style="font-size: 32px; margin-bottom: 8px;">📸</div>
+                            <div style="font-weight: 600; color: #1c1e21; margin-bottom: 4px;">Cliquez pour télécharger</div>
+                            <div style="font-size: 13px; color: #65676b;">JPG, PNG ou WEBP (Max 5MB)</div>
+                        </div>
+                        
+                        <!-- Generate Zone -->
+                        <div style="border: 2px dashed #764ba2; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s ease;" id="generate-zone" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'">
+                            <div style="font-size: 32px; margin-bottom: 8px;">✨</div>
+                            <div style="font-weight: 600; color: #1c1e21; margin-bottom: 4px;">Générer avec IA</div>
+                            <div style="font-size: 13px; color: #65676b;">Créer avec imfin.it</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Save Button -->
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 16px;">💾 Enregistrer les Modifications</button>
+            </form>
+        </div>
+        
+        <!-- Security Section -->
+        <div class="card" style="margin-top: 20px;">
+            <h3 style="margin-top: 0; display: flex; align-items: center; gap: 12px;">🔒 Sécurité</h3>
+            
+            <form method="post" action="{{ path('app_profile') }}" style="display: grid; gap: 16px;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('profile') }}">
+                
+                <div class="form-group">
+                    <label for="new_password" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Nouveau Mot de Passe (Optionnel)</label>
+                    <input id="new_password" type="password" name="new_password" placeholder="••••••••" minlength="6" style="width: 100%; padding: 12px 16px; border: 2px solid #e4e6eb; border-radius: 8px; font-size: 14px; transition: all 0.3s ease;" onfocus="this.style.borderColor='#667eea'">
+                    <div style="font-size: 12px; color: #65676b; margin-top: 4px;">Min. 6 caractères</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm_password" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Confirmer le Mot de Passe</label>
+                    <input id="confirm_password" type="password" name="confirm_password" placeholder="••••••••" minlength="6" style="width: 100%; padding: 12px 16px; border: 2px solid #e4e6eb; border-radius: 8px; font-size: 14px; transition: all 0.3s ease;" onfocus="this.style.borderColor='#667eea'">
+                </div>
+                
+                <button type="submit" class="btn btn-secondary">🔑 Changer le Mot de Passe</button>
+            </form>
+
+            <!-- 2FA Section -->
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e4e6eb;">
+                <h4 style="margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; color: #1c1e21;">📱 Authentification à Deux Facteurs</h4>
+                <p style="margin: 0 0 12px 0; font-size: 14px; color: #65676b; line-height: 1.5;">
+                    {% if app.user.isTwoFactorEnabled %}
+                        ✅ L'authentification à deux facteurs est <strong>activée</strong> sur votre compte.
+                    {% else %}
+                        Ajoutez une couche de sécurité supplémentaire à votre compte avec l'authentification à deux facteurs.
+                    {% endif %}
+                </p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    {% if app.user.isTwoFactorEnabled %}
+                        <a href="{{ path('app_user_security_settings') }}" class="btn btn-primary" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 10px 16px; border-radius: 8px; text-align: center; text-decoration: none; font-weight: 600; font-size: 13px; border: none; cursor: pointer; transition: all 0.3s;">
+                            ⚙️ Gérer 2FA
+                        </a>
+                    {% else %}
+                        <a href="{{ path('app_2fa_setup') }}" class="btn btn-primary" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 10px 16px; border-radius: 8px; text-align: center; text-decoration: none; font-weight: 600; font-size: 13px; border: none; cursor: pointer; transition: all 0.3s;">
+                            🚀 Activer 2FA
+                        </a>
+                    {% endif %}
+                    <a href="{{ path('app_user_security_settings') }}" class="btn btn-secondary" style="background: #f3f4f6; color: #1c1e21; padding: 10px 16px; border-radius: 8px; text-align: center; text-decoration: none; font-weight: 600; font-size: 13px; border: 1px solid #e5e7eb; cursor: pointer; transition: all 0.3s;">
+                        📊 Paramètres Sécurité
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Right Sidebar -->
+    <aside style="display: flex; flex-direction: column; gap: 20px;">
+        
+        <!-- Badges -->
+        <div class="card">
+            <h4 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">🏆 Mes Badges</h4>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                {% for badge in badges %}
+                <div class="badge-card" onclick="showBadgeDetails({{ badge.id|default(loop.index) }}, '{{ badge.name|escape('js') }}', '{{ badge.description|default('Achievement')|escape('js') }}', '{{ badge.icon|default('🏆')|escape('js') }}')" style="
+                    text-align: center; 
+                    padding: 12px; 
+                    background: {% if badge.rarity == 'COMMUN' %}#f0f2f5{% elseif badge.rarity == 'RARE' %}#e8f4f8{% elseif badge.rarity == 'ÉPIQUE' %}#f0e8ff{% else %}#fff8f0{% endif %}; 
+                    border: 2px solid {% if badge.rarity == 'COMMUN' %}#ccc{% elseif badge.rarity == 'RARE' %}#0891b2{% elseif badge.rarity == 'ÉPIQUE' %}#667eea{% else %}#ff9f43{% endif %};
+                    border-radius: 8px; 
+                    position: relative; 
+                    transition: all 0.3s;
+                    cursor: pointer;">
+                    <div style="font-size: 32px; margin-bottom: 4px;">{{ badge.icon|default('🏆') }}</div>
+                    <div style="font-size: 12px; font-weight: 600; color: #1c1e21;">{{ badge.name }}</div>
+                    <div style="font-size: 10px; color: #65676b; margin-top: 4px;">
+                        {% if badge.rarity == 'COMMUN' %}🟩 Commun
+                        {% elseif badge.rarity == 'RARE' %}🟦 Rare
+                        {% elseif badge.rarity == 'ÉPIQUE' %}🟪 Épique
+                        {% else %}🟨 Légendaire{% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div style="grid-column: 1 / -1; padding: 12px; background: #f0f2f5; border-radius: 8px; text-align: center; color: #65676b; font-size: 14px;">
+                    🔒 Gagnez vos premiers badges en créant du contenu!
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Friends List -->
+        <div class="card">
+            <h4 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">👥 Mes Amis ({{ friends|length }})</h4>
+            <div style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;">
+                {% for friend in friends %}
+                <div style="
+                    display: flex; align-items: center; gap: 12px; 
+                    padding: 12px; background: #f8f9fa; 
+                    border-radius: 8px; 
+                    transition: all 0.3s;"
+                    onmouseover="this.style.background='#efefef'; this.style.transform='translateX(4px)'"
+                    onmouseout="this.style.background='#f8f9fa'; this.style.transform='translateX(0)'">
+                    
+                    <!-- Avatar -->
+                    <div style="
+                        width: 40px; height: 40px; 
+                        border-radius: 50%; 
+                        background: linear-gradient(135deg, #667eea, #764ba2); 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        color: white; 
+                        font-weight: 700; 
+                        flex-shrink: 0;
+                        overflow: hidden;">
+                        {% if friend.profile_picture %}
+                            {% if friend.profile_picture starts with 'http://' or friend.profile_picture starts with 'https://' %}
+                                <img src="{{ friend.profile_picture }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% else %}
+                                <img src="{{ asset('images/profile_pictures/' ~ friend.profile_picture) }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% endif %}
+                        {% else %}
+                            {{ friend.username|first|upper }}
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Info -->
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 600; color: #1c1e21; font-size: 13px;">{{ friend.username }}</div>
+                        <div style="font-size: 11px; color: #65676b;">{{ friend.email }}</div>
+                        {% if friend.friend_since %}
+                        <div style="font-size: 10px; color: #999; margin-top: 2px;">🤝 Depuis {{ friend.friend_since|date('d/m/Y') }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Status -->
+                    <div style="
+                        width: 28px; height: 28px; 
+                        border-radius: 50%;
+                        background: {{ friend.is_online ? '#4CAF50' : '#ccc' }};
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 14px;
+                        title='{{ friend.is_online ? 'En ligne' : 'Hors ligne' }}'">
+                        {{ friend.is_online ? '●' : '○' }}
+                    </div>
+                </div>
+                {% else %}
+                <div style="padding: 20px; text-align: center; color: #999; font-size: 14px;">
+                    👥 Aucun ami pour le moment<br><span style="font-size: 12px; color: #bbb;">Commencez à vous connecter!</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        
+        <!-- Account Actions -->
+        <div class="card">
+            <h4 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">⚙️ Actions</h4>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <a href="{{ path('app_dashboard') }}" class="btn btn-outline" style="width: 100%; text-align: center; padding: 10px; background: #667eea; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">← Retour au Tableau</a>
+                <button onclick="toggleOnlineStatus()" class="btn btn-outline" style="width: 100%; text-align: center; padding: 10px; background: {{ profile.isOnline ? '#FF9800' : '#4CAF50' }}; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">{{ profile.isOnline ? '🟢 Passer hors ligne' : '⚫ Passer en ligne' }}</button>
+                <a href="{{ path('app_logout') }}" class="btn btn-danger" style="width: 100%; text-align: center; padding: 10px; background: #ef5350; color: white; border-radius: 8px; text-decoration: none; font-weight: 600;">🚪 Déconnexion</a>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<script>
+    // ── Badge Modal ──
+    function showBadgeDetails(badgeId, badgeName, badgeDesc, badgeIcon) {
+        const modal = document.getElementById('badgeModal');
+        document.getElementById('badgeModalIcon').textContent = badgeIcon;
+        document.getElementById('badgeModalName').textContent = badgeName;
+        document.getElementById('badgeModalDesc').textContent = badgeDesc || 'Achievement débloqué!';
+        modal.style.display = 'flex';
+    }
+
+    function closeBadgeModal() {
+        document.getElementById('badgeModal').style.display = 'none';
+    }
+
+    document.getElementById('badgeModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeBadgeModal();
+        }
+    });
+
+    // Hover effects on badge cards
+    document.querySelectorAll('.badge-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-4px)';
+            this.style.boxShadow = '0 8px 16px rgba(102,126,234,0.2)';
+        });
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = 'none';
+        });
+    });
+
+    // Profile picture upload
+    document.getElementById('upload-zone')?.addEventListener('click', function() {
+        document.getElementById('profile_picture').click();
+    });
+    
+    document.getElementById('upload-zone')?.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.style.backgroundColor = '#f0f2f5';
+    });
+    
+    document.getElementById('upload-zone')?.addEventListener('dragleave', function() {
+        this.style.backgroundColor = 'transparent';
+    });
+    
+    document.getElementById('upload-zone')?.addEventListener('drop', function(e) {
+        e.preventDefault();
+        document.getElementById('profile_picture').files = e.dataTransfer.files;
+    });
+
+    // Modal dialog for AI image generation
+    const aiModal = document.getElementById('aiGenerateModal');
+    const promptInput = document.getElementById('genPrompt');
+    const modelSelect = document.getElementById('genModel');
+    const charCount = document.getElementById('charCount');
+    
+    // Open modal on generate zone click
+    document.getElementById('generate-zone')?.addEventListener('click', function() {
+        aiModal.style.display = 'flex';
+        promptInput.focus();
+    });
+    
+    // Close modal function
+    function closeAIModal() {
+        aiModal.style.display = 'none';
+    }
+    
+    // Close on background click
+    aiModal?.addEventListener('click', function(e) {
+        if (e.target === this) closeAIModal();
+    });
+    
+    // Close button
+    document.getElementById('aiModalClose')?.addEventListener('click', closeAIModal);
+    
+    // Update character count in modal
+    promptInput?.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+    });
+    
+    // Generate on button click in modal
+    document.getElementById('aiGenerateBtn')?.addEventListener('click', async function() {
+        const prompt = promptInput.value.trim();
+        const model = modelSelect.value;
+        const aspectRatio = document.getElementById('genAspectRatio').value;
+        
+        if (!prompt) {
+            alert('Veuillez entrer une description pour générer une image');
+            return;
+        }
+        
+        const generateBtn = this;
+        const originalHTML = generateBtn.innerHTML;
+        
+        try {
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '⏳ Génération...';
+            
+            const response = await fetch('{{ path("app_profile_generate_image") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    _csrf_token: document.querySelector('input[name="_csrf_token"]').value,
+                    prompt: prompt,
+                    model: model,
+                    ar: aspectRatio
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                generateBtn.innerHTML = '✅ Généré!';
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                throw new Error(data.error || 'Generation failed');
+            }
+        } catch (error) {
+            console.error('Generation error:', error);
+            generateBtn.innerHTML = originalHTML;
+            generateBtn.disabled = false;
+            alert('⚠️ Erreur: ' + error.message);
+        }
+    });
+    document.getElementById('bio')?.addEventListener('input', function() {
+        const count = this.value.length;
+        const max = 500;
+        this.style.borderColor = count > max ? '#e74c3c' : '#e4e6eb';
+    });
+
+    // Close modal on ESC key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeBadgeModal();
+        }
+    });
+</script>
+
+<!-- Badge Details Modal -->
+<div id="badgeModal" style="
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;">
+    
+    <div style="
+        background: white;
+        border-radius: 20px;
+        padding: 40px 30px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        animation: slideUp 0.3s ease-out;">
+        
+        <button onclick="closeBadgeModal()" style="
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;">✕</button>
+        
+        <div style="font-size: 60px; margin-bottom: 16px;" id="badgeModalIcon">🏆</div>
+        <h2 id="badgeModalName" style="margin: 0 0 12px 0; font-size: 20px; color: #1c1e21;">Badge Name</h2>
+        <p id="badgeModalDesc" style="margin: 0; color: #65676b; line-height: 1.6; font-size: 14px;">Achievement unlocked!</p>
+        
+        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e4e6eb;">
+            <button onclick="closeBadgeModal()" style="
+                width: 100%;
+                padding: 12px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;">
+                Fermer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- AI Image Generation Modal -->
+<div id="aiGenerateModal" style="
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;">
+    
+    <div style="
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease-out;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 22px; color: #1c1e21;">✨ Générer avec IA</h2>
+            <button id="aiModalClose" style="
+                background: none;
+                border: none;
+                font-size: 24px;
+                cursor: pointer;
+                color: #999;">✕</button>
+        </div>
+        
+        <!-- Prompt Input -->
+        <div style="margin-bottom: 16px;">
+            <label for="genPrompt" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Description</label>
+            <textarea id="genPrompt" rows="4" placeholder="Ex: Portrait d'une personne avec des lunettes, style artistique et moderne..." maxlength="500" style="
+                width: 100%;
+                padding: 12px 16px;
+                border: 2px solid #e4e6eb;
+                border-radius: 8px;
+                font-size: 14px;
+                font-family: inherit;
+                resize: vertical;
+                transition: all 0.3s;
+                box-sizing: border-box;" onfocus="this.style.borderColor='#667eea'"></textarea>
+            <div style="font-size: 12px; color: #65676b; margin-top: 4px;">
+                <span id="charCount">0</span>/500 caractères
+            </div>
+        </div>
+        
+        <!-- Model Selection -->
+        <div style="margin-bottom: 20px;">
+            <label for="genModel" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Modèle d'IA</label>
+            <select id="genModel" style="
+                width: 100%;
+                padding: 10px 12px;
+                border: 2px solid #e4e6eb;
+                border-radius: 8px;
+                font-size: 14px;
+                cursor: pointer;
+                background-color: white;
+                transition: all 0.3s;" onfocus="this.style.borderColor='#667eea'">
+                <option value="gemini">Gemini (Rapide et de qualité)</option>
+                <option value="ultra">Ultra (Haute qualité)</option>
+                <option value="imagen4">Imagen 4 (Réaliste)</option>
+                <option value="seedream-4">Seedream 4 (Créatif)</option>
+                <option value="nano-banana-2">Nano Banana 2 (Très rapide)</option>
+            </select>
+        </div>
+        
+        <!-- Aspect Ratio -->
+        <div style="margin-bottom: 20px;">
+            <label for="genAspectRatio" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Ratio</label>
+            <select id="genAspectRatio" style="
+                width: 100%;
+                padding: 10px 12px;
+                border: 2px solid #e4e6eb;
+                border-radius: 8px;
+                font-size: 14px;
+                cursor: pointer;
+                background-color: white;
+                transition: all 0.3s;" onfocus="this.style.borderColor='#667eea'">
+                <option value="1:1">Carré (1:1) - Profil</option>
+                <option value="16:9">Large (16:9)</option>
+                <option value="9:16">Portrait (9:16)</option>
+                <option value="4:3">Standard (4:3)</option>
+                <option value="3:4">Vertical (3:4)</option>
+            </select>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 12px;">
+            <button type="button" onclick="closeAIModal()" style="
+                flex: 1;
+                padding: 12px;
+                background: #f0f2f5;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+                color: #1c1e21;" onmouseover="this.style.background='#e4e6eb'" onmouseout="this.style.background='#f0f2f5'">
+                Annuler
+            </button>
+            <button id="aiGenerateBtn" type="button" style="
+                flex: 1;
+                padding: 12px;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter='brightness(1)'">
+                🚀 Générer
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .badge-card:hover {
+        transform: translateY(-4px) !important;
+        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2) !important;
+    }
+
+    #badgeModal button:hover {
+        filter: brightness(1.1);
+        transform: translateY(-1px);
+    }
+</style>
+
+<script>
+    // Header profile picture upload
+    document.getElementById('headerProfilePicture')?.addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            // Set the file to the form input and submit
+            document.getElementById('profile_picture').files = this.files;
+            document.querySelector('form[action="{{ path("app_profile") }}"]')?.submit();
+        }
+    });
+
+    // Show upload icon on hover
+    const profilePicContainer = document.getElementById('profilePicContainer');
+    profilePicContainer?.addEventListener('mouseenter', function() {
+        const overlay = document.getElementById('profilePicOverlay');
+        if (overlay) overlay.style.opacity = '1';
+    });
+    profilePicContainer?.addEventListener('mouseleave', function() {
+        const overlay = document.getElementById('profilePicOverlay');
+        if (overlay) overlay.style.opacity = '0';
+    });
+
+    document.getElementById('upload-zone')?.addEventListener('click', function() {
+        document.getElementById('profile_picture').click();
+    });
+    
+    document.getElementById('upload-zone')?.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.style.backgroundColor = '#f0f2f5';
+    });
+    
+    document.getElementById('upload-zone')?.addEventListener('dragleave', function() {
+        this.style.backgroundColor = 'transparent';
+    });
+    
+    document.getElementById('upload-zone')?.addEventListener('drop', function(e) {
+        e.preventDefault();
+        document.getElementById('profile_picture').files = e.dataTransfer.files;
+    });
+
+    // Update char count
+    document.getElementById('bio')?.addEventListener('input', function() {
+        const count = this.value.length;
+        const max = 500;
+        this.style.borderColor = count > max ? '#e74c3c' : '#e4e6eb';
+    });
+
+    // Toggle online status
+    function toggleOnlineStatus() {
+        const btn = event.target;
+        const isCurrentlyOnline = btn.textContent.includes('Passer hors ligne');
+        const csrfToken = document.querySelector('input[name="_csrf_token"]');
+        
+        if (!csrfToken) {
+            console.error('CSRF token not found');
+            alert('Erreur de sécurité: Token CSRF manquant');
+            return;
+        }
+        
+        fetch('{{ path("toggle_online_status") }}', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken.value
+            },
+            body: JSON.stringify({ online: !isCurrentlyOnline })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('HTTP ' + response.status);
+            }
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.ok) {
+                location.reload();
+            } else {
+                alert('Erreur: ' + (data.error || 'Impossible de mettre à jour le statut'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erreur: ' + error.message);
+        });
+    }
+</script>
+
+<style>
+    @media (max-width: 1024px) {
+        main > div {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        main > div {
+            grid-template-columns: 1fr !important;
+            gap: 12px;
+        }
+        
+        aside {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}

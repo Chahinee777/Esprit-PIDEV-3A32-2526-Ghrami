@@ -1,0 +1,1348 @@
+﻿{% extends 'base.html.twig' %}
+
+{% block title %}Mes Loisirs - Ghrami{% endblock %}
+
+{% block body %}
+<div class="hobbies-container" style="display: grid; grid-template-columns: 1fr; gap: 24px; padding: 20px; max-width: 1400px; margin: 0 auto;">
+    
+    <!-- Barre de navigation -->
+    <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 16px 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <button onclick="goBack()" style="padding: 10px 16px; background: #e0e0e0; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">← Retour</button>
+            <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #1c1e21;">🎯 Mes Loisirs</h1>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="openCoachModal()" style="padding: 10px 16px; background: #9C27B0; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">🤖 Coach</button>
+            <a href="{{ path('app_hobbies_analytics') }}" class="btn-secondary" style="padding: 10px 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block;">📊 Statistiques</a>
+            <button onclick="refreshPage()" style="padding: 10px 16px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">🔄 Actualiser</button>
+        </div>
+    </div>
+    
+    <!-- Section d'en-tête -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+        <!-- Cartes de statistiques -->
+        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+            <div style="font-size: 32px; margin-bottom: 8px;">🎯</div>
+            <p style="margin: 0; font-size: 14px; opacity: 0.9;">Total des Loisirs</p>
+            <h3 style="margin: 4px 0 0 0; font-size: 28px; font-weight: bold;">{{ total_hobbies }}</h3>
+        </div>
+
+        <div class="stat-card" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);">
+            <div style="font-size: 32px; margin-bottom: 8px;">⏱️</div>
+            <p style="margin: 0; font-size: 14px; opacity: 0.9;">Total des Heures</p>
+            <h3 style="margin: 4px 0 0 0; font-size: 28px; font-weight: bold;">{{ total_hours }}</h3>
+        </div>
+
+        <div class="stat-card" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); color: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);">
+            <div style="font-size: 32px; margin-bottom: 8px;">🏆</div>
+            <p style="margin: 0; font-size: 14px; opacity: 0.9;">Jalons</p>
+            <h3 style="margin: 4px 0 0 0; font-size: 28px; font-weight: bold;">{{ achieved_milestones }} / {{ total_milestones }}</h3>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: center;">
+            <button onclick="openCreateHobbyModal()" class="btn-primary" style="width: 100%; padding: 16px; border-radius: 16px; border: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; font-size: 16px; cursor: pointer; transition: transform 0.2s;">
+                ➕ Ajouter un Loisir
+            </button>
+        </div>
+    </div>
+
+    <!-- Section de filtres -->
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div style="flex: 1; min-width: 200px;">
+            <input type="text" id="searchInput" placeholder="Rechercher des loisirs..." style="width: 100%; padding: 12px 16px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px;" onkeyup="filterHobbies()">
+        </div>
+        <select id="categoryFilter" onchange="filterHobbies()" style="padding: 12px 16px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; min-width: 200px;">
+            <option value="all">Toutes les Catégories</option>
+            {% for category in categories %}
+            <option value="{{ category }}" {% if category == current_category %}selected{% endif %}>{{ category }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Grille des loisirs -->
+    <div id="hobbiesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px;">
+        {% if hobbies|length == 0 %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+            <div style="font-size: 80px; opacity: 0.5; margin-bottom: 16px;">🎯</div>
+            <h3 style="font-size: 24px; font-weight: bold; color: #1c1e21; margin: 0 0 8px 0;">Aucun loisir pour l'instant</h3>
+            <p style="color: #65676b; margin: 0 0 24px 0;">Commencez à suivre vos passions et observez votre progression !</p>
+            <button onclick="openCreateHobbyModal()" class="btn-primary" style="padding: 12px 32px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                ➕ Créer votre premier Loisir
+            </button>
+        </div>
+        {% else %}
+        {% for hobby in hobbies %}
+        <div class="hobby-card" data-hobby-id="{{ hobby.id }}" data-csrf-edit="{{ csrf_token('hobby_edit_' ~ hobby.id) }}" data-csrf-delete="{{ csrf_token('hobby_delete_' ~ hobby.id) }}" data-csrf-log="{{ csrf_token('log_progress_' ~ hobby.id) }}" data-csrf-milestone="{{ csrf_token('milestone_add_' ~ hobby.id) }}" style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s; cursor: pointer; display: flex; flex-direction: column; gap: 16px;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 24px rgba(102,126,234,0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'">
+            
+            <!-- En-tête -->
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div style="font-size: 48px;">
+                    {% set icon = {
+                        'Sports & Fitness': '⚽',
+                        'Arts & Crafts': '🎨',
+                        'Music': '🎵',
+                        'Cooking': '🍳',
+                        'Gaming': '🎮',
+                        'Reading': '📚',
+                        'Technology': '💻',
+                        'Photography': '📷',
+                        'Gardening': '🌱',
+                        'Writing': '✏️',
+                        'Learning Languages': '🗣️',
+                        'Dancing': '💃',
+                        'Traveling': '✈️'
+                    } %}
+                    {{ icon[hobby.category] ?? '🎯' }}
+                </div>
+                <div style="flex: 1;">
+                    <h4 style="margin: 0; font-size: 18px; font-weight: bold; color: #1c1e21;">{{ hobby.name }}</h4>
+                    <span style="display: inline-block; margin-top: 4px; padding: 4px 12px; background: #667eea; color: white; border-radius: 12px; font-size: 11px; font-weight: 600;">{{ hobby.category }}</span>
+                </div>
+            </div>
+
+            <!-- Description -->
+            {% if hobby.description %}
+            <p style="margin: 0; color: #65676b; font-size: 13px; line-height: 1.5; max-height: 70px; overflow: hidden;">{{ hobby.description }}</p>
+            {% endif %}
+
+            <!-- Informations de progression -->
+            {% set progress = hobby.progress.first() %}
+            {% set milestones = hobby.milestones %}
+            {% set achieved = milestones|filter(m => m.isAchieved)|length %}
+            <div style="display: flex; gap: 12px; background: #f0f2f5; padding: 12px; border-radius: 12px;">
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">Heures</div>
+                    <div style="font-size: 18px; font-weight: bold; color: #4CAF50;">{{ progress ? progress.hoursSpent|round(1) : 0 }}</div>
+                </div>
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">Objectifs</div>
+                    <div style="font-size: 18px; font-weight: bold; color: #FF9800;">{{ achieved }}/{{ milestones|length }}</div>
+                </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div style="display: flex; gap: 8px;">
+                <button onclick="openDetailsModal({{ hobby.id }})" class="btn-action" style="flex: 1; padding: 10px; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">📊 Détails</button>
+                <button onclick="openLogProgressModal({{ hobby.id }}, '{{ hobby.name }}')" class="btn-action" style="flex: 1; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">➕ Temps</button>
+                <button onclick="openMusicModal({{ hobby.id }}, '{{ hobby.name }}')" class="btn-action" style="flex: 1; padding: 10px; background: #E91E63; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">🎵 Musique</button>
+                <button onclick="openEditHobbyModal({{ hobby.id }}, '{{ hobby.name }}', '{{ hobby.category }}', '{{ hobby.description }}')" style="padding: 10px 12px; background: #FF9800; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">✏️</button>
+                <button onclick="deleteHobby({{ hobby.id }})" style="padding: 10px 12px; background: #f44336; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">🗑️</button>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Créer/Modifier un Loisir -->
+<div id="createHobbyModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 450px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="hobbyModalTitle" style="margin: 0; font-size: 20px; font-weight: bold;">Créer un Nouveau Loisir</h2>
+            <button onclick="closeCreateHobbyModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <form id="hobbyForm" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+            <input type="hidden" name="_csrf_token" value="" id="hobbyCSRF">
+            <input type="hidden" name="hobby_id" id="hobbyId">
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Nom du Loisir *</label>
+                <input type="text" name="name" id="hobbyName" placeholder="ex. : Guitare, Course à pied" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px;">
+                    <span id="hobbyNameStatus" style="color: #65676b;"></span>
+                    <span id="hobbyNameCounter" style="color: #65676b;">0 / 100</span>
+                </div>
+                <div id="hobbyNameError" style="color: #e74c3c; font-size: 12px; margin-top: 6px; display: none;"></div>
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Catégorie *</label>
+                <select name="category" id="hobbyCategory" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                    <option value="">Choisir une catégorie</option>
+                    {% for category in categories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                    {% endfor %}
+                </select>
+                <div id="hobbyCategoryError" style="color: #e74c3c; font-size: 12px; margin-top: 6px; display: none;"></div>
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Description (facultatif)</label>
+                <textarea name="description" id="hobbyDescription" placeholder="Ajouter une description..." style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 80px; box-sizing: border-box;"></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px;">
+                    <span id="hobbyDescStatus" style="color: #65676b;"></span>
+                    <span id="hobbyDescCounter" style="color: #65676b;">0 / 500</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <button type="button" onclick="closeCreateHobbyModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Annuler</button>
+                <button type="submit" class="btn-primary" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">✨ Créer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Enregistrer la Progression -->
+<div id="logProgressModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 450px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20px; font-weight: bold;">Progression : <span id="hobbyNameDisplay"></span></h2>
+            <button onclick="closeLogProgressModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <form id="progressForm" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+            <input type="hidden" name="_csrf_token" value="" id="progressCSRF">
+            <input type="hidden" name="hobby_id" id="progressHobbyId">
+
+            <div id="currentHours" style="background: #f0f0ff; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #667eea;">📊 Total actuel : chargement...</div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">📅 Date de la séance</label>
+                <input type="date" name="session_date" id="sessionDate" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">⏱️ Heures passées *</label>
+                <input type="number" name="hours" id="hoursSpent" placeholder="ex. 1.5" min="0.1" step="0.5" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                <div id="hoursError" style="color: #e74c3c; font-size: 12px; margin-top: 6px; display: none;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px;">
+                    <span id="hoursStatus" style="color: #65676b;"></span>
+                </div>
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">📝 Notes (facultatif)</label>
+                <textarea name="notes" id="sessionNotes" placeholder="Qu'avez-vous pratiqué aujourd'hui ?" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; resize: vertical; min-height: 80px; box-sizing: border-box;"></textarea>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px;">
+                    <span id="notesStatus" style="color: #65676b;"></span>
+                    <span id="notesCounter" style="color: #65676b;">0 / 500</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <button type="button" onclick="closeLogProgressModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Annuler</button>
+                <button type="submit" class="btn-primary" style="flex: 1; padding: 12px; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">✅ Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Jalon -->
+<div id="milestoneModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1001; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 450px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="milestoneModalTitle" style="margin: 0; font-size: 20px; font-weight: bold;">Ajouter un Jalon</h2>
+            <button onclick="closeMilestoneModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <form id="milestoneForm" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+            <input type="hidden" name="_csrf_token" value="" id="milestoneCSRF">
+            <input type="hidden" name="hobby_id" id="milestoneHobbyId">
+            <input type="hidden" name="milestone_id" id="milestoneId">
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Titre du Jalon *</label>
+                <input type="text" name="title" id="milestoneTitle" placeholder="ex. : Apprendre 10 chansons" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px;">
+                    <span id="milestoneStatus" style="color: #65676b;"></span>
+                    <span id="milestoneCounter" style="color: #65676b;">0 / 150</span>
+                </div>
+                <div id="milestoneError" style="color: #e74c3c; font-size: 12px; margin-top: 6px; display: none;"></div>
+            </div>
+
+            <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1c1e21;">Date cible (facultatif)</label>
+                <input type="date" name="target_date" id="milestoneDate" style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                <div id="milestoneeDateError" style="color: #e74c3c; font-size: 12px; margin-top: 6px; display: none;"></div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+                <button type="button" onclick="closeMilestoneModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Annuler</button>
+                <button type="submit" class="btn-primary" style="flex: 1; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">✨ Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Détails -->
+<div id="detailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 900px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="detailsTitle" style="margin: 0; font-size: 20px; font-weight: bold;">Détails du Loisir</h2>
+            <button onclick="closeDetailsModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <div id="detailsContent" style="display: flex; flex-direction: column; gap: 24px;">
+            <p style="text-align: center; color: #65676b;">Chargement des détails...</p>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 24px; border-top: 1px solid #e4e6eb; padding-top: 16px;">
+            <button type="button" onclick="closeDetailsModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Fermer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Recommandations Musicales -->
+<div id="musicModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1001; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 600px; padding: 28px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20px; font-weight: bold;">🎵 Recommandations Musicales</h2>
+            <button onclick="closeMusicModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+
+        <div style="background: #f0f2f5; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+            <p style="margin: 0; font-size: 14px; color: #1c1e21;"><strong>Loisir:</strong> <span id="musicHobbyName"></span></p>
+        </div>
+
+        <div id="musicResults" style="display: flex; flex-direction: column; gap: 12px; min-height: 200px;">
+            <div style="text-align: center; padding: 40px; color: #65676b;">⏳ Chargement...</div>
+        </div>
+
+        <input type="hidden" id="musicHobbyId">
+
+        <div style="display: flex; gap: 12px; margin-top: 16px; border-top: 1px solid #e4e6eb; padding-top: 16px;">
+            <button onclick="closeMusicModal()" class="btn-secondary" style="flex: 1; padding: 12px; background: #e0e0e0; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Fermer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Coach -->
+<div id="coachModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 700px; padding: 0; box-shadow: 0 10px 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; max-height: 85vh;">
+        
+        <!-- En-tête -->
+        <div style="background: linear-gradient(to right, #667eea, #764ba2); color: white; padding: 20px 24px; border-radius: 16px 16px 0 0; display: flex; gap: 14px; align-items: center; justify-content: space-between;">
+            <div style="display: flex; gap: 14px; align-items: center; flex: 1;">
+                <div style="font-size: 30px;">🤖</div>
+                <div>
+                    <h2 style="margin: 0; font-size: 18px; font-weight: bold;">AI Hobby Coach</h2>
+                    <p style="margin: 2px 0 0 0; font-size: 12px; opacity: 0.8;">Powered by Groq • Ask anything</p>
+                </div>
+            </div>
+            <button onclick="closeCoachModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: white; padding: 0; width: 40px; height: 40px;">✕</button>
+        </div>
+
+        <!-- Zone de discussion -->
+        <div id="coachChat" style="flex: 1; padding: 20px; overflow-y: auto; background: #f0f2f5; display: flex; flex-direction: column; gap: 14px; min-height: 300px;">
+            <div style="padding: 12px 18px; background: white; border-radius: 16px 16px 16px 4px; max-width: 600px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                <div style="font-size: 14px; color: #1c1e21;">👋 Hello! I'm your AI Hobby Coach. Ask me for tips, motivation, practice plans, or anything about your hobbies!</div>
+            </div>
+        </div>
+
+        <!-- Zone de saisie -->
+        <div style="padding: 14px 20px; border-top: 1px solid #e4e6eb; background: white; border-radius: 0 0 16px 16px; display: flex; gap: 12px;">
+            <input type="text" id="coachInput" placeholder="Ask me anything about your hobbies..." style="flex: 1; padding: 12px 16px; border: 1px solid #dde0e8; border-radius: 25px; background-color: white; font-size: 14; box-sizing: border-box;">
+            <button onclick="sendCoachMessage()" style="padding: 12px 22px; background: #667eea; color: white; border: none; border-radius: 25px; font-weight: 600; cursor: pointer; font-size: 14px;">Send 🚀</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const icons = {
+        'Sports & Fitness': '⚽',
+        'Arts & Crafts': '🎨',
+        'Music': '🎵',
+        'Cooking': '🍳',
+        'Gaming': '🎮',
+        'Reading': '📚',
+        'Technology': '💻',
+        'Photography': '📷',
+        'Gardening': '🌱',
+        'Writing': '✏️',
+        'Learning Languages': '🗣️',
+        'Dancing': '💃',
+        'Traveling': '✈️'
+    };
+
+    let currentHobbyId = null;
+    let currentMilestoneId = null;
+
+    // Date d'aujourd'hui par défaut
+    const today = new Date();
+    document.getElementById('sessionDate').valueAsDate = today;
+
+    function goBack() {
+        window.history.back();
+    }
+
+    function refreshPage() {
+        location.reload();
+    }
+
+    function openCreateHobbyModal() {
+        document.getElementById('hobbyForm').action = '{{ path("app_hobbies_create") }}';
+        document.getElementById('hobbyForm').method = 'POST';
+        document.getElementById('hobbyModalTitle').textContent = 'Créer un Nouveau Loisir';
+        document.getElementById('hobbyName').value = '';
+        document.getElementById('hobbyCategory').value = '';
+        document.getElementById('hobbyDescription').value = '';
+        document.getElementById('hobbyId').value = '';
+        document.getElementById('hobbyCSRF').value = '{{ csrf_token("hobby_create") }}';
+        document.getElementById('createHobbyModal').style.display = 'flex';
+    }
+
+    function closeCreateHobbyModal() {
+        document.getElementById('createHobbyModal').style.display = 'none';
+    }
+
+    function openEditHobbyModal(id, name, category, description) {
+        const hobbyCard = document.querySelector(`[data-hobby-id="${id}"]`);
+        const csrfToken = hobbyCard?.dataset.csrfEdit || '{{ csrf_token("hobby_edit_") }}';
+        
+        document.getElementById('hobbyForm').action = '{{ path("app_hobbies_edit", {"id": "ID"}) }}'.replace('ID', id);
+        document.getElementById('hobbyForm').method = 'POST';
+        document.getElementById('hobbyModalTitle').textContent = 'Modifier le Loisir';
+        document.getElementById('hobbyName').value = name;
+        document.getElementById('hobbyCategory').value = category;
+        document.getElementById('hobbyDescription').value = description;
+        document.getElementById('hobbyCSRF').value = csrfToken;
+        document.getElementById('hobbyId').value = id;
+        document.getElementById('createHobbyModal').style.display = 'flex';
+    }
+
+    function openLogProgressModal(id, name) {
+        const hobbyCard = document.querySelector(`[data-hobby-id="${id}"]`);
+        const csrfToken = hobbyCard?.dataset.csrfLog || '{{ csrf_token("log_progress_") }}';
+        
+        document.getElementById('hobbyNameDisplay').textContent = name;
+        document.getElementById('progressHobbyId').value = id;
+        document.getElementById('hoursSpent').value = '';
+        document.getElementById('sessionNotes').value = '';
+        // Set today's date as default
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('sessionDate').value = today;
+        // Set CSRF token dynamically for this hobby
+        document.getElementById('progressCSRF').value = csrfToken;
+        document.getElementById('logProgressModal').style.display = 'flex';
+
+        // Charger le total actuel
+        fetch(`{{ path('app_hobbies_details', {'id': 999}) }}`.replace('999', id))
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('currentHours').textContent = `📊 Total actuel : ${data.progress.total_hours.toFixed(1)} heures`;
+            })
+            .catch(e => console.error(e));
+    }
+
+    function closeLogProgressModal() {
+        document.getElementById('logProgressModal').style.display = 'none';
+    }
+
+    function openMilestoneModal(hobbyId, milestoneId = null, title = '', targetDate = '') {
+        const hobbyCard = document.querySelector(`[data-hobby-id="${hobbyId}"]`);
+        const csrfToken = hobbyCard?.dataset.csrfMilestone || '{{ csrf_token("milestone_add_") }}';
+        
+        currentHobbyId = hobbyId;
+        currentMilestoneId = milestoneId;
+        document.getElementById('milestoneHobbyId').value = hobbyId;
+        document.getElementById('milestoneId').value = milestoneId || '';
+        document.getElementById('milestoneTitle').value = title;
+        document.getElementById('milestoneDate').value = targetDate;
+        document.getElementById('milestoneCSRF').value = csrfToken;
+        document.getElementById('milestoneModalTitle').textContent = milestoneId ? '✏️ Modifier le Jalon' : '🏆 Ajouter un Jalon';
+        document.getElementById('milestoneModal').style.display = 'flex';
+    }
+
+    function closeMilestoneModal() {
+        document.getElementById('milestoneModal').style.display = 'none';
+    }
+
+    function openDetailsModal(id) {
+        document.getElementById('detailsModal').style.display = 'flex';
+        loadHobbyDetails(id);
+    }
+
+    function closeDetailsModal() {
+        document.getElementById('detailsModal').style.display = 'none';
+    }
+
+    async function loadHobbyDetails(hobbyId) {
+        try {
+            const response = await fetch(`{{ path('app_hobbies_details', {'id': 999}) }}`.replace('999', hobbyId));
+            const data = await response.json();
+            
+            // Store CSRF tokens globally for use in toggleMilestone and deleteMilestone
+            window.csrfTokens = window.csrfTokens || {};
+            window.csrfTokens[hobbyId] = data.csrf_tokens;
+            
+            const hobby = data.hobby;
+            const progress = data.progress.total_hours;
+            const milestones = data.milestones;
+            const logs = data.recent_logs;
+            const streak = data.streak;
+            const dayHours = data.day_hours;
+            
+            // Load weather data if hobby has a location-based category
+            let weatherHtml = '';
+            const weatherCategories = ['sports', 'outdoor', 'hiking', 'cycling', 'running', 'camping', 'nature'];
+            const isOutdoor = weatherCategories.some(cat => hobby.category?.toLowerCase().includes(cat));
+            
+            if (isOutdoor) {
+                try {
+                    const weatherResponse = await fetch(`/hobbies/weather/current?lat=48.8566&lon=2.3522`);
+                    const weatherData = await weatherResponse.json();
+                    if (weatherData.ok && weatherData.weather) {
+                        const w = weatherData.weather;
+                        weatherHtml = `
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                                <h4 style="margin: 0 0 12px 0; font-weight: bold;">🌤️ Météo Actuelle</h4>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+                                    <div><strong>Température:</strong> ${w.temperature || 'N/A'}°C</div>
+                                    <div><strong>Humidité:</strong> ${w.humidity || 'N/A'}%</div>
+                                    <div><strong>Condition:</strong> ${w.emoji} ${w.condition || 'N/A'}</div>
+                                    <div><strong>Pour l'activité:</strong> ${w.good_for_activity ? '✅ Idéal' : '⚠️ Pas idéal'}</div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } catch (err) {
+                    console.error('Erreur lors du chargement de la météo:', err);
+                }
+            }
+
+            let html = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <!-- Gauche : Statistiques et infos -->
+                    <div>
+                        ${weatherHtml}
+                        <div style="background: #f0f2f5; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                            <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: bold;">${hobby.name}</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">Heures</div>
+                                    <div style="font-size: 24px; font-weight: bold; color: #4CAF50;">${progress.toFixed(1)}</div>
+                                </div>
+                                <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">🔥 Série</div>
+                                    <div style="font-size: 24px; font-weight: bold; color: #FF9800;">${streak}</div>
+                                </div>
+                                <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">Catégorie</div>
+                                    <div style="font-size: 14px; font-weight: bold; color: #667eea;">${hobby.category}</div>
+                                </div>
+                                <div style="background: white; padding: 12px; border-radius: 8px; text-align: center;">
+                                    <div style="font-size: 12px; color: #65676b; font-weight: 500;">Objectifs</div>
+                                    <div style="font-size: 24px; font-weight: bold; color: #2196F3;">${milestones.filter(m => m.isAchieved).length}/${milestones.length}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 style="margin: 0 0 12px 0; font-weight: bold; color: #1c1e21;">📌 Séances récentes</h4>
+                            ${logs.length === 0 ? '<p style="color: #65676b; font-size: 13px; margin: 0;">Aucune séance pour l\'instant</p>' :
+                                logs.map(log => `
+                                    <div style="background: #f5f6ff; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; gap: 12px;">
+                                        <div style="font-size: 13px; font-weight: 600; color: #667eea; min-width: 110px;">${log.date || 'Unknown'}</div>
+                                        <div style="font-size: 13px; font-weight: bold; color: #4CAF50;">${(log.hours || 0).toFixed(1)} h</div>
+                                        <div style="font-size: 12px; color: #65676b; flex: 1;">${log.notes || ''}</div>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Droite : Calendrier et jalons -->
+                    <div>
+                        <div>
+                            <h4 style="margin: 0 0 12px 0; font-weight: bold; color: #1c1e21;">📅 Ce Mois-ci</h4>
+                            <div id="calendarWidget" style="background: white; padding: 12px; border-radius: 8px; border: 1px solid #e4e6eb;">
+                                ${buildCalendar(dayHours, milestones, hobby.id)}
+                            </div>
+                            <div id="calendarWeatherBox" style="margin-top: 12px; background: #f5f7ff; border: 1px solid #dbe3ff; padding: 12px; border-radius: 8px; font-size: 13px; color: #2b3a67;">
+                                Cliquez sur un jour du calendrier pour voir la météo de cette date.
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h4 style="margin: 0; font-weight: bold; color: #1c1e21;">🏆 Jalons</h4>
+                                <button onclick="openMilestoneModal(${hobby.id})" style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">➕ Ajouter</button>
+                            </div>
+                            ${milestones.length === 0 ? '<p style="color: #65676b; font-size: 13px; margin: 0;">Aucun jalon pour l\'instant</p>' :
+                                milestones.map(m => `
+                                    <div style="background: ${m.isAchieved ? '#e8f5e9' : m.isOverdue ? '#ffebee' : '#fff3e0'}; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; gap: 12px; align-items: center;">
+                                        <input type="checkbox" ${m.isAchieved ? 'checked' : ''} onchange="toggleMilestone(${m.id}, this, ${hobby.id})" style="cursor: pointer;">
+                                        <span style="flex: 1; ${m.isAchieved ? 'text-decoration: line-through; color: #4CAF50;' : m.isOverdue ? 'color: #d32f2f; font-weight: bold;' : 'color: #1c1e21;'} font-weight: 600;">${m.title}</span>
+                                        ${m.isOverdue ? '<span style="color: #d32f2f; font-weight: bold;">⚠️ EN RETARD</span>' : ''}
+                                        <button onclick="openMilestoneModal(${hobby.id}, ${m.id}, '${m.title}', '${m.targetDate}')" style="padding: 4px 8px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">✏️</button>
+                                        <button onclick="deleteMilestone(${m.id}, ${hobby.id})" style="padding: 4px 8px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">🗑️</button>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('detailsTitle').textContent = hobby.name;
+            document.getElementById('detailsContent').innerHTML = html;
+
+            const now = new Date();
+            const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const todayCell = document.querySelector(`#calendarWidget [data-calendar-day="${todayKey}"]`);
+            if (todayCell) {
+                onCalendarDayClick(todayKey, hobby.id, todayCell);
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('detailsContent').innerHTML = '<p style="color: #f44336;">Erreur lors du chargement des détails</p>';
+        }
+    }
+
+    function buildCalendar(dayHours, milestones = [], hobbyId = null) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+
+        const toLocalDateKey = (date) => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+        
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - firstDay.getDay());
+        
+        const monthStr = firstDay.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        
+        let html = `<div style="margin-bottom: 12px;"><strong>${monthStr}</strong></div>`;
+        html += '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; font-size: 11px;">';
+        
+        // En-têtes des jours
+        ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'].forEach(day => {
+            html += `<div style="text-align: center; font-weight: bold; color: #65676b; padding: 4px;">${day}</div>`;
+        });
+        
+        // Render a stable 6x7 grid so previous/next month leading days always appear.
+        let current = new Date(startDate);
+        for (let i = 0; i < 42; i++) {
+            const dateStr = toLocalDateKey(current);
+            const hasEntry = dayHours && dayHours[dateStr];
+            const hasMilestone = milestones && milestones.find(m => m && m.targetDate === dateStr);
+            const isToday = current.toDateString() === now.toDateString();
+            const isCurrentMonth = current.getMonth() === month;
+            
+            if (!isCurrentMonth) {
+                html += '<div style="padding: 4px; opacity: 0.3;"></div>';
+            } else {
+                let bgColor = '#f7f8fc';
+                let textColor = '#999';
+                let content = `${current.getDate()}`;
+                let borderStyle = '1px solid #e4e6eb';
+                
+                if (hasMilestone) {
+                    bgColor = hasMilestone.isAchieved ? '#c8e6c9' : '#ffe0b2';
+                    textColor = hasMilestone.isAchieved ? '#1b5e20' : '#e65100';
+                    borderStyle = '2px solid ' + (hasMilestone.isAchieved ? '#4caf50' : '#ff9800');
+                    content = `<strong>${current.getDate()}</strong><br>🎯`;
+                }
+                
+                if (hasEntry && !hasMilestone) {
+                    bgColor = '#e3f2fd';
+                    textColor = '#1976d2';
+                    borderStyle = '2px solid #1976d2';
+                    content = `<strong>${current.getDate()}</strong><br>${(dayHours[dateStr] || 0).toFixed(1)}h`;
+                }
+                
+                if (isToday && !hasMilestone && !hasEntry) {
+                    bgColor = '#fff9c4';
+                    textColor = '#f57f17';
+                    borderStyle = '2px solid #fbc02d';
+                }
+                
+                let title = '';
+                if (hasEntry) title += `${(dayHours[dateStr] || 0).toFixed(1)}h`;
+                if (hasMilestone) title += (title ? ' - ' : '') + `Jalon: ${hasMilestone.title}`;
+                if (!title) title = 'Aucune entrée';
+                
+                html += `<div data-calendar-day="${dateStr}" onclick="onCalendarDayClick('${dateStr}', ${hobbyId ?? 'null'}, this)" style="padding: 8px 4px; text-align: center; background: ${bgColor}; border: ${borderStyle}; border-radius: 6px; font-weight: bold; color: ${textColor}; cursor: pointer; line-height: 1.2; font-size: 10px; min-height: 40px; display: flex; align-items: center; justify-content: center;" title="${title}">${content}</div>`;
+            }
+            
+            current.setDate(current.getDate() + 1);
+        }
+        
+        html += '</div>';
+        return html;
+    }
+
+    async function onCalendarDayClick(dateStr, hobbyId, cellEl) {
+        document.querySelectorAll('#calendarWidget [data-calendar-day]').forEach(el => {
+            el.style.boxShadow = 'none';
+        });
+
+        if (cellEl) {
+            cellEl.style.boxShadow = '0 0 0 2px #111827 inset';
+        }
+
+        await loadWeatherForDate(dateStr);
+    }
+
+    async function loadWeatherForDate(dateStr) {
+        const weatherBox = document.getElementById('calendarWeatherBox');
+        if (!weatherBox) return;
+
+        weatherBox.innerHTML = `<span style="color: #667eea; font-weight: 600;">Chargement météo pour ${dateStr}...</span>`;
+
+        try {
+            const response = await fetch(`/hobbies/weather/for-activity?lat=48.8566&lon=2.3522&date=${encodeURIComponent(dateStr)}`);
+            const data = await response.json();
+
+            if (!response.ok || !data.ok || !data.weather) {
+                weatherBox.innerHTML = `<span style="color: #d32f2f; font-weight: 600;">Impossible de charger la météo pour ${dateStr}.</span>`;
+                return;
+            }
+
+            const weather = data.weather;
+            const tMin = weather.temperature_min !== null && weather.temperature_min !== undefined
+                ? `${Number(weather.temperature_min).toFixed(1)}°C`
+                : 'N/A';
+            const tMax = weather.temperature_max !== null && weather.temperature_max !== undefined
+                ? `${Number(weather.temperature_max).toFixed(1)}°C`
+                : 'N/A';
+            const rain = weather.precipitation !== null && weather.precipitation !== undefined
+                ? `${Number(weather.precipitation).toFixed(1)} mm`
+                : 'N/A';
+
+            weatherBox.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <strong style="color: #1c1e21;">🌤️ Météo du ${dateStr}</strong>
+                    <span style="font-size: 18px;">${weather.emoji || '🌤️'}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; color: #374151;">
+                    <div><strong>Min:</strong> ${tMin}</div>
+                    <div><strong>Max:</strong> ${tMax}</div>
+                    <div><strong>Pluie:</strong> ${rain}</div>
+                    <div><strong>Condition:</strong> ${weather.weather_description || 'N/A'}</div>
+                </div>
+                <div style="margin-top: 8px; font-weight: 600; color: ${weather.good_for_activity ? '#2e7d32' : '#ef6c00'};">
+                    ${weather.good_for_activity ? '✅ Bonne journée pour l\'activité' : '⚠️ Météo moins favorable'}
+                </div>
+            `;
+        } catch (e) {
+            console.error('Erreur météo:', e);
+            weatherBox.innerHTML = `<span style="color: #d32f2f; font-weight: 600;">Erreur réseau lors du chargement météo.</span>`;
+        }
+    }
+
+    function toggleMilestone(id, checkbox, hobbyId) {
+        const tokenData = window.csrfTokens?.[hobbyId]?.milestone_toggle?.find(t => t.id === id);
+        const token = tokenData?.token;
+        
+        if (!token) {
+            alert('Erreur : Token CSRF manquant');
+            return;
+        }
+        
+        fetch(`/hobbies/milestone/${id}/toggle`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `_csrf_token=${encodeURIComponent(token)}`
+        }).then(r => r.json()).then(data => {
+            if (data.ok) {
+                loadHobbyDetails(hobbyId);
+            } else {
+                alert('Erreur : ' + data.error);
+            }
+        }).catch(e => console.error(e));
+    }
+
+    function deleteMilestone(id, hobbyId) {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer ce jalon ?')) return;
+        
+        const tokenData = window.csrfTokens?.[hobbyId]?.milestone_toggle?.find(t => t.id === id);
+        const token = tokenData?.delete_token;
+        
+        if (!token) {
+            alert('Erreur : Token CSRF manquant');
+            return;
+        }
+        
+        fetch(`/hobbies/milestone/${id}/delete`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `_csrf_token=${encodeURIComponent(token)}`
+        }).then(r => r.json()).then(data => {
+            if (data.ok) {
+                loadHobbyDetails(hobbyId);
+            } else {
+                alert('Erreur : ' + data.error);
+            }
+        }).catch(e => console.error(e));
+    }
+
+    function deleteHobby(id) {
+        if (!confirm('Êtes-vous sûr ? Cela supprimera le loisir ainsi que toute la progression et les jalons associés.')) return;
+        
+        const hobbyCard = document.querySelector(`[data-hobby-id="${id}"]`);
+        const csrfToken = hobbyCard?.dataset.csrfDelete || '{{ csrf_token("hobby_delete_") }}';
+        const formData = new FormData();
+        formData.set('_csrf_token', csrfToken);
+        
+        fetch(`{{ path('app_hobbies_delete', {'id': 'ID'}) }}`.replace('ID', id), {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                window.location.href = '{{ path("app_hobbies_index") }}';
+            } else {
+                alert('Erreur : ' + (data.error || 'Impossible de supprimer le loisir'));
+            }
+        })
+        .catch(e => {
+            alert('Erreur : ' + e.message);
+        });
+    }
+
+    function filterHobbies() {
+        const search = document.getElementById('searchInput').value;
+        const category = document.getElementById('categoryFilter').value;
+        const url = new URL(window.location);
+        url.searchParams.set('search', search);
+        url.searchParams.set('category', category);
+        window.location.href = url.toString();
+    }
+
+    function formatServerErrors(data) {
+        if (!data || !data.errors || typeof data.errors !== 'object') {
+            return data?.error || 'Unknown error';
+        }
+
+        return Object.values(data.errors).join('\n');
+    }
+
+    // Real-time validation for hobby form
+    document.getElementById('hobbyName')?.addEventListener('input', () => {
+        const name = document.getElementById('hobbyName').value.trim();
+        const counter = document.getElementById('hobbyNameCounter');
+        const status = document.getElementById('hobbyNameStatus');
+        const error = document.getElementById('hobbyNameError');
+        const MAX_CHARS = 100;
+        const len = name.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        error.style.display = 'none';
+        
+        if (len === 0) {
+            counter.style.color = '#e4e6eb';
+            status.textContent = '';
+            document.getElementById('hobbyName').style.borderColor = '#e4e6eb';
+        } else if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            status.textContent = '❌ Trop long';
+            status.style.color = '#e74c3c';
+            document.getElementById('hobbyName').style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            status.textContent = '✅ OK';
+            status.style.color = '#27ae60';
+            document.getElementById('hobbyName').style.borderColor = '#e4e6eb';
+        }
+    });
+
+    document.getElementById('hobbyDescription')?.addEventListener('input', () => {
+        const desc = document.getElementById('hobbyDescription').value.trim();
+        const counter = document.getElementById('hobbyDescCounter');
+        const status = document.getElementById('hobbyDescStatus');
+        const MAX_CHARS = 500;
+        const len = desc.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        
+        if (len === 0) {
+            counter.style.color = '#e4e6eb';
+            status.textContent = '';
+            document.getElementById('hobbyDescription').style.borderColor = '#e4e6eb';
+        } else if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            status.textContent = '❌ Trop long';
+            status.style.color = '#e74c3c';
+            document.getElementById('hobbyDescription').style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            status.textContent = '✅ OK';
+            status.style.color = '#27ae60';
+            document.getElementById('hobbyDescription').style.borderColor = '#e4e6eb';
+        }
+    });
+
+    document.getElementById('hobbyCategory')?.addEventListener('change', () => {
+        const category = document.getElementById('hobbyCategory').value;
+        const error = document.getElementById('hobbyCategoryError');
+        error.style.display = 'none';
+        document.getElementById('hobbyCategory').style.borderColor = '#e4e6eb';
+    });
+
+    // Gestion des soumissions de formulaires
+    document.getElementById('hobbyForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Validation
+        const name = document.getElementById('hobbyName').value.trim();
+        const category = document.getElementById('hobbyCategory').value;
+        const description = document.getElementById('hobbyDescription').value.trim();
+        const nameError = document.getElementById('hobbyNameError');
+        const categoryError = document.getElementById('hobbyCategoryError');
+        
+        let hasError = false;
+        
+        if (!name) {
+            nameError.textContent = '❌ Le nom du loisir est requis';
+            nameError.style.display = 'block';
+            document.getElementById('hobbyName').style.borderColor = '#e74c3c';
+            hasError = true;
+        }
+        
+        if (name.length > 100) {
+            nameError.textContent = '❌ Le nom ne peut pas dépasser 100 caractères';
+            nameError.style.display = 'block';
+            document.getElementById('hobbyName').style.borderColor = '#e74c3c';
+            hasError = true;
+        }
+        
+        if (!category) {
+            categoryError.textContent = '❌ Choisissez une catégorie';
+            categoryError.style.display = 'block';
+            document.getElementById('hobbyCategory').style.borderColor = '#e74c3c';
+            hasError = true;
+        }
+        
+        if (description.length > 500) {
+            const descError = document.getElementById('hobbyDescError') || document.createElement('div');
+            descError.id = 'hobbyDescError';
+            descError.textContent = '❌ La description ne peut pas dépasser 500 caractères';
+            descError.style.cssText = 'color: #e74c3c; font-size: 12px; margin-top: 6px;';
+            document.getElementById('hobbyDescription').parentElement.appendChild(descError);
+            document.getElementById('hobbyDescription').style.borderColor = '#e74c3c';
+            hasError = true;
+        }
+        
+        if (hasError) return;
+        
+        const form = e.target;
+        const formData = new FormData(form);
+        const action = form.action;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Enregistrement...';
+        
+        try {
+            const response = await fetch(action, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.ok) {
+                window.location.href = '{{ path("app_hobbies_index") }}';
+            } else {
+                alert('❌ Erreur : ' + formatServerErrors(data));
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✨ Créer';
+            }
+        } catch (error) {
+            console.error('Erreur :', error);
+            alert('❌ Erreur : ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✨ Créer';
+        }
+    });
+
+    // Real-time validation for progress form
+    document.getElementById('hoursSpent')?.addEventListener('input', () => {
+        const hours = parseFloat(document.getElementById('hoursSpent').value);
+        const status = document.getElementById('hoursStatus');
+        const error = document.getElementById('hoursError');
+        error.style.display = 'none';
+        document.getElementById('hoursSpent').style.borderColor = '#e4e6eb';
+        
+        if (isNaN(hours) || hours === '') {
+            status.textContent = '';
+        } else if (hours <= 0) {
+            status.textContent = '❌ Doit être > 0';
+            status.style.color = '#e74c3c';
+        } else if (hours > 24) {
+            status.textContent = '⚠️ Plus de 24h?';
+            status.style.color = '#FF9800';
+        } else {
+            status.textContent = '✅ OK';
+            status.style.color = '#27ae60';
+        }
+    });
+
+    document.getElementById('sessionNotes')?.addEventListener('input', () => {
+        const notes = document.getElementById('sessionNotes').value.trim();
+        const counter = document.getElementById('notesCounter');
+        const status = document.getElementById('notesStatus');
+        const MAX_CHARS = 500;
+        const len = notes.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        
+        if (len === 0) {
+            counter.style.color = '#e4e6eb';
+            status.textContent = '';
+        } else if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            status.textContent = '❌ Trop long';
+            status.style.color = '#e74c3c';
+            document.getElementById('sessionNotes').style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            status.textContent = '✅ OK';
+            status.style.color = '#27ae60';
+            document.getElementById('sessionNotes').style.borderColor = '#e4e6eb';
+        }
+    });
+
+    document.getElementById('progressForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Validation
+        const hours = parseFloat(document.getElementById('hoursSpent').value);
+        const date = document.getElementById('sessionDate').value;
+        const error = document.getElementById('hoursError');
+        
+        if (!date) {
+            alert('❌ Veuillez sélectionner une date');
+            return;
+        }
+        
+        if (isNaN(hours) || hours === '') {
+            error.textContent = '❌ Entrez le nombre d\'heures';
+            error.style.display = 'block';
+            document.getElementById('hoursSpent').style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        if (hours <= 0) {
+            error.textContent = '❌ Les heures doivent être supérieures à 0';
+            error.style.display = 'block';
+            document.getElementById('hoursSpent').style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        if (hours > 24) {
+            if (!confirm('⚠️ ' + hours + ' heures en une seule séance ? Continuer ?')) {
+                return;
+            }
+        }
+        
+        const notes = document.getElementById('sessionNotes').value.trim();
+        if (notes.length > 500) {
+            error.textContent = '❌ Les notes ne peuvent pas dépasser 500 caractères';
+            error.style.display = 'block';
+            return;
+        }
+        
+        const hobbyId = document.getElementById('progressHobbyId').value;
+        const formData = new FormData(e.target);
+        const submitBtn = document.querySelector('#logProgressModal button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Enregistrement...';
+        
+        try {
+            const response = await fetch(`{{ path('app_hobbies_log_progress', {'id': 999}) }}`.replace('999', hobbyId), {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.ok) {
+                closeLogProgressModal();
+                window.location.reload();
+            } else {
+                alert('❌ Erreur : ' + formatServerErrors(data));
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✅ Enregistrer';
+            }
+        } catch (error) {
+            alert('❌ Erreur : ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✅ Enregistrer';
+        }
+    });
+
+    // Real-time validation for milestone form
+    document.getElementById('milestoneTitle')?.addEventListener('input', () => {
+        const title = document.getElementById('milestoneTitle').value.trim();
+        const counter = document.getElementById('milestoneCounter');
+        const status = document.getElementById('milestoneStatus');
+        const error = document.getElementById('milestoneError');
+        const MAX_CHARS = 150;
+        const len = title.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        error.style.display = 'none';
+        
+        if (len === 0) {
+            counter.style.color = '#e4e6eb';
+            status.textContent = '';
+            document.getElementById('milestoneTitle').style.borderColor = '#e4e6eb';
+        } else if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            status.textContent = '❌ Trop long';
+            status.style.color = '#e74c3c';
+            document.getElementById('milestoneTitle').style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            status.textContent = '✅ OK';
+            status.style.color = '#27ae60';
+            document.getElementById('milestoneTitle').style.borderColor = '#e4e6eb';
+        }
+    });
+
+    document.getElementById('milestoneDate')?.addEventListener('change', () => {
+        const dateInput = document.getElementById('milestoneDate').value;
+        const error = document.getElementById('milestoneeDateError');
+        error.style.display = 'none';
+        
+        if (dateInput) {
+            const selectedDate = new Date(dateInput);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (selectedDate < today) {
+                error.textContent = '⚠️ La date cible est dans le passé';
+                error.style.display = 'block';
+                error.style.color = '#FF9800';
+            }
+        }
+    });
+
+    document.getElementById('milestoneForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Validation
+        const title = document.getElementById('milestoneTitle').value.trim();
+        const error = document.getElementById('milestoneError');
+        
+        if (!title) {
+            error.textContent = '❌ Le titre du jalon est requis';
+            error.style.display = 'block';
+            document.getElementById('milestoneTitle').style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        if (title.length > 150) {
+            error.textContent = '❌ Le titre ne peut pas dépasser 150 caractères';
+            error.style.display = 'block';
+            document.getElementById('milestoneTitle').style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        const hobbyId = document.getElementById('milestoneHobbyId').value;
+        const milestoneId = document.getElementById('milestoneId').value;
+        const formData = new FormData(e.target);
+        const submitBtn = document.querySelector('#milestoneModal button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Enregistrement...';
+        
+        let endpoint, method;
+        if (milestoneId) {
+            endpoint = `/hobbies/milestone/${milestoneId}/edit`;
+            method = 'POST';
+        } else {
+            endpoint = `{{ path('app_hobbies_milestone_add', {'id': 999}) }}`.replace('999', hobbyId);
+            method = 'POST';
+        }
+        
+        try {
+            const response = await fetch(endpoint, {
+                method: method,
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.ok) {
+                closeMilestoneModal();
+                loadHobbyDetails(hobbyId);
+            } else {
+                alert('❌ Erreur : ' + formatServerErrors(data));
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✨ Enregistrer';
+            }
+        } catch (error) {
+            alert('❌ Erreur : ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✨ Enregistrer';
+        }
+    });
+
+    // Music Recommendations Functions
+    function openMusicModal(hobbyId, hobbyName) {
+        const modal = document.getElementById('musicModal');
+        modal.style.display = 'flex';
+        document.getElementById('musicHobbyId').value = hobbyId;
+        document.getElementById('musicHobbyName').textContent = hobbyName;
+        document.getElementById('musicResults').innerHTML = '<div style="text-align: center; padding: 40px; color: #65676b;">⏳ Chargement des recommandations musicales...</div>';
+        
+        fetchMusicRecommendations(hobbyId);
+    }
+
+    function closeMusicModal() {
+        document.getElementById('musicModal').style.display = 'none';
+    }
+
+    async function fetchMusicRecommendations(hobbyId) {
+        try {
+            const response = await fetch(`/hobbies/${hobbyId}/music-recommendations`);
+            const json = await response.json();
+            
+            if (json.ok && json.data.recommendations && json.data.recommendations.length > 0) {
+                displayMusicRecommendations(json.data.recommendations);
+            } else {
+                document.getElementById('musicResults').innerHTML = '<div style="text-align: center; padding: 40px; color: #65676b;">😢 Pas de recommandations trouvées. Veuillez réessayer.</div>';
+            }
+        } catch (error) {
+            console.error('Music fetch error:', error);
+            document.getElementById('musicResults').innerHTML = '<div style="text-align: center; padding: 40px; color: #e74c3c;">❌ Erreur lors du chargement: ' + error.message + '</div>';
+        }
+    }
+
+    function displayMusicRecommendations(tracks) {
+        let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+        
+        tracks.forEach((track, index) => {
+            const youtubeQuery = encodeURIComponent(track.title + ' ' + track.artists);
+            const youtubeUrl = `https://www.youtube.com/results?search_query=${youtubeQuery}`;
+            
+            html += `
+                <div style="background: #f8f8f8; padding: 12px; border-radius: 8px; border-left: 4px solid #E91E63;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #1c1e21; margin-bottom: 4px;">${index + 1}. ${escapeHtml(track.title)}</div>
+                            <div style="font-size: 13px; color: #65676b; margin-bottom: 4px;">🎤 ${escapeHtml(track.artists)}</div>
+                            <div style="font-size: 12px; color: #999;">📅 ${escapeHtml(track.date)}</div>
+                        </div>
+                        <a href="${youtubeUrl}" target="_blank" style="padding: 6px 12px; background: #E91E63; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; text-decoration: none; font-size: 12px; white-space: nowrap;">
+                            ▶️ YouTube
+                        </a>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        document.getElementById('musicResults').innerHTML = html;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Close modal on outside click
+    window.onclick = function(event) {
+        const musicModal = document.getElementById('musicModal');
+        if (event.target === musicModal) {
+            closeMusicModal();
+        }
+    }
+
+    // Fermer les modals en cliquant en dehors
+    document.getElementById('createHobbyModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'createHobbyModal') closeCreateHobbyModal();
+    });
+
+    document.getElementById('logProgressModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'logProgressModal') closeLogProgressModal();
+    });
+
+    document.getElementById('detailsModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'detailsModal') closeDetailsModal();
+    });
+
+    // Fonctions du Modal Coach
+    function openCoachModal() {
+        document.getElementById('coachModal').style.display = 'flex';
+        document.getElementById('coachInput').focus();
+        document.getElementById('coachInput').onkeypress = (e) => {
+            if (e.key === 'Enter') sendCoachMessage();
+        };
+    }
+
+    function closeCoachModal() {
+        document.getElementById('coachModal').style.display = 'none';
+    }
+
+    function addCoachMessage(text, isUser) {
+        const chatContainer = document.getElementById('coachChat');
+        const messageDiv = document.createElement('div');
+        
+        if (isUser) {
+            messageDiv.style.cssText = 'display: flex; justify-content: flex-end; align-items: flex-start; padding: 0 0 14px 0;';
+            messageDiv.innerHTML = `
+                <div style="padding: 12px 18px; background: #667eea; color: white; border-radius: 16px 16px 4px 16px; max-width: 600px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="font-size: 14px;">${text}</div>
+                </div>
+            `;
+        } else {
+            messageDiv.style.cssText = 'display: flex; gap: 10px; align-items: flex-start; padding: 0 0 14px 0;';
+            messageDiv.innerHTML = `
+                <div style="font-size: 20px; flex-shrink: 0;">🤖</div>
+                <div style="padding: 12px 18px; background: white; color: #1c1e21; border-radius: 16px 16px 16px 4px; max-width: 600px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+                    <div style="font-size: 14px; line-height: 1.5;">${text}</div>
+                </div>
+            `;
+        }
+        
+        chatContainer.appendChild(messageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function sendCoachMessage() {
+        const input = document.getElementById('coachInput');
+        const text = input.value.trim();
+        
+        addCoachMessage(text, true);
+        input.value = '';
+        
+        const typingDiv = document.createElement('div');
+        typingDiv.style.cssText = 'display: flex; gap: 10px; align-items: center;';
+        typingDiv.innerHTML = '<div style="font-size: 20px;">🤖</div><div style="font-size: 14px; color: #9b59b6; font-style: italic;">typing…</div>';
+        document.getElementById('coachChat').appendChild(typingDiv);
+        document.getElementById('coachChat').scrollTop = document.getElementById('coachChat').scrollHeight;
+        
+        fetch('{{ path("app_hobbies_coach_chat") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({message: text})
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('coachChat').removeChild(typingDiv);
+            if (data.ok) {
+                addCoachMessage(data.response, false);
+            } else {
+                addCoachMessage('❌ ' + (data.error || 'Error'), false);
+            }
+            document.getElementById('coachInput').focus();
+        })
+        .catch(e => {
+            document.getElementById('coachChat').removeChild(typingDiv);
+            addCoachMessage('❌ ' + e.message, false);
+        });
+    }
+
+    document.getElementById('coachModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'coachModal') closeCoachModal();
+    });
+</script>
+
+{% endblock %}

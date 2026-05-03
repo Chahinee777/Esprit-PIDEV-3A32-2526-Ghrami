@@ -1,0 +1,1863 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Fil Social - Ghrami{% endblock %}
+
+{% block body %}
+<div style="display: grid; grid-template-columns: 280px 1fr 280px; gap: 20px; margin-top: 20px;">
+    
+    <!-- Left Sidebar -->
+    <aside style="display: flex; flex-direction: column; gap: 16px; position: sticky; top: 90px;">
+        
+        <!-- User Profile Card -->
+        <div class="card" style="text-align: center; padding: 20px;">
+            <div style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0 auto 12px; border: 3px solid white; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                {% if app.user.profilePicture %}
+                    <img src="{% if app.user.profilePicture starts with 'http' %}{{ app.user.profilePicture }}{% else %}{{ asset('images/profile_pictures/' ~ app.user.profilePicture) }}{% endif %}" alt="{{ app.user.fullName }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    <span style="color: white; font-weight: bold; font-size: 40px;">{{ app.user.fullName[0:1] | upper }}</span>
+                {% endif %}
+            </div>
+            <h4 style="margin: 0 0 4px 0; color: #1c1e21; font-weight: 700;">{{ app.user.fullName }}</h4>
+            <p style="color: #65676b; font-size: 13px; margin: 0 0 16px 0;">{{ app.user.email }}</p>
+            
+            <!-- Stats -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding-top: 12px; border-top: 1px solid #e4e6eb;">
+                <div>
+                    <p style="margin: 0; font-size: 11px; color: #65676b; text-transform: uppercase;">Posts</p>
+                    <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold; color: #667eea;">{{ userPostCount }}</p>
+                </div>
+                <div>
+                    <p style="margin: 0; font-size: 11px; color: #65676b; text-transform: uppercase;">Abonnés</p>
+                    <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold; color: #667eea;">{{ userFollowerCount }}</p>
+                </div>
+                <div>
+                    <p style="margin: 0; font-size: 11px; color: #65676b; text-transform: uppercase;">Hobby</p>
+                    <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold; color: #667eea;">{{ userHobbyCount }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Navigation Rapide -->
+        <div class="card" style="padding: 16px;">
+            <h5 style="margin: 0 0 12px 0; color: #1c1e21; font-weight: 700; font-size: 14px;">Navigation Rapide</h5>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <a href="{{ path('app_dashboard') }}" style="padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #1c1e21; font-size: 14px; transition: background 0.2s; {% if app.request.attributes.get('_route') == 'app_dashboard' %}background: #f0f2f5; font-weight: 600;{% else %}background: transparent; hover:background: #f0f2f5;{% endif %}" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='{% if app.request.attributes.get('_route') == 'app_dashboard' %}#f0f2f5{% else %}transparent{% endif %}'">
+                    📰 Fil d'Actualité
+                </a>
+                <a href="{{ path('app_hobbies_index') }}" style="padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #1c1e21; font-size: 14px; transition: background 0.2s; {% if app.request.attributes.get('_route') == 'app_hobbies_index' %}background: #f0f2f5; font-weight: 600;{% else %}background: transparent; hover:background: #f0f2f5;{% endif %}" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='{% if app.request.attributes.get('_route') == 'app_hobbies_index' %}#f0f2f5{% else %}transparent{% endif %}'">
+                    🎮 Mes Loisirs
+                </a>
+                <a href="#" style="padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #1c1e21; font-size: 14px; cursor: pointer; transition: background 0.2s; background: transparent; hover:background: #f0f2f5;" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='transparent'">
+                    🌟 Découvrir
+                </a>
+                <a href="{{ path('app_friends_index') }}" style="padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #1c1e21; font-size: 14px; transition: background 0.2s; {% if app.request.attributes.get('_route') == 'app_friends_index' %}background: #f0f2f5; font-weight: 600;{% else %}background: transparent; hover:background: #f0f2f5;{% endif %}" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='{% if app.request.attributes.get('_route') == 'app_friends_index' %}#f0f2f5{% else %}transparent{% endif %}'">
+                    👥 Mes Amis
+                </a>
+                <a href="{{ path('app_badges_index') }}" style="padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #1c1e21; font-size: 14px; transition: background 0.2s; {% if app.request.attributes.get('_route') == 'app_badges_index' %}background: #f0f2f5; font-weight: 600;{% else %}background: transparent; hover:background: #f0f2f5;{% endif %}" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='{% if app.request.attributes.get('_route') == 'app_badges_index' %}#f0f2f5{% else %}transparent{% endif %}'">
+                    ⭐ Badges
+                </a>
+                <a href="{{ path('app_meetings_index') }}" style="padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #1c1e21; font-size: 14px; transition: background 0.2s; {% if app.request.attributes.get('_route') == 'app_meetings_index' %}background: #f0f2f5; font-weight: 600;{% else %}background: transparent; hover:background: #f0f2f5;{% endif %}" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='{% if app.request.attributes.get('_route') == 'app_meetings_index' %}#f0f2f5{% else %}transparent{% endif %}'">
+                    📅 Événements
+                </a>
+                <a href="#" style="padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #1c1e21; font-size: 14px; cursor: pointer; transition: background 0.2s; background: transparent; hover:background: #f0f2f5;" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='transparent'">
+                    👫 Groupes
+                </a>
+                <a href="{{ path('app_marketplace_index') }}" style="padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #1c1e21; font-size: 14px; transition: background 0.2s; {% if app.request.attributes.get('_route') == 'app_marketplace_index' %}background: #f0f2f5; font-weight: 600;{% else %}background: transparent; hover:background: #f0f2f5;{% endif %}" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='{% if app.request.attributes.get('_route') == 'app_marketplace_index' %}#f0f2f5{% else %}transparent{% endif %}'">
+                    🎓 Classes
+                </a>
+                <a href="{{ path('app_meetings_index') }}" style="padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #1c1e21; font-size: 14px; transition: background 0.2s; {% if app.request.attributes.get('_route') == 'app_meetings_index' %}background: #f0f2f5; font-weight: 600;{% else %}background: transparent; hover:background: #f0f2f5;{% endif %}" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='{% if app.request.attributes.get('_route') == 'app_meetings_index' %}#f0f2f5{% else %}transparent{% endif %}'">
+                    🤝 Meetups
+                </a>
+                <a href="{{ path('app_vr_rooms') }}" style="padding: 10px 12px; border-radius: 8px; text-decoration: none; color: #1c1e21; font-size: 14px; transition: background 0.2s; {% if app.request.attributes.get('_route') == 'app_vr_rooms' %}background: #f0f2f5; font-weight: 600;{% else %}background: transparent; hover:background: #f0f2f5;{% endif %}" onmouseover="this.style.background='#f0f2f5'" onmouseout="this.style.background='{% if app.request.attributes.get('_route') == 'app_vr_rooms' %}#f0f2f5{% else %}transparent{% endif %}'">
+                    🥽 Salles VR
+                </a>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- Center Feed -->
+    <main style="display: flex; flex-direction: column; gap: 20px;">
+        
+        <!-- Stories Section -->
+        <div class="card" style="padding: 12px;">
+            <div class="stories-container">
+                <!-- User's Own Story or Add Story Button -->
+                {% set userStory = stories|filter((s) => s.user_id == userId)|first %}
+                
+                {% if userStory %}
+                    <!-- User's Story with Add Overlay -->
+                    <div class="story-item" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 8px; background-image: url('{{ userStory.image_url }}'); background-size: cover; background-position: center; cursor: pointer;">
+                        <!-- Add Story Overlay -->
+                        <div onclick="openCreateStoryModal()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.4); border-radius: 8px; transition: background 0.2s; z-index: 10;" onmouseover="this.style.background='rgba(0, 0, 0, 0.6)'" onmouseout="this.style.background='rgba(0, 0, 0, 0.4)'">
+                            <div style="text-align: center;">
+                                <div style="font-size: 28px; margin-bottom: 4px; color: white;">+</div>
+                                <div style="font-size: 11px; font-weight: 600; color: white;">Ajouter</div>
+                            </div>
+                        </div>
+                        <!-- Story Avatar -->
+                        <div style="position: absolute; top: 8px; width: 48px; height: 48px; border-radius: 50%; border: 3px solid #667eea; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); background-clip: padding-box; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 5;">
+                            {% if app.user.profilePicture %}
+                                <img src="{% if app.user.profilePicture starts with 'http' %}{{ app.user.profilePicture }}{% else %}{{ asset('images/profile_pictures/' ~ app.user.profilePicture) }}{% endif %}" alt="{{ app.user.fullName }}" style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid white; object-fit: cover;">
+                            {% else %}
+                                <div style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid white; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">{{ app.user.fullName[0:1] | upper }}</div>
+                            {% endif %}
+                        </div>
+                        <!-- Story Name -->
+                        <div style="background: rgba(0, 0, 0, 0.6); color: white; font-size: 11px; font-weight: 600; padding: 4px 6px; border-radius: 4px; text-align: center; width: 100%; margin-top: auto; z-index: 5;">Votre Histoire</div>
+                    </div>
+                {% else %}
+                    <!-- Add Your Story Button (Placeholder) -->
+                    <div class="story-item add-story" onclick="openCreateStoryModal()" style="cursor: pointer;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 28px; margin-bottom: 4px;">+</div>
+                            <div style="font-size: 11px; font-weight: 600;">Story</div>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Friend Stories -->
+                {% for story in stories %}
+                    {% if story.user_id != userId %}
+                    <div class="story-item" onclick="openStoryModal(this)" data-story-id="{{ story.story_id }}" data-user-id="{{ story.user_id }}" data-username="{{ story.username }}" data-full-name="{{ story.full_name ?: story.username }}" data-image-url="{{ story.image_url }}" data-profile-picture="{% if story.profile_picture starts with 'http' %}{{ story.profile_picture }}{% else %}{{ asset('images/profile_pictures/' ~ story.profile_picture) }}{% endif %}" data-caption="{{ story.caption ?: '' }}" data-created-at="{{ story.created_at }}" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 8px; background-image: url('{{ story.image_url }}'); background-size: cover; background-position: center; cursor: pointer;">
+                        <!-- Story Ring (Gradient border if has story) -->
+                        <div style="position: absolute; top: 8px; width: 48px; height: 48px; border-radius: 50%; border: 3px solid #667eea; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); background-clip: padding-box; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            {% if story.profile_picture %}
+                                <img src="{% if story.profile_picture starts with 'http' %}{{ story.profile_picture }}{% else %}{{ asset('images/profile_pictures/' ~ story.profile_picture) }}{% endif %}" alt="{{ story.full_name ?: story.username }}" style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid white; object-fit: cover;">
+                            {% else %}
+                                <div style="width: 44px; height: 44px; border-radius: 50%; border: 2px solid white; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">{{ (story.full_name ?: story.username)[0:1] | upper }}</div>
+                            {% endif %}
+                        </div>
+                        <!-- Story Name -->
+                        <div style="background: rgba(0, 0, 0, 0.6); color: white; font-size: 11px; font-weight: 600; padding: 4px 6px; border-radius: 4px; text-align: center; width: 100%; margin-top: auto;">{{ (story.full_name ?: story.username) | split(' ')[0] }}</div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Search and Sort Section -->
+        <div class="card" style="padding: 16px;">
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <!-- Search Form -->
+                <form method="get" action="{{ path('app_social_index') }}" style="display: flex; gap: 8px; flex: 1; min-width: 250px;">
+                    <input type="hidden" name="page" value="1">
+                    <input type="hidden" name="perPage" value="{{ perPage }}">
+                    <input type="text" name="query" placeholder="Rechercher des posts, utilisateurs..." value="{{ searchQuery }}" style="flex: 1; padding: 10px 12px; border: 1px solid #e4e6eb; border-radius: 20px; font-size: 14px;">
+                    <button type="submit" style="padding: 10px 16px; background: #667eea; color: white; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">🔍 Chercher</button>
+                    {% if searchQuery %}
+                    <a href="{{ path('app_social_index', { sort: sort, page: 1, perPage: perPage }) }}" style="padding: 10px 16px; background: #f0f2f5; color: #e74c3c; text-decoration: none; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" title="Effacer la recherche" onmouseover="this.style.background='#e8e9eb'" onmouseout="this.style.background='#f0f2f5'">✕ Réinitialiser</a>
+                    {% endif %}
+                </form>
+                
+                <!-- Sort Buttons -->
+                <div style="display: flex; gap: 8px;">
+                    <a href="{{ path('app_social_index', { query: searchQuery, sort: 'recent', page: 1, perPage: perPage }) }}" style="padding: 10px 16px; background: {% if sort == 'recent' %}#667eea{% else %}#f0f2f5{% endif %}; color: {% if sort == 'recent' %}white{% else %}#1c1e21{% endif %}; text-decoration: none; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='{% if sort == 'recent' %}#5568d3{% else %}#e8e9eb{% endif %}'" onmouseout="this.style.background='{% if sort == 'recent' %}#667eea{% else %}#f0f2f5{% endif %}'">📅 Récent</a>
+                    <a href="{{ path('app_social_index', { query: searchQuery, sort: 'popular', page: 1, perPage: perPage }) }}" style="padding: 10px 16px; background: {% if sort == 'popular' %}#667eea{% else %}#f0f2f5{% endif %}; color: {% if sort == 'popular' %}white{% else %}#1c1e21{% endif %}; text-decoration: none; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='{% if sort == 'popular' %}#5568d3{% else %}#e8e9eb{% endif %}'" onmouseout="this.style.background='{% if sort == 'popular' %}#667eea{% else %}#f0f2f5{% endif %}'">👍 Populaire</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Create Post Box -->
+        <div class="create-post-card">
+            <div class="create-post-header">
+                <div class="create-post-avatar" style="{% if app.user.profilePicture %}background-image: url('{% if app.user.profilePicture starts with 'http' %}{{ app.user.profilePicture }}{% else %}{{ asset('images/profile_pictures/' ~ app.user.profilePicture) }}{% endif %}'); background-size: cover; background-position: center;{% else %}background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;{% endif %}">
+                    {% if not app.user.profilePicture %}{{ app.user.fullName[0:1] | upper }}{% endif %}
+                </div>
+                <div style="flex: 1;">
+                    <input type="text" id="social-post-input" class="create-post-input" placeholder="Quoi de neuf ? Partagez votre passion... 🤖 L'IA peut vous aider !">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 12px;">
+                        <span id="postInputStatus" style="color: #65676b;"></span>
+                        <span id="postCharCount" style="color: #65676b;">0 / 5000</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="create-post-actions">
+                <button class="action-btn" id="social-photo-btn">
+                    <span>📷</span> Photo
+                </button>
+                <button class="action-btn" id="social-ai-complete-btn">
+                    <span>🤖</span> Compléter avec IA
+                </button>
+                <button class="publish-btn" id="social-publish-btn">Publier</button>
+            </div>
+            <div class="create-post-meta" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 12px;">
+                <div style="position: relative;">
+                    <select name="location" form="social-post-form" style="padding: 10px 12px; border-radius: 16px; border: 1px solid #e4e6eb; font-size: 13px; width: 100%; background: white;">
+                        <option value="">📍 Choisir un gouvernorat</option>
+                        {% for governorate in governorates %}
+                        <option value="{{ governorate }}">{{ governorate }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="position: relative;">
+                    <select name="mood" form="social-post-form" style="padding: 10px 12px; border-radius: 16px; border: 1px solid #e4e6eb; font-size: 13px; width: 100%; background: white;">
+                        <option value="">😊 Choisir une humeur</option>
+                        {% for mood in moodOptions %}
+                        <option value="{{ mood }}">{{ mood }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="position: relative;">
+                    <select name="hobbyTag" form="social-post-form" style="padding: 10px 12px; border-radius: 16px; border: 1px solid #e4e6eb; font-size: 13px; width: 100%; background: white;">
+                        <option value="">🏷️ Choisir un loisir</option>
+                        {% for hobby in hobbyOptions %}
+                        <option value="{{ hobby }}">{{ hobby }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="position: relative;">
+                    <select name="visibility" form="social-post-form" style="padding: 10px 12px; border-radius: 16px; border: 1px solid #e4e6eb; font-size: 13px; width: 100%; background: white;">
+                        <option value="public">🌐 Public</option>
+                        <option value="friends">👥 Amis</option>
+                        <option value="private">🔒 Privé</option>
+                    </select>
+                </div>
+            </div>
+            
+            <form method="post" action="{{ path('app_social_post') }}" enctype="multipart/form-data" style="display: contents;" id="social-post-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_post') }}">
+                <textarea name="content" id="social-post-content" style="display: none;"></textarea>
+                <input type="file" name="image_file" accept="image/jpeg,image/png,image/webp" style="display: none;" id="social-image-file">
+                <input type="text" name="image_url" id="social-post-image-url" style="display: none;">
+            </form>
+        </div>
+        
+        <!-- Feed Posts -->
+        {% for p in feed %}
+        <div class="post-card" id="post-card-{{ p.post_id }}" data-post-id="{{ p.post_id }}">
+            <!-- Post Header -->
+            <div class="post-header">
+                <div class="post-author-info">
+                    <div class="post-avatar" style="{% if p.profile_picture %}background-image: url('{% if p.profile_picture starts with 'http' %}{{ p.profile_picture }}{% else %}{{ asset('images/profile_pictures/' ~ p.profile_picture) }}{% endif %}'); background-size: cover; background-position: center;{% else %}background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;{% endif %}">
+                        {% if not p.profile_picture %}{{ (p.full_name ?: p.username)[0:1] | upper }}{% endif %}
+                    </div>
+                    <div>
+                        <div class="post-author-name">{{ p.full_name ?: p.username }}</div>
+                        <div class="post-metadata">
+                            @{{ p.username }} • {{ p.created_at }}
+                            {% if p.updated_at %}• modifié{% endif %}
+                        </div>
+                        <div class="post-extra-meta" style="margin-top: 6px; font-size: 12px; color: #65676b; display: flex; flex-wrap: wrap; gap: 8px;">
+                            {% if p.location %}<span>📍 {{ p.location }}</span>{% endif %}
+                            {% if p.mood %}<span>✨ {{ p.mood }}</span>{% endif %}
+                            {% if p.hobby_tag %}<span>🏷️ {{ p.hobby_tag }}</span>{% endif %}
+                            {% if p.visibility %}<span>🔒 {{ p.visibility|capitalize }}</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% if p.user_id == userId %}
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button type="button" onclick="openEditPost('{{ p.post_id }}', '{{ p.content|escape('js') }}')" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #4b5563;">✏️</button>
+                    <form method="post" action="{{ path('app_social_post_delete') }}" onsubmit="return confirm('Supprimer ce post ?');" style="margin: 0;">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_post_delete') }}">
+                        <input type="hidden" name="post_id" value="{{ p.post_id }}">
+                        <button type="submit" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #65676b;">✕</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Post Content -->
+            <div class="post-content">
+                <div class="post-text">{{ p.content }}</div>
+                {% if p.image_url %}
+                    {% if p.image_url starts with 'http://' or p.image_url starts with 'https://' %}
+                        <img src="{{ p.image_url }}" alt="Post image" class="post-image">
+                    {% else %}
+                        <img src="{{ asset('images/posts/' ~ p.image_url) }}" alt="Post image" class="post-image">
+                    {% endif %}
+                {% endif %}
+            </div>
+            
+            <!-- Post Stats -->
+            <div style="padding: 12px 16px; border-top: 1px solid #e4e6eb; border-bottom: 1px solid #e4e6eb; font-size: 13px; color: #65676b;">
+                <span style="cursor: pointer;">👍 {{ p.likes_count }} J'aime</span>
+                <span style="margin-left: 16px; cursor: pointer;">💬 {{ p.comments_count }} Commentaires</span>
+            </div>
+            
+            <!-- Post Actions -->
+            <div class="post-actions">
+                <form method="post" action="{{ path('app_social_like') }}" style="flex: 1;">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_like') }}">
+                    <input type="hidden" name="post_id" value="{{ p.post_id }}">
+                    <button type="submit" class="action-item" style="width: 100%;">
+                        {{ p.liked_by_me ? '❤️' : '👍' }} J'aime
+                    </button>
+                </form>
+                <button type="button" class="action-item comment-toggle-btn" data-post-id="{{ p.post_id }}" aria-expanded="false" onclick="toggleComments({{ p.post_id }}, this)">
+                    💬 Commenter
+                </button>
+                <button class="action-item" onclick="openShareDialog({post_id: {{ p.post_id }}, content: `{{ p.content | escape('js') }}`, image_url: `{{ p.image_url ?: '' | escape('js') }}`})">
+                    📤 Partager
+                </button>
+                {% if p.user_id != userId %}
+                <form method="post" action="{{ path('app_social_post_hide') }}" class="social-post-hide-form" data-post-id="{{ p.post_id }}" style="display: inline;">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_post_hide') }}">
+                    <input type="hidden" name="post_id" value="{{ p.post_id }}">
+                    <button type="submit" class="action-item" style="background: none; border: none; color: #4b5563; cursor: pointer;">
+                        🙈 Masquer
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            
+            <!-- Comments Section (Threaded) -->
+            {% set comments = commentsByPost[p.post_id]|default(null) %}
+            {% if comments and comments.getTotalItemCount > 0 %}
+            <div id="comments-wrapper-{{ p.post_id }}" class="comments-wrapper" style="display: none;">
+            <div class="comments-section">
+                {# Render comment with its replies (threaded) #}
+                {% macro render_comment(comment, userId, indent, postId) %}
+                    <div class="comment" style="margin-left: {{ indent * 32 }}px; border-left: {% if indent > 0 %}2px solid #e4e6eb{% else %}none{% endif %}; padding-left: {% if indent > 0 %}12px{% else %}0{% endif %};">
+                        <div class="comment-avatar"></div>
+                        <div class="comment-content">
+                            <div class="comment-header">
+                                <span class="comment-author">{{ comment.full_name ?: comment.username }}</span>
+                                {% if comment.reply_to_username %}
+                                <span class="comment-reply-indicator" style="font-size: 12px; color: #8a8d91; margin-left: 8px;" title="Réponse à @{{ comment.reply_to_username }}">↳ @{{ comment.reply_to_username }}</span>
+                                {% endif %}
+                                <span class="comment-time">{{ comment.created_at }}</span>
+                                {% if comment.updated_at %}<span class="comment-time" style="margin-left: 6px;">• modifié</span>{% endif %}
+                                {% if comment.mood %}<span class="comment-time" style="margin-left: 6px;">• {{ comment.mood }}</span>{% endif %}
+                            </div>
+                            <div class="comment-text">
+                                {{ comment.content }}
+                            </div>
+                            {% if comment.image_url %}
+                            <div style="margin-top: 10px;">
+                                {% if comment.image_url starts with 'http://' or comment.image_url starts with 'https://' %}
+                                <img src="{{ comment.image_url }}" alt="Comment image" style="max-width: 260px; width: 100%; border-radius: 12px; border: 1px solid #e4e6eb; object-fit: cover;">
+                                {% else %}
+                                <img src="{{ asset('images/comments/' ~ comment.image_url) }}" alt="Comment image" style="max-width: 260px; width: 100%; border-radius: 12px; border: 1px solid #e4e6eb; object-fit: cover;">
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            <div class="comment-actions">
+                                <button onclick="addMention('@{{ comment.username }}', {{ postId }})">↳ Répondre</button>
+                                {% if comment.user_id == userId %}
+                                <button type="button" onclick="openEditComment('{{ comment.comment_id }}', '{{ (comment.content ?? '')|escape('js') }}', '{{ (comment.mood ?? '')|escape('js') }}', '{{ (comment.image_url ?? '')|escape('js') }}')" style="background: none; border: none; color: #2563eb; cursor: pointer; padding: 0; font-weight: 600;">Modifier</button>
+                                <form method="post" action="{{ path('app_social_comment_delete') }}" style="display: inline;">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_comment_delete') }}">
+                                    <input type="hidden" name="comment_id" value="{{ comment.comment_id }}">
+                                    <button type="submit" style="background: none; border: none; color: #e74c3c; cursor: pointer; padding: 0; font-weight: 600;">Supprimer</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {# Render replies recursively #}
+                    {% if comment.replies|default([])|length > 0 %}
+                        {% for reply in comment.replies %}
+                            {{ _self.render_comment(reply, userId, indent + 1, postId) }}
+                        {% endfor %}
+                    {% endif %}
+                {% endmacro %}
+                
+                {% for c in comments %}
+                    {% if not c.is_reply %}
+                        {{ _self.render_comment(c, userId, 0, p.post_id) }}
+                    {% endif %}
+                {% endfor %}
+
+                {% if comments.pageCount > 1 %}
+                <div style="padding-top: 10px; border-top: 1px solid #eef2f7;">
+                    <div style="font-size: 12px; color: #65676b; margin-bottom: 8px;">
+                        {{ comments.getTotalItemCount }} commentaires
+                    </div>
+                    {{ knp_pagination_render(comments) }}
+                </div>
+                {% endif %}
+            </div>
+            </div>
+            {% endif %}
+            
+            <!-- Add Comment Form -->
+            <form method="post" action="{{ path('app_social_comment') }}" enctype="multipart/form-data" class="social-comment-form comments-wrapper" id="comment-form-{{ p.post_id }}" data-post-id="{{ p.post_id }}" style="padding: 12px 16px; border-top: 1px solid #e4e6eb; display: none; flex-direction: column; gap: 8px;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_comment') }}">
+                <input type="hidden" name="post_id" value="{{ p.post_id }}">
+                <div style="display: flex; gap: 8px; align-items: flex-start;">
+                    <textarea name="content" rows="1" placeholder="Écrivez un commentaire..." style="flex: 1; padding: 8px 12px; background-color: #f0f2f5; border: 1px solid #e4e6eb; border-radius: 16px; resize: none; font-size: 13px; min-height: 32px; line-height: 18px; max-height: 100px; font-family: inherit;" class="comment-textarea"></textarea>
+                    <button type="submit" class="btn btn-sm btn-primary" style="padding: 8px 14px; height: fit-content; align-self: flex-end;">Poster</button>
+                </div>
+                <div class="comment-gif-panel" style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" name="gif_query" placeholder="Rechercher un GIF..." class="comment-gif-query" style="flex:1; padding: 8px 10px; background-color: #f8f9fa; border: 1px solid #e4e6eb; border-radius: 12px; font-size: 12px;">
+                        <button type="button" onclick="searchCommentGifs(this)" class="btn btn-outline" style="padding: 8px 14px; font-size: 12px; white-space: nowrap;">GIF</button>
+                    </div>
+                    <div class="comment-gif-results" style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;"></div>
+                    <div class="comment-gif-preview" style="display:none; align-items:center; gap:10px; padding: 8px 10px; border: 1px solid #e4e6eb; border-radius: 12px; background: #ffffff;">
+                        <span style="font-size:12px; color:#65676b;">GIF sélectionné :</span>
+                        <div class="comment-gif-preview-img" style="max-width:120px; max-height:90px; overflow:hidden; border-radius: 10px;"></div>
+                        <button type="button" onclick="clearSelectedGif(this)" class="btn btn-sm btn-link" style="padding:0; font-size:12px;">Effacer</button>
+                    </div>
+                    <input type="hidden" name="gif_url" class="comment-gif-url">
+                </div>
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 8px; align-items: center;">
+                    <input type="file" name="image_file" accept="image/jpeg,image/png,image/webp" class="comment-image-input" style="padding: 8px 10px; background-color: #f8f9fa; border: 1px solid #e4e6eb; border-radius: 12px; font-size: 12px;">
+                    <select name="mood" style="padding: 8px 10px; background-color: #f8f9fa; border: 1px solid #e4e6eb; border-radius: 12px; font-size: 12px;">
+                        <option value="">😊 Humeur (optionnel)</option>
+                        {% for mood in moodOptions %}
+                        <option value="{{ mood }}">{{ mood }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                    <span class="comment-status" style="color: #65676b;"></span>
+                    <span class="comment-char-count" style="color: #65676b;">0 / 500</span>
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <div class="card" style="text-align: center; padding: 40px;">
+            <div style="font-size: 40px; margin-bottom: 16px;">📭</div>
+            <h3>Aucun post à afficher</h3>
+            <p style="color: #65676b;">Soyez le premier à partager quelque chose !</p>
+        </div>
+        {% endfor %}
+        
+        <!-- Pagination -->
+        {% if feed.pageCount > 1 %}
+        <div style="padding: 20px 0;">
+            {{ knp_pagination_render(feed) }}
+        </div>
+        {% endif %}
+
+        <form id="social-edit-post-form" method="post" action="{{ path('app_social_post_edit') }}" style="display: none;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_post_edit') }}">
+            <input type="hidden" name="post_id" id="social-edit-post-id">
+            <textarea name="content" id="social-edit-post-content"></textarea>
+        </form>
+
+        <form id="social-edit-comment-form" method="post" action="{{ path('app_social_comment_edit') }}" enctype="multipart/form-data" style="display: none;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('social_comment_edit') }}">
+            <input type="hidden" name="comment_id" id="social-edit-comment-id">
+        </form>
+    </main>
+    
+    <!-- Right Sidebar -->
+    <aside style="display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- Trending Hobbies -->
+        <div class="card">
+            <h4 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">🔥 Tendances</h4>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="padding: 10px; background: #f0f2f5; border-radius: 8px; cursor: pointer;">
+                    <div style="font-weight: 600;">🎯 Hobbies Populaires</div>
+                    <div style="font-size: 12px; color: #65676b; margin-top: 4px;">Explorez les tendances</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Friend Suggestions -->
+        <div class="card">
+            <h4 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">✨ Suggestions</h4>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: #65676b;">
+                Connectez-vous avec d'autres membres partageant vos passions
+            </div>
+        </div>
+    </aside>
+</div>
+
+<style>
+    @media (max-width: 1200px) {
+        main > div {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        main > div {
+            grid-template-columns: 1fr !important;
+            gap: 12px;
+        }
+        
+        aside {
+            display: none;
+        }
+    }
+</style>
+
+<!-- Create Story Modal -->
+<div id="createStoryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);">
+        <!-- Modal Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e4e6eb; position: sticky; top: 0; background: white;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: 700;">📸 Créer une histoire</h2>
+            <button onclick="closeCreateStoryModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+        
+        <!-- Modal Body -->
+        <div style="padding: 24px;">
+            <form method="POST" action="{{ path('app_story_create') }}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 16px;" id="storyCreateForm">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('story_create') }}">
+                
+                <!-- Image Upload -->
+                <div>
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #1c1e21; margin-bottom: 8px;">Image *</label>
+                    <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 100%; border: 2px dashed #667eea; border-radius: 12px; padding: 32px 20px; background-color: #f8f9ff; cursor: pointer; transition: all 0.2s;" id="dropZone">
+                        <div style="text-align: center;">
+                            <div style="font-size: 32px; margin-bottom: 8px;">📷</div>
+                            <p style="margin: 0 0 4px 0; font-weight: 600; color: #667eea;">Cliquez ou glissez-déposez</p>
+                            <p style="margin: 0; font-size: 12px; color: #65676b;">JPG, PNG ou WEBP (max 5MB)</p>
+                        </div>
+                        <input type="file" name="image" accept="image/jpeg,image/png,image/webp" required style="position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer;" id="imageInput">
+                    </div>
+                    <div id="imagePreview" style="margin-top: 12px;"></div>
+                </div>
+                
+                <!-- Caption -->
+                <div>
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #1c1e21; margin-bottom: 8px;">Légende (optionnel)</label>
+                    <textarea name="caption" placeholder="Ajoutez une légende à votre histoire..." style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 80px;"></textarea>
+                </div>
+                
+                <!-- Submit Button -->
+                <button type="submit" style="padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                    ✨ Publier l'histoire
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Story Modal -->
+<div id="viewStoryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1001; align-items: center; justify-content: center;">
+    <div style="position: relative; width: 90%; max-width: 600px; height: 90vh; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column;">
+        <!-- Story Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: white; border-bottom: 1px solid #e4e6eb;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <div id="storyAvatarContainer" style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; overflow: hidden;"></div>
+                <div>
+                    <div id="storyAuthorName" style="font-weight: 600; color: #1c1e21; font-size: 14px;"></div>
+                    <div id="storyCreatedAt" style="font-size: 12px; color: #65676b;"></div>
+                </div>
+            </div>
+            <button onclick="closeStoryModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+        </div>
+        
+        <!-- Story Image -->
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: #f0f2f5; overflow: hidden;">
+            <img id="storyImage" src="" alt="Story" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+        
+        <!-- Story Caption -->
+        <div id="storyCaptionContainer" style="padding: 16px 20px; background: white; border-top: 1px solid #e4e6eb; min-height: 0; max-height: 100px; overflow-y: auto; display: none;">
+            <div id="storyCaption" style="color: #1c1e21; font-size: 14px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Facebook Share Dialog -->
+<div id="shareModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 430px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+        
+        <!-- Facebook Header -->
+        <div style="background: #1877F2; color: white; padding: 20px 24px; border-radius: 16px 16px 0 0; display: flex; gap: 14px; align-items: center; justify-content: space-between;">
+            <div style="display: flex; gap: 14px; align-items: center; flex: 1;">
+                <div style="font-size: 24px;">f</div>
+                <h2 style="margin: 0; font-size: 18px; font-weight: bold;">Partager sur Facebook</h2>
+            </div>
+            <button onclick="closeShareDialog()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: white; padding: 0; width: 40px; height: 40px;">✕</button>
+        </div>
+
+        <!-- Body -->
+        <div style="flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; background: #f0f2f5;">
+            
+            <!-- Image Thumbnail -->
+            <div id="shareImageContainer" style="display: none;">
+                <div style="background: white; border-radius: 10px; padding: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.12);">
+                    <img id="shareImagePreview" src="" alt="Post image" style="width: 100%; border-radius: 8px; max-height: 200px; object-fit: cover;">
+                </div>
+            </div>
+            
+            <!-- Edit Label -->
+            <label style="font-size: 12px; font-weight: bold; color: #65676b;">✏️ Personnalisez votre message :</label>
+            
+            <!-- Editable Text Area -->
+            <textarea id="shareTextarea" style="flex: 1; padding: 12px 16px; border: 1px solid #dde0e8; border-radius: 10px; background-color: white; font-size: 14px; font-family: inherit; resize: vertical; min-height: 100px; box-sizing: border-box;"></textarea>
+            
+            <!-- Character Counter -->
+            <div style="text-align: right;">
+                <span id="shareCharCounter" style="font-size: 11px; color: #65676b;">0 / 500</span>
+            </div>
+            
+            <!-- How to Share Banner -->
+            <div style="background-color: #e7f3ff; border-left: 4px solid #1877F2; border-radius: 10px; padding: 12px 14px; display: flex; gap: 10px;">
+                <div style="font-size: 18px; flex-shrink: 0;">📋</div>
+                <div>
+                    <div style="font-weight: bold; font-size: 12px; color: #1877F2; margin-bottom: 2px;">Votre texte sera copié automatiquement</div>
+                    <div style="font-size: 11px; color: #4b6584;">Le texte sera pré-rempli si possible. Le presse-papiers est aussi copié — utilisez Ctrl+V si le champ est vide.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 14px 20px; border-top: 1px solid #e4e6eb; background: white; border-radius: 0 0 16px 16px; display: flex; gap: 12px;">
+            <button onclick="closeShareDialog()" style="flex: 1; padding: 12px 24px; background: #f0f2f5; color: #1c1e21; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Annuler</button>
+            <button onclick="shareToFacebook()" style="flex: 1; padding: 12px 24px; background: #1877F2; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: background 0.2s;" onmouseover="this.style.background='#145db2'" onmouseout="this.style.background='#1877F2'">Ouvrir Facebook</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Story Modal Functions
+    function openCreateStoryModal() {
+        document.getElementById('createStoryModal').style.display = 'flex';
+        setupDropZone();
+    }
+    
+    function closeCreateStoryModal() {
+        document.getElementById('createStoryModal').style.display = 'none';
+        document.getElementById('imageInput').value = '';
+        document.getElementById('imagePreview').innerHTML = '';
+    }
+    
+    function openStoryModal(element) {
+        const storyId = element.getAttribute('data-story-id');
+        const userId = element.getAttribute('data-user-id');
+        const username = element.getAttribute('data-username');
+        const fullName = element.getAttribute('data-full-name');
+        const imageUrl = element.getAttribute('data-image-url');
+        const profilePicture = element.getAttribute('data-profile-picture');
+        const caption = element.getAttribute('data-caption');
+        const createdAt = element.getAttribute('data-created-at');
+        
+        // Set story content
+        document.getElementById('storyImage').src = imageUrl;
+        document.getElementById('storyAuthorName').textContent = fullName;
+        document.getElementById('storyCreatedAt').textContent = new Date(createdAt).toLocaleDateString() + ' à ' + new Date(createdAt).toLocaleTimeString();
+        
+        // Set avatar
+        const avatarContainer = document.getElementById('storyAvatarContainer');
+        if (profilePicture && !profilePicture.includes('null')) {
+            avatarContainer.style.backgroundImage = 'url(' + profilePicture + ')';
+            avatarContainer.style.backgroundSize = 'cover';
+            avatarContainer.style.backgroundPosition = 'center';
+            avatarContainer.textContent = '';
+        } else {
+            avatarContainer.style.backgroundImage = 'none';
+            avatarContainer.textContent = fullName.charAt(0).toUpperCase();
+        }
+        
+        // Set caption
+        if (caption && caption.trim()) {
+            document.getElementById('storyCaption').textContent = caption;
+            document.getElementById('storyCaptionContainer').style.display = 'block';
+        } else {
+            document.getElementById('storyCaptionContainer').style.display = 'none';
+        }
+        
+        document.getElementById('viewStoryModal').style.display = 'flex';
+    }
+    
+    function closeStoryModal() {
+        document.getElementById('viewStoryModal').style.display = 'none';
+    }
+    
+    // Share Dialog Functions
+    function openShareDialog(post) {
+        const modal = document.getElementById('shareModal');
+        const textarea = document.getElementById('shareTextarea');
+        const imageContainer = document.getElementById('shareImageContainer');
+        const imagePreview = document.getElementById('shareImagePreview');
+        
+        // Set text content
+        textarea.value = post.content;
+        
+        // Update character counter
+        updateShareCounter();
+        
+        // Show image if exists
+        if (post.image_url && post.image_url.trim()) {
+            let imageUrl = post.image_url;
+            if (!imageUrl.startsWith('http')) {
+                imageUrl = '{{ asset('images/posts/') }}' + imageUrl;
+            }
+            imagePreview.src = imageUrl;
+            imageContainer.style.display = 'block';
+        } else {
+            imageContainer.style.display = 'none';
+        }
+        
+        // Store post data in global variable for sharing
+        window.currentSharePost = post;
+        
+        // Open modal
+        modal.style.display = 'flex';
+        textarea.focus();
+    }
+    
+    function closeShareDialog() {
+        document.getElementById('shareModal').style.display = 'none';
+    }
+    
+    function updateShareCounter() {
+        const textarea = document.getElementById('shareTextarea');
+        const counter = document.getElementById('shareCharCounter');
+        const MAX_CHARS = 500;
+        const len = textarea.value.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        
+        if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            textarea.style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            textarea.style.borderColor = '#dde0e8';
+        }
+    }
+    
+    function shareToFacebook() {
+        const textarea = document.getElementById('shareTextarea');
+        const text = textarea.value.trim();
+        const MAX_CHARS = 500;
+        
+        if (text.length > MAX_CHARS) {
+            alert('Le texte dépasse ' + MAX_CHARS + ' caractères.\nVeuillez le raccourcir avant de partager.');
+            return;
+        }
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(text).catch(err => {
+            console.warn('Clipboard copy failed:', err);
+        });
+        
+        // Open Facebook sharer
+        try {
+            const encoded = encodeURIComponent(text);
+            const facebookUrl = 'https://www.facebook.com/sharer/sharer.php?quote=' + encoded;
+            window.open(facebookUrl, '_blank');
+            
+            closeShareDialog();
+            
+            // Show notification
+            setTimeout(() => {
+                alert('✅ Texte copié ! Facebook ouvert.\nSi le texte n\'est pas pré-rempli, appuyez sur Ctrl+V pour coller.');
+            }, 400);
+        } catch (err) {
+            console.error('Error opening Facebook:', err);
+            alert('Erreur: Impossible d\'ouvrir Facebook');
+        }
+    }
+    
+    // Update counter while typing
+    document.getElementById('shareTextarea')?.addEventListener('input', updateShareCounter);
+    
+    // Close modal when clicking outside
+    document.getElementById('shareModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'shareModal') closeShareDialog();
+    });
+    
+    function setupDropZone() {
+        const dropZone = document.getElementById('dropZone');
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const storyForm = document.getElementById('storyCreateForm');
+        
+        if (!dropZone || !imageInput) return;
+        
+        // Handle form submission
+        storyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(storyForm);
+            const submitBtn = storyForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Envoi...';
+            
+            try {
+                const response = await fetch('{{ path('app_story_create') }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (data.ok) {
+                    alert('✨ Histoire publiée! Elle expirera dans 24 heures.');
+                    closeCreateStoryModal();
+                    location.reload();
+                } else {
+                    alert('Erreur: ' + (data.error || 'Une erreur est survenue'));
+                }
+            } catch (e) {
+                alert('Erreur réseau: ' + e.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        });
+        
+        // Click to upload
+        dropZone.addEventListener('click', () => imageInput.click());
+        
+        // Drag and drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.background = '#e8ecff';
+            dropZone.style.borderColor = '#764ba2';
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.background = '#f8f9ff';
+            dropZone.style.borderColor = '#667eea';
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.background = '#f8f9ff';
+            dropZone.style.borderColor = '#667eea';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                imageInput.files = files;
+                imageInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+        
+        // File preview
+        imageInput.addEventListener('change', function(e) {
+            const file = this.files[0];
+            if (file) {
+                const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                const maxSize = 5242880;
+                
+                if (!validTypes.includes(file.type)) {
+                    alert('Format invalide. Utilisez JPG, PNG ou WEBP.');
+                    this.value = '';
+                    imagePreview.innerHTML = '';
+                    return;
+                }
+                
+                if (file.size > maxSize) {
+                    alert('Fichier trop volumineux. Maximum 5MB.');
+                    this.value = '';
+                    imagePreview.innerHTML = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    imagePreview.innerHTML = '<img src="' + event.target.result + '" style="width: 100%; border-radius: 8px; max-height: 300px; object-fit: cover;">';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Close modals when clicking outside
+    document.getElementById('createStoryModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'createStoryModal') closeCreateStoryModal();
+    });
+    
+    document.getElementById('viewStoryModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'viewStoryModal') closeStoryModal();
+    });
+
+    function openComments(postId) {
+        const wrappers = document.querySelectorAll(`#comments-wrapper-${postId}, #comment-form-${postId}`);
+        const toggleButton = document.querySelector(`.comment-toggle-btn[data-post-id="${postId}"]`);
+
+        wrappers.forEach((wrapper) => {
+            wrapper.style.display = wrapper.tagName === 'FORM' ? 'flex' : 'block';
+        });
+
+        if (toggleButton) {
+            toggleButton.setAttribute('aria-expanded', 'true');
+            toggleButton.innerHTML = '💬 Fermer';
+        }
+    }
+
+    function closeComments(postId) {
+        const wrappers = document.querySelectorAll(`#comments-wrapper-${postId}, #comment-form-${postId}`);
+        const toggleButton = document.querySelector(`.comment-toggle-btn[data-post-id="${postId}"]`);
+
+        wrappers.forEach((wrapper) => {
+            wrapper.style.display = 'none';
+        });
+
+        if (toggleButton) {
+            toggleButton.setAttribute('aria-expanded', 'false');
+            toggleButton.innerHTML = '💬 Commenter';
+        }
+    }
+
+    function toggleComments(postId) {
+        const form = document.getElementById(`comment-form-${postId}`);
+        const isOpen = form && form.style.display !== 'none';
+
+        if (isOpen) {
+            closeComments(postId);
+            return;
+        }
+
+        openComments(postId);
+        const textarea = document.querySelector(`#comment-form-${postId} textarea[name="content"]`);
+        textarea?.focus();
+    }
+
+    // P2 Fix 9: Comment threading - add mention to reply
+    function addMention(mention, postId) {
+        openComments(postId);
+
+        const textarea = document.querySelector(`#comment-form-${postId} textarea[name="content"]`);
+        if (textarea) {
+            const current = textarea.value.trim();
+            if (current && !current.startsWith(mention)) {
+                textarea.value = mention + ' ' + current;
+            } else if (!current) {
+                textarea.value = mention + ' ';
+            }
+            textarea.focus();
+            textarea.closest('form')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    function searchCommentGifs(button) {
+        const form = button.closest('form');
+        if (!form) {
+            return;
+        }
+
+        const queryInput = form.querySelector('.comment-gif-query');
+        const results = form.querySelector('.comment-gif-results');
+        const preview = form.querySelector('.comment-gif-preview');
+        const previewImg = form.querySelector('.comment-gif-preview-img');
+        const hiddenInput = form.querySelector('.comment-gif-url');
+        const fileInput = form.querySelector('input[name="image_file"]');
+        const status = form.querySelector('.comment-status');
+
+        if (!queryInput || !results || !hiddenInput || !preview || !previewImg) {
+            return;
+        }
+
+        const query = queryInput.value.trim();
+        if (query === '') {
+            results.innerHTML = '<div style="grid-column:1/-1;color:#555;">Entrez un terme pour rechercher un GIF.</div>';
+            return;
+        }
+
+        results.innerHTML = '<div style="grid-column:1/-1;color:#555;">Recherche en cours...</div>';
+
+        fetch('{{ path('app_social_comment_gif_search') }}?q=' + encodeURIComponent(query))
+            .then((response) => response.json())
+            .then((json) => {
+                if (!json.ok) {
+                    results.innerHTML = '<div style="grid-column:1/-1;color:#d9534f;">' + (json.error || 'Erreur lors de la recherche.') + '</div>';
+                    return;
+                }
+
+                if (!Array.isArray(json.data) || json.data.length === 0) {
+                    results.innerHTML = '<div style="grid-column:1/-1;color:#555;">Aucun GIF trouvé pour cette recherche.</div>';
+                    return;
+                }
+
+                results.innerHTML = '';
+                json.data.forEach((gif) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.style.cssText = 'border:none; padding:0; background:none; cursor:pointer; outline:none;';
+                    button.innerHTML = '<img src="' + gif.preview + '" alt="' + (gif.title || 'GIF') + '" style="width:100%; height:100%; border-radius:10px; object-fit:cover;">';
+                    button.addEventListener('click', () => {
+                        hiddenInput.value = gif.url;
+                        previewImg.innerHTML = '<img src="' + gif.url + '" alt="GIF sélectionné" style="max-width:100%; max-height:80px; border-radius:10px;">';
+                        preview.style.display = 'flex';
+                        if (fileInput) {
+                            fileInput.value = '';
+                        }
+                        if (status) {
+                            status.textContent = 'GIF sélectionné pour le commentaire.';
+                        }
+                    });
+                    results.appendChild(button);
+                });
+            })
+            .catch(() => {
+                results.innerHTML = '<div style="grid-column:1/-1;color:#d9534f;">Impossible de charger les GIFs.</div>';
+            });
+    }
+
+    function clearSelectedGif(button) {
+        const form = button.closest('form');
+        if (!form) {
+            return;
+        }
+
+        const hiddenInput = form.querySelector('.comment-gif-url');
+        const preview = form.querySelector('.comment-gif-preview');
+        const previewImg = form.querySelector('.comment-gif-preview-img');
+        const status = form.querySelector('.comment-status');
+
+        if (hiddenInput) {
+            hiddenInput.value = '';
+        }
+        if (preview) {
+            preview.style.display = 'none';
+        }
+        if (previewImg) {
+            previewImg.innerHTML = '';
+        }
+        if (status) {
+            status.textContent = 'GIF supprimé.';
+        }
+    }
+
+    // Edit Post Modal
+    function openEditPost(postId, currentContent) {
+        const modal = document.getElementById('editPostModal') || createEditPostModal();
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const counter = modal.querySelector('#editPostCharCounter');
+        const submitBtn = modal.querySelector('button[type="submit"]');
+        
+        textarea.value = currentContent || '';
+        textarea.focus();
+        updateEditPostCounter();
+        
+        modal.dataset.postId = postId;
+        modal.style.display = 'flex';
+        
+        // Focus on textarea
+        textarea.setSelectionRange(0, textarea.value.length);
+    }
+
+    function createEditPostModal() {
+        const modal = document.createElement('div');
+        modal.id = 'editPostModal';
+        modal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 999; align-items: center; justify-content: center;';
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e4e6eb;">
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 700;">✏️ Modifier votre post</h3>
+                    <button type="button" onclick="closeEditPostModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+                </div>
+                <div style="padding: 20px;">
+                    <textarea name="content" placeholder="Modifiez votre post..." style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 120px; box-sizing: border-box;" id="editPostContent"></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                        <span id="editPostCharCounter" style="font-size: 12px; color: #65676b;">0 / 5000</span>
+                    </div>
+                    <div id="editPostError" style="color: #e74c3c; font-size: 13px; margin-top: 8px; display: none;"></div>
+                </div>
+                <div style="padding: 14px 20px; border-top: 1px solid #e4e6eb; display: flex; gap: 12px;">
+                    <button type="button" onclick="closeEditPostModal()" style="flex: 1; padding: 12px 24px; background: #f0f2f5; color: #1c1e21; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Annuler</button>
+                    <button type="submit" onclick="submitEditPost()" style="flex: 1; padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">Enregistrer</button>
+                </div>
+            </div>
+        `;
+        
+        modal.querySelector('textarea[name="content"]').addEventListener('input', updateEditPostCounter);
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'editPostModal') closeEditPostModal();
+        });
+        
+        document.body.appendChild(modal);
+        return modal;
+    }
+
+    function updateEditPostCounter() {
+        const modal = document.getElementById('editPostModal');
+        if (!modal) return;
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const counter = modal.querySelector('#editPostCharCounter');
+        const MAX_CHARS = 5000;
+        const len = textarea.value.length;
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        
+        if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            textarea.style.borderColor = '#e74c3c';
+        } else if (len === 0) {
+            counter.style.color = '#e74c3c';
+            textarea.style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            textarea.style.borderColor = '#e4e6eb';
+        }
+    }
+
+    function submitEditPost() {
+        const modal = document.getElementById('editPostModal');
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const errorDiv = modal.querySelector('#editPostError');
+        const content = textarea.value.trim();
+        const MAX_CHARS = 5000;
+        
+        // Validation
+        if (!content) {
+            errorDiv.textContent = '❌ Le post ne peut pas être vide.';
+            errorDiv.style.display = 'block';
+            textarea.style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        if (content.length > MAX_CHARS) {
+            errorDiv.textContent = '❌ Le post dépasse ' + MAX_CHARS + ' caractères.';
+            errorDiv.style.display = 'block';
+            textarea.style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        // Submit
+        document.getElementById('social-edit-post-id').value = modal.dataset.postId;
+        document.getElementById('social-edit-post-content').value = content;
+        document.getElementById('social-edit-post-form').submit();
+    }
+
+    function closeEditPostModal() {
+        const modal = document.getElementById('editPostModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.querySelector('#editPostError').style.display = 'none';
+        }
+    }
+
+    // Edit Comment Modal
+    function openEditComment(commentId, currentContent, currentMood = '', currentImage = '') {
+        const modal = document.getElementById('editCommentModal') || createEditCommentModal();
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const counter = modal.querySelector('#editCommentCharCounter');
+        const moodSelect = modal.querySelector('select[name="mood"]');
+        const preview = modal.querySelector('#editCommentImagePreview');
+        const removeImage = modal.querySelector('input[name="remove_image"]');
+        const fileInput = modal.querySelector('input[name="image_file"]');
+        
+        textarea.value = currentContent || '';
+        moodSelect.value = currentMood || '';
+        removeImage.checked = false;
+        fileInput.value = '';
+        preview.innerHTML = currentImage
+            ? `<img src="${currentImage.startsWith('http') ? currentImage : '{{ asset('images/comments/') }}${currentImage}'}" alt="Comment image" style="max-width: 100%; max-height: 180px; border-radius: 10px; border: 1px solid #e4e6eb;">`
+            : '<div style="font-size: 12px; color: #8a8d91;">Aucune image actuelle</div>';
+        textarea.focus();
+        updateEditCommentCounter();
+        
+        modal.dataset.commentId = commentId;
+        modal.style.display = 'flex';
+        
+        // Focus and select all
+        textarea.setSelectionRange(0, textarea.value.length);
+    }
+
+    function createEditCommentModal() {
+        const modal = document.createElement('div');
+        modal.id = 'editCommentModal';
+        modal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 999; align-items: center; justify-content: center;';
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e4e6eb;">
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 700;">✏️ Modifier votre commentaire</h3>
+                    <button type="button" onclick="closeEditCommentModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #65676b;">✕</button>
+                </div>
+                <div style="padding: 20px;">
+                    <textarea name="content" form="social-edit-comment-form" placeholder="Modifiez votre commentaire..." style="width: 100%; padding: 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 80px; box-sizing: border-box;" id="editCommentContent"></textarea>
+                    <div style="display: grid; gap: 10px; margin-top: 12px;">
+                        <select name="mood" form="social-edit-comment-form" style="width: 100%; padding: 10px 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 13px; background: #f8f9fa; box-sizing: border-box;">
+                            <option value="">😊 Humeur (optionnel)</option>
+                            {% for mood in moodOptions %}
+                            <option value="{{ mood }}">{{ mood }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="file" name="image_file" form="social-edit-comment-form" accept="image/jpeg,image/png,image/webp" style="width: 100%; padding: 10px 12px; border: 1px solid #e4e6eb; border-radius: 8px; font-size: 12px; background: #f8f9fa; box-sizing: border-box;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #65676b;">
+                            <input type="checkbox" name="remove_image" value="1" form="social-edit-comment-form">
+                            Supprimer l'image actuelle
+                        </label>
+                        <div id="editCommentImagePreview" style="display: flex; align-items: center; min-height: 40px;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                        <span id="editCommentCharCounter" style="font-size: 12px; color: #65676b;">0 / 500</span>
+                    </div>
+                    <div id="editCommentError" style="color: #e74c3c; font-size: 13px; margin-top: 8px; display: none;"></div>
+                </div>
+                <div style="padding: 14px 20px; border-top: 1px solid #e4e6eb; display: flex; gap: 12px;">
+                    <button type="button" onclick="closeEditCommentModal()" style="flex: 1; padding: 12px 24px; background: #f0f2f5; color: #1c1e21; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Annuler</button>
+                    <button type="submit" onclick="submitEditComment()" style="flex: 1; padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">Enregistrer</button>
+                </div>
+            </div>
+        `;
+        
+        modal.querySelector('textarea[name="content"]').addEventListener('input', updateEditCommentCounter);
+        modal.querySelector('input[name="image_file"]').addEventListener('change', function () {
+            const preview = modal.querySelector('#editCommentImagePreview');
+            const file = this.files?.[0];
+            if (!file) {
+                updateEditCommentCounter();
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                preview.innerHTML = `<img src="${event.target.result}" alt="Preview" style="max-width: 100%; max-height: 180px; border-radius: 10px; border: 1px solid #e4e6eb;">`;
+                updateEditCommentCounter();
+            };
+            reader.readAsDataURL(file);
+        });
+        modal.querySelector('input[name="remove_image"]').addEventListener('change', updateEditCommentCounter);
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'editCommentModal') closeEditCommentModal();
+        });
+        
+        document.body.appendChild(modal);
+        return modal;
+    }
+
+    function updateEditCommentCounter() {
+        const modal = document.getElementById('editCommentModal');
+        if (!modal) return;
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const fileInput = modal.querySelector('input[name="image_file"]');
+        const removeImage = modal.querySelector('input[name="remove_image"]');
+        const hasExistingImage = modal.querySelector('#editCommentImagePreview img') !== null;
+        const counter = modal.querySelector('#editCommentCharCounter');
+        const MAX_CHARS = 500;
+        const len = textarea.value.length;
+        const hasImage = !!fileInput.files?.length || (hasExistingImage && !removeImage.checked);
+        
+        counter.textContent = len + ' / ' + MAX_CHARS;
+        
+        if (len > MAX_CHARS) {
+            counter.style.color = '#e74c3c';
+            counter.style.fontWeight = 'bold';
+            textarea.style.borderColor = '#e74c3c';
+        } else if (len === 0 && !hasImage) {
+            counter.style.color = '#e74c3c';
+            textarea.style.borderColor = '#e74c3c';
+        } else {
+            counter.style.color = '#65676b';
+            counter.style.fontWeight = 'normal';
+            textarea.style.borderColor = '#e4e6eb';
+        }
+    }
+
+    function submitEditComment() {
+        const modal = document.getElementById('editCommentModal');
+        const textarea = modal.querySelector('textarea[name="content"]');
+        const fileInput = modal.querySelector('input[name="image_file"]');
+        const removeImage = modal.querySelector('input[name="remove_image"]');
+        const hasExistingImage = modal.querySelector('#editCommentImagePreview img') !== null;
+        const errorDiv = modal.querySelector('#editCommentError');
+        const content = textarea.value.trim();
+        const MAX_CHARS = 500;
+        
+        // Validation
+        if (!content && !fileInput.files?.length && !(hasExistingImage && !removeImage.checked)) {
+            errorDiv.textContent = '❌ Ajoutez du texte ou une image.';
+            errorDiv.style.display = 'block';
+            textarea.style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        if (content.length > MAX_CHARS) {
+            errorDiv.textContent = '❌ Le commentaire dépasse ' + MAX_CHARS + ' caractères.';
+            errorDiv.style.display = 'block';
+            textarea.style.borderColor = '#e74c3c';
+            return;
+        }
+        
+        // Submit
+        document.getElementById('social-edit-comment-id').value = modal.dataset.commentId;
+        document.getElementById('social-edit-comment-form').submit();
+    }
+
+    function closeEditCommentModal() {
+        const modal = document.getElementById('editCommentModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.querySelector('#editCommentError').style.display = 'none';
+        }
+    }
+
+    (function () {
+        const content = document.getElementById('social-post-content');
+        const imageUrlInput = document.getElementById('social-post-image-url');
+        const completeBtn = document.getElementById('social-ai-complete-btn');
+        const photoBtn = document.getElementById('social-photo-btn');
+        const publishBtn = document.getElementById('social-publish-btn');
+        const postInput = document.getElementById('social-post-input');
+        const imageFileInput = document.getElementById('social-image-file');
+        const postForm = document.getElementById('social-post-form');
+        const MAX_POST_CHARS = 5000;
+        const MAX_COMMENT_CHARS = 500;
+
+        // Update post input counter
+        postInput?.addEventListener('input', () => {
+            const len = postInput.value.trim().length;
+            const counter = document.getElementById('postCharCount');
+            const status = document.getElementById('postInputStatus');
+            
+            counter.textContent = len + ' / ' + MAX_POST_CHARS;
+            
+            if (len === 0) {
+                counter.style.color = '#e4e6eb';
+                status.textContent = '';
+            } else if (len > MAX_POST_CHARS) {
+                counter.style.color = '#e74c3c';
+                counter.style.fontWeight = 'bold';
+                status.textContent = '❌ Trop long';
+                status.style.color = '#e74c3c';
+            } else {
+                counter.style.color = '#65676b';
+                counter.style.fontWeight = 'normal';
+                status.textContent = '✅ Prêt';
+                status.style.color = '#27ae60';
+            }
+        });
+
+        // Photo button - trigger file picker
+        photoBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            imageFileInput?.click();
+        });
+
+        // Handle file selection from file picker
+        imageFileInput?.addEventListener('change', async () => {
+            if (imageFileInput.files?.length > 0) {
+                const file = imageFileInput.files[0];
+                const fileName = file.name;
+                const size = (file.size / 1024 / 1024).toFixed(2);
+                const status = document.getElementById('postInputStatus');
+                
+                status.textContent = '🤖 Analyse de l\'image...';
+                status.style.color = '#667eea';
+
+                try {
+                    // Send image to AI captioning endpoint
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    formData.append('_csrf_token', '{{ csrf_token('social_ai_caption') }}');
+
+                    const response = await fetch('{{ path('app_social_ai_caption') }}', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (data.ok && data.caption) {
+                        // Insert caption into textarea
+                        postInput.value = data.caption;
+                        postInput.dispatchEvent(new Event('input'));
+                        
+                        status.textContent = '✨ Caption générée | 📷 Image: ' + fileName + ' (' + size + 'MB)';
+                        status.style.color = '#27ae60';
+                    } else {
+                        status.textContent = '⚠️ Caption échouée: ' + (data.error || 'Erreur inconnue');
+                        status.style.color = '#f39c12';
+                    }
+                } catch (e) {
+                    console.error('Image analysis failed:', e);
+                    status.textContent = '⚠️ Erreur réseau lors de l\'analyse';
+                    status.style.color = '#f39c12';
+                }
+            }
+        });
+
+        // Publish button - submit the form with content and optional image
+        publishBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            const postContent = postInput?.value?.trim();
+            const postLength = postContent?.length || 0;
+            const status = document.getElementById('postInputStatus');
+            const errorMsg = document.createElement('div');
+            
+            // Validation
+            if (!postContent) {
+                status.textContent = '❌ Écrivez quelque chose avant de publier';
+                status.style.color = '#e74c3c';
+                postInput?.focus();
+                return;
+            }
+            
+            if (postLength > MAX_POST_CHARS) {
+                status.textContent = '❌ Le post dépasse ' + MAX_POST_CHARS + ' caractères';
+                status.style.color = '#e74c3c';
+                return;
+            }
+
+            // Set the hidden content textarea with the post input value
+            if (content) {
+                content.value = postContent;
+            }
+
+            // Disable button and show loading state
+            publishBtn.disabled = true;
+            publishBtn.textContent = '⏳ Publication...';
+
+            // Use Fetch API to intercept response and check for moderation errors
+            const formData = new FormData(postForm);
+            
+            fetch('{{ path('app_social_post') }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(async response => {
+                const data = await response.json();
+                
+                if (response.status === 400 && !data.ok) {
+                    // Moderation error
+                    showModerationModal(data.error, data.severity, data.flagged_words);
+                    publishBtn.disabled = false;
+                    publishBtn.textContent = '✓ Publier';
+                } else if (response.ok && data.ok) {
+                    // Success - reload page
+                    window.location.reload();
+                } else {
+                    // Other error
+                    status.textContent = '❌ Erreur: ' + (data.error || 'Erreur inconnue');
+                    status.style.color = '#e74c3c';
+                    publishBtn.disabled = false;
+                    publishBtn.textContent = '✓ Publier';
+                }
+            })
+            .catch(err => {
+                console.error('Post error:', err);
+                status.textContent = '❌ Erreur réseau';
+                status.style.color = '#e74c3c';
+                publishBtn.disabled = false;
+                publishBtn.textContent = '✓ Publier';
+            });
+        });
+
+        completeBtn?.addEventListener('click', async () => {
+            const current = postInput?.value?.trim() || content?.value?.trim();
+            if (!current) {
+                alert('Écrivez quelque chose d\'abord');
+                return;
+            }
+
+            completeBtn.disabled = true;
+            completeBtn.textContent = '⏳ Complétion par IA...';
+            try {
+                const response = await fetch('{{ path('app_social_ai_complete') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new URLSearchParams({
+                        _csrf_token: '{{ csrf_token('social_ai_complete') }}',
+                        content: current
+                    })
+                });
+                const data = await response.json();
+                if (data.ok && data.fullText) {
+                    postInput.value = data.fullText;
+                    if (content) content.value = data.fullText;
+                    postInput.dispatchEvent(new Event('input'));
+                    const status = document.getElementById('postInputStatus');
+                    status.textContent = '✨ Complété par IA!';
+                    status.style.color = '#667eea';
+                } else {
+                    alert('❌ Erreur: ' + (data.error || 'Impossible de compléter'));
+                }
+            } catch (e) {
+                console.error('AI completion failed:', e);
+                alert('❌ Erreur réseau');
+            } finally {
+                completeBtn.disabled = false;
+                completeBtn.textContent = '🤖 Compléter avec IA';
+            }
+        });
+
+        const hiddenPostSnapshots = new Map();
+        let activeCommentCooldown = null;
+
+        function buildHiddenPostNotice(postId, csrfToken) {
+            return `
+                <div style="padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px dashed #d1d5db; border-radius: 18px; background: linear-gradient(180deg, #fcfcfd 0%, #f7f8fa 100%);">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 700; color: #1f2937;">Post masque dans votre feed</div>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Il reste visible pour les autres utilisateurs.</div>
+                    </div>
+                    <form method="post" action="{{ path('app_social_post_hide') }}" class="social-post-hide-form" data-post-id="${postId}" style="margin: 0;">
+                        <input type="hidden" name="_csrf_token" value="${csrfToken}">
+                        <input type="hidden" name="post_id" value="${postId}">
+                        <button type="submit" class="btn btn-sm btn-outline" style="padding: 8px 14px;">Reafficher</button>
+                    </form>
+                </div>
+            `;
+        }
+
+        function setPostHiddenState(postId, hidden, csrfToken) {
+            const postCard = document.getElementById(`post-card-${postId}`);
+            if (!postCard) {
+                return;
+            }
+
+            if (hidden) {
+                if (!hiddenPostSnapshots.has(postId)) {
+                    hiddenPostSnapshots.set(postId, postCard.innerHTML);
+                }
+                postCard.innerHTML = buildHiddenPostNotice(postId, csrfToken);
+                return;
+            }
+
+            const originalMarkup = hiddenPostSnapshots.get(postId);
+            if (originalMarkup) {
+                postCard.innerHTML = originalMarkup;
+                hiddenPostSnapshots.delete(postId);
+            }
+        }
+
+        async function submitHidePostForm(form) {
+            const postId = form.dataset.postId;
+            const submitButton = form.querySelector('button[type="submit"]');
+            const csrfToken = form.querySelector('input[name="_csrf_token"]')?.value || '';
+            const formData = new FormData(form);
+
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || !payload?.ok) {
+                    throw new Error(payload?.error || 'Unable to update hidden post state.');
+                }
+
+                setPostHiddenState(postId, !!payload.hidden, csrfToken);
+            } catch (error) {
+                console.error('Hide post failed:', error);
+                alert('Impossible de mettre a jour ce post masque pour le moment.');
+                if (submitButton) {
+                    submitButton.disabled = false;
+                }
+            }
+        }
+
+        function setCommentStatus(form, message, color) {
+            const status = form?.querySelector('.comment-status');
+            if (!status) return;
+
+            status.textContent = message;
+            status.style.color = color;
+        }
+
+        function clearCommentCooldown() {
+            if (activeCommentCooldown !== null) {
+                window.clearInterval(activeCommentCooldown);
+                activeCommentCooldown = null;
+            }
+        }
+
+        function startCommentCooldown(form, waitSeconds) {
+            const submitButton = form?.querySelector('button[type="submit"]');
+            let secondsLeft = Math.max(1, waitSeconds);
+
+            clearCommentCooldown();
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Patientez...';
+            }
+
+            setCommentStatus(form, '⏳ Anti-spam actif: attendez ' + secondsLeft + ' secondes.', '#d97706');
+
+            activeCommentCooldown = window.setInterval(() => {
+                secondsLeft -= 1;
+
+                if (secondsLeft <= 0) {
+                    clearCommentCooldown();
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Poster';
+                    }
+                    setCommentStatus(form, '✅ Vous pouvez republier un commentaire.', '#27ae60');
+                    return;
+                }
+
+                setCommentStatus(form, '⏳ Anti-spam actif: attendez ' + secondsLeft + ' secondes.', '#d97706');
+            }, 1000);
+        }
+
+        function extractCommentError(payload) {
+            if (payload?.errors) {
+                const firstField = Object.keys(payload.errors)[0];
+                if (firstField && payload.errors[firstField]) {
+                    return payload.errors[firstField];
+                }
+            }
+
+            return payload?.error || '❌ Une erreur est survenue.';
+        }
+
+        async function submitCommentForm(form) {
+            const submitButton = form.querySelector('button[type="submit"]');
+            const formData = new FormData(form);
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Envoi...';
+            }
+
+            setCommentStatus(form, 'Envoi du commentaire...', '#2563eb');
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const payload = await response.json().catch(() => ({}));
+
+                if (response.ok && payload?.ok) {
+                    clearCommentCooldown();
+                    setCommentStatus(form, '✅ Commentaire publié.', '#27ae60');
+                    window.location.reload();
+                    return;
+                }
+
+                if (response.status === 429) {
+                    const retryAfterHeader = Number(response.headers.get('Retry-After') || 0);
+                    const retryAfterTimestamp = Number(payload?.retryAfter || 0);
+                    const nowSeconds = Math.floor(Date.now() / 1000);
+                    const waitSeconds = retryAfterHeader > 0
+                        ? retryAfterHeader
+                        : Math.max(1, retryAfterTimestamp - nowSeconds);
+
+                    startCommentCooldown(form, waitSeconds);
+                    return;
+                }
+
+                setCommentStatus(form, extractCommentError(payload), '#e74c3c');
+            } catch (error) {
+                console.error('Comment submission failed:', error);
+                setCommentStatus(form, '❌ Erreur réseau, réessayez dans un instant.', '#e74c3c');
+            } finally {
+                if (submitButton && activeCommentCooldown === null) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Poster';
+                }
+            }
+        }
+
+        // Real-time comment validation
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('comment-textarea')) {
+                const form = e.target.closest('form');
+                if (!form) return;
+                
+                const charCount = form.querySelector('.comment-char-count');
+                const status = form.querySelector('.comment-status');
+                const len = e.target.value.trim().length;
+                const fileInput = form.querySelector('input[name="image_file"]');
+                const hasImage = !!fileInput?.files?.length;
+                
+                charCount.textContent = len + ' / ' + MAX_COMMENT_CHARS;
+                
+                if (len === 0 && !hasImage) {
+                    charCount.style.color = '#e4e6eb';
+                    charCount.style.fontWeight = 'normal';
+                    status.textContent = '';
+                } else if (len > MAX_COMMENT_CHARS) {
+                    charCount.style.color = '#e74c3c';
+                    charCount.style.fontWeight = 'bold';
+                    status.textContent = '❌ Trop long';
+                    status.style.color = '#e74c3c';
+                } else {
+                    charCount.style.color = '#65676b';
+                    charCount.style.fontWeight = 'normal';
+                    status.textContent = '✅ Prêt';
+                    status.style.color = '#27ae60';
+                }
+            }
+        });
+
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('comment-image-input')) {
+                const form = e.target.closest('form');
+                if (!form) return;
+
+                const textarea = form.querySelector('textarea[name="content"]');
+                const charCount = form.querySelector('.comment-char-count');
+                const status = form.querySelector('.comment-status');
+                const len = textarea?.value?.trim().length || 0;
+                const hasImage = !!e.target.files?.length;
+
+                charCount.textContent = len + ' / ' + MAX_COMMENT_CHARS;
+
+                if (len === 0 && !hasImage) {
+                    charCount.style.color = '#e4e6eb';
+                    charCount.style.fontWeight = 'normal';
+                    status.textContent = '';
+                } else if (len > MAX_COMMENT_CHARS) {
+                    charCount.style.color = '#e74c3c';
+                    charCount.style.fontWeight = 'bold';
+                    status.textContent = '❌ Trop long';
+                    status.style.color = '#e74c3c';
+                } else {
+                    charCount.style.color = '#65676b';
+                    charCount.style.fontWeight = 'normal';
+                    status.textContent = hasImage ? '🖼️ Image prête' : '✅ Prêt';
+                    status.style.color = '#27ae60';
+                }
+            }
+        });
+
+        // Comment form validation on submit
+        document.addEventListener('submit', (e) => {
+            if (e.target.classList && e.target.classList.contains('social-post-hide-form')) {
+                e.preventDefault();
+                submitHidePostForm(e.target);
+                return;
+            }
+
+            if (e.target.classList && e.target.classList.contains('social-comment-form')) {
+                e.preventDefault();
+
+                const textarea = e.target.querySelector('textarea[name="content"]');
+                const content = textarea?.value?.trim();
+                const imageInput = e.target.querySelector('input[name="image_file"]');
+                const gifUrlInput = e.target.querySelector('.comment-gif-url');
+                const status = e.target.querySelector('.comment-status');
+                const charCount = e.target.querySelector('.comment-char-count');
+                const hasImage = !!imageInput?.files?.length;
+                const hasGif = !!gifUrlInput?.value?.trim();
+                const hasMedia = hasImage || hasGif;
+                
+                if (!content && !hasMedia) {
+                    if (textarea) {
+                        textarea.style.borderColor = '#e74c3c';
+                        textarea.style.backgroundColor = '#ffe6e6';
+                        textarea.focus();
+                    }
+                    if (status) {
+                        status.textContent = '❌ Écrivez un commentaire ou ajoutez une image';
+                        status.style.color = '#e74c3c';
+                    }
+                    if (charCount) {
+                        charCount.style.color = '#e74c3c';
+                        charCount.style.fontWeight = 'bold';
+                    }
+                    return false;
+                }
+                
+                if ((content?.length || 0) > MAX_COMMENT_CHARS) {
+                    if (status) {
+                        status.textContent = '❌ Le commentaire est trop long';
+                        status.style.color = '#e74c3c';
+                    }
+                    alert('❌ Le commentaire dépasse ' + MAX_COMMENT_CHARS + ' caractères.');
+                    return false;
+                }
+
+                submitCommentForm(e.target);
+            }
+        });
+    })();
+
+    // Moderation Modal
+    function showModerationModal(errorMsg, severity, flaggedWords = []) {
+        const modal = document.createElement('div');
+        modal.id = 'moderation-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            animation: slideUp 0.3s ease;
+        `;
+
+        const icon = severity === 'blocked' ? '🚫' : '⚠️';
+        const title = severity === 'blocked' ? 'Post Blocked' : 'Inappropriate Content';
+        const color = severity === 'blocked' ? '#e74c3c' : '#f39c12';
+
+        content.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 16px;">${icon}</div>
+            <h2 style="color: ${color}; margin: 0 0 12px 0; font-size: 24px;">${title}</h2>
+            <p style="color: #666; margin: 0 0 16px 0; line-height: 1.6;">${errorMsg}</p>
+            ${flaggedWords.length > 0 ? `
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: left;">
+                    <p style="color: #666; font-size: 12px; margin: 0 0 8px 0; font-weight: 600;">Flagged Words:</p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        ${flaggedWords.map(w => `<span style="background: ${color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">${w}</span>`).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            <button onclick="closeModerationModal()" style="
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                padding: 12px 32px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 600;
+                transition: all 0.2s;
+            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                Understood
+            </button>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Add slide up animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModerationModal();
+        });
+    }
+
+    function closeModerationModal() {
+        const modal = document.getElementById('moderation-modal');
+        if (modal) modal.remove();
+    }
+
+</script>
+{% endblock %}
