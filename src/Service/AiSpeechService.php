@@ -59,6 +59,8 @@ class AiSpeechService
             throw new \RuntimeException('No transcription text returned.');
         }
 
+
+
         return $text;
     }
 }
