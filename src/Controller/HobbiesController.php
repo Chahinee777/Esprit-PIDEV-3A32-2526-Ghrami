@@ -930,4 +930,221 @@ final class HobbiesController extends AbstractController
         $insights = $groqAnalytics->getHobbyRecommendations((int) $user->id);
         return $this->json(['ok' => true, 'insights' => $insights['insights']]);
     }
+
+    // ── 1. Submit job (Pixazo P-Video) ───────────────────────────────────────────
+#[Route('/{id}/generate-video', name: 'app_hobbies_generate_video', methods: ['GET'],
+    requirements: ['id' => '\d+'])]
+public function generateVideo(Hobby $hobby, Request $request): JsonResponse
+{
+    try {
+        $this->denyAccessUnlessGranted('HOBBY_VIEW', $hobby);
+
+        $pixazoKey = $_ENV['PIXAZO_API_KEY'] ?? '';
+        if (!$pixazoKey) {
+            return new JsonResponse(['ok' => false, 'error' => 'Pixazo API key not configured. Add PIXAZO_API_KEY to .env'], 500);
+        }
+
+        $hobbyName     = $hobby->name;
+        $hobbyCategory = $hobby->category ?? 'hobby';
+        $prompt = "A person happily practicing {$hobbyName}, {$hobbyCategory}, cinematic footage, smooth motion, bright lighting, high quality";
+
+        // ── POST to Pixazo P-Video generate endpoint ──────────────────────────────
+        $apiUrl = 'https://gateway.pixazo.ai/p-video/v1/p-video/generate';
+        $payload = json_encode([
+            'prompt'       => $prompt,
+            'aspect_ratio' => '16:9',
+            'resolution'   => '720p',
+            'duration'     => 5,
+        ]);
+
+        if ($payload === false) {
+            return new JsonResponse(['ok' => false, 'error' => 'Failed to encode request payload.'], 400);
+        }
+
+        $ch = curl_init($apiUrl);
+        if ($ch === false) {
+            return new JsonResponse(['ok' => false, 'error' => 'Failed to initialize HTTP request.'], 500);
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_TIMEOUT        => 20,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Cache-Control: no-cache',
+                'Ocp-Apim-Subscription-Key: ' . $pixazoKey,
+            ],
+            CURLOPT_POSTFIELDS => $payload,
+        ]);
+
+        $rawResponse = curl_exec($ch);
+        $curlError   = curl_error($ch);
+        $curlErrno   = curl_errno($ch);
+        $httpCode    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        // ── cURL-level failure ────────────────────────────────────────────────────
+        if ($rawResponse === false || $httpCode === 0) {
+            $reason = match ($curlErrno) {
+                CURLE_COULDNT_RESOLVE_HOST => 'Could not resolve gateway.pixazo.ai — check DNS or firewall.',
+                CURLE_COULDNT_CONNECT      => 'Could not connect to Pixazo — host unreachable.',
+                CURLE_OPERATION_TIMEDOUT   => 'Connection to Pixazo timed out.',
+                CURLE_SSL_CONNECT_ERROR    => 'SSL handshake failed — CA bundle may be misconfigured.',
+                default                    => 'cURL error (' . $curlErrno . '): ' . $curlError,
+            };
+            return new JsonResponse(['ok' => false, 'error' => $reason], 502);
+        }
+
+        $decoded = json_decode($rawResponse, true);
+        error_log('[PIXAZO SUBMIT] HTTP ' . $httpCode . ' — ' . $rawResponse);
+
+        // ── Success: Pixazo returns request_id + QUEUED status ────────────────────
+        if ($httpCode === 200 && is_array($decoded) && isset($decoded['request_id'])) {
+            return new JsonResponse([
+                'ok'         => false,
+                'loading'    => true,
+                'eta'        => 60,
+                'request_id' => $decoded['request_id'],
+                'prompt'     => $prompt,
+            ]);
+        }
+
+        // ── Pixazo error ──────────────────────────────────────────────────────────
+        $msg = null;
+        if (is_array($decoded)) {
+            $raw = $decoded['message'] ?? $decoded['error'] ?? null;
+            $msg = is_array($raw) ? json_encode($raw) : $raw;
+        }
+        $msg = $msg ?? sprintf('Unexpected response from Pixazo (HTTP %d).', $httpCode);
+
+        return new JsonResponse([
+            'ok'         => false,
+            'error'      => $msg,
+            'debug_http' => $httpCode,
+            'debug_body' => is_array($decoded) ? $decoded : substr((string)$rawResponse, 0, 300),
+        ], $httpCode > 0 ? $httpCode : 502);
+
+    } catch (\Exception $e) {
+        return new JsonResponse([
+            'ok'      => false,
+            'error'   => 'An unexpected error occurred while submitting the video job.',
+            'details' => $e->getMessage(),
+        ], 500);
+    }
+}
+
+// ── 2. Poll job status ────────────────────────────────────────────────────────
+#[Route('/{id}/generate-video/poll', name: 'app_hobbies_generate_video_poll', methods: ['GET'],
+    requirements: ['id' => '\d+'])]
+public function pollGenerateVideo(Hobby $hobby, Request $request): JsonResponse
+{
+    try {
+        $this->denyAccessUnlessGranted('HOBBY_VIEW', $hobby);
+
+        $pixazoKey = $_ENV['PIXAZO_API_KEY'] ?? '';
+        $requestId = $request->query->get('request_id');
+
+        if (!$requestId) {
+            return new JsonResponse(['ok' => false, 'error' => 'Missing request_id.'], 400);
+        }
+
+        if (!$pixazoKey) {
+            return new JsonResponse(['ok' => false, 'error' => 'PIXAZO_API_KEY environment variable not set.'], 500);
+        }
+
+        // ── Poll Pixazo universal status endpoint ─────────────────────────────────
+        $statusUrl = 'https://gateway.pixazo.ai/v2/requests/status/' . urlencode($requestId);
+
+        $ch = curl_init($statusUrl);
+        if ($ch === false) {
+            return new JsonResponse(['ok' => false, 'error' => 'Failed to initialize HTTP request.'], 500);
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_HTTPHEADER     => [
+                'Ocp-Apim-Subscription-Key: ' . $pixazoKey,
+            ],
+        ]);
+
+        $rawResponse = curl_exec($ch);
+        $curlError   = curl_error($ch);
+        $httpCode    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($rawResponse === false || $httpCode === 0) {
+            return new JsonResponse(['ok' => false, 'error' => 'Poll request failed: ' . $curlError], 502);
+        }
+
+        if ($httpCode !== 200) {
+            return new JsonResponse([
+                'ok'             => false,
+                'error'          => 'Pixazo returned HTTP ' . $httpCode,
+                'debug_http'     => $httpCode,
+                'debug_response' => substr((string)$rawResponse, 0, 500),
+            ], 502);
+        }
+
+        $decoded = json_decode($rawResponse, true);
+        if ($decoded === null) {
+            return new JsonResponse([
+                'ok'             => false,
+                'error'          => 'Failed to parse Pixazo JSON response',
+                'debug_response' => substr((string)$rawResponse, 0, 300),
+            ], 502);
+        }
+
+        $status = strtoupper($decoded['status'] ?? '');
+        error_log('[PIXAZO POLL] request_id=' . $requestId . ' status=' . $status);
+
+        // ── Still in queue or processing ──────────────────────────────────────────
+        if (in_array($status, ['QUEUED', 'PROCESSING'], true)) {
+            return new JsonResponse([
+                'ok'           => false,
+                'loading'      => true,
+                'eta'          => 15,
+                'debug_status' => $status,
+            ]);
+        }
+
+        // ── Completed ─────────────────────────────────────────────────────────────
+        if ($status === 'COMPLETED') {
+            $videoUrl = $decoded['output']['media_url'][0] ?? null;
+
+            if (!$videoUrl) {
+                return new JsonResponse([
+                    'ok'    => false,
+                    'error' => 'Video completed but no URL found in response.',
+                    'debug' => $decoded,
+                ], 502);
+            }
+
+            return new JsonResponse(['ok' => true, 'videoUrl' => $videoUrl]);
+        }
+
+        // ── Failed / Error / unknown ──────────────────────────────────────────────
+        $errMsg = $decoded['error'] ?? ('Unexpected Pixazo status: ' . $status);
+        return new JsonResponse([
+            'ok'           => false,
+            'error'        => $errMsg,
+            'debug_status' => $status,
+            'debug_body'   => $decoded,
+        ], 502);
+
+    } catch (\Exception $e) {
+        return new JsonResponse([
+            'ok'      => false,
+            'error'   => 'An unexpected error occurred while polling video status.',
+            'details' => $e->getMessage(),
+        ], 500);
+    }
+}
+
 }

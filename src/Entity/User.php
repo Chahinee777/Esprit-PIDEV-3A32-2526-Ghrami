@@ -113,6 +113,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'two_factor_backup_codes', type: Types::JSON, nullable: true)]
     public ?array $twoFactorBackupCodes = null;
 
+    #[ORM\Column(name: 'digest_opted_in', type: Types::BOOLEAN, options: ['default' => true])]
+    public bool $digestOptedIn = true;
+
     public function getUserIdentifier(): string
     {
         return $this->email;

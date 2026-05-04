@@ -127,6 +127,11 @@
                 <button onclick="openMusicModal({{ hobby.id }}, '{{ hobby.name }}')" class="btn-action" style="flex: 1; padding: 10px; background: #E91E63; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">🎵 Musique</button>
                 <button onclick="openEditHobbyModal({{ hobby.id }}, '{{ hobby.name }}', '{{ hobby.category }}', '{{ hobby.description }}')" style="padding: 10px 12px; background: #FF9800; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">✏️</button>
                 <button onclick="deleteHobby({{ hobby.id }})" style="padding: 10px 12px; background: #f44336; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">🗑️</button>
+                {# ── NEW: AI Video button ── #}
+                <button onclick="openVideoModal({{ hobby.id }}, '{{ hobby.name|e('js') }}', '{{ hobby.category|e('js') }}')"
+                        class="btn-action"
+                        style="padding: 10px 12px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;"
+                        title="Générer une vidéo IA">🎬</button>
             </div>
         </div>
         {% endfor %}
@@ -307,6 +312,87 @@
         </div>
     </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- Modal Vidéo IA (NEW)                                                      -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div id="videoModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1001; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #0f0f1a; border-radius: 20px; width: 90%; max-width: 680px; box-shadow: 0 20px 60px rgba(99,102,241,0.4); overflow: hidden; display: flex; flex-direction: column;">
+
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <span style="font-size: 28px;">🎬</span>
+                <div>
+                    <h2 style="margin: 0; font-size: 18px; font-weight: bold; color: white;">Vidéo IA</h2>
+                    <p style="margin: 2px 0 0 0; font-size: 12px; color: rgba(255,255,255,0.75);">Powered by Magic Hour</p>
+                </div>
+            </div>
+            <button onclick="closeVideoModal()" style="background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; font-size: 18px; color: white; display: flex; align-items: center; justify-content: center;">✕</button>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+
+            <!-- Hobby info pill -->
+            <div id="videoHobbyInfo" style="background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); padding: 10px 16px; border-radius: 10px; font-size: 13px; color: #c4b5fd;"></div>
+
+            <!-- Prompt preview (shown after generation) -->
+            <div id="videoPromptBox" style="display: none; background: rgba(255,255,255,0.05); border-left: 3px solid #8b5cf6; padding: 10px 14px; border-radius: 6px; font-size: 12px; color: #a78bfa; font-style: italic; word-break: break-word;"></div>
+
+            <!-- Video player area -->
+            <div id="videoArea" style="min-height: 280px; background: #1a1a2e; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+
+                <!-- Idle state -->
+                <div id="videoIdle" style="text-align: center; padding: 40px 20px;">
+                    <div style="font-size: 56px; margin-bottom: 12px;">🎬</div>
+                    <p style="color: #6b7280; font-size: 14px; margin: 0;">Appuyez sur <strong style="color: #8b5cf6;">Générer</strong> pour créer une vidéo IA</p>
+                    <p style="color: #4b5563; font-size: 11px; margin: 8px 0 0 0;">Première génération : ~60 s (cold start)</p>
+                </div>
+
+                <!-- Loading state -->
+                <div id="videoLoading" style="display: none; text-align: center; padding: 40px 20px;">
+                    <div style="width: 56px; height: 56px; border: 4px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spinVideo 1s linear infinite; margin: 0 auto 16px;"></div>
+                    <p id="videoLoadingText" style="color: #c4b5fd; font-size: 14px; margin: 0; font-weight: 600;">Génération en cours…</p>
+                    <p id="videoEta" style="color: #6b7280; font-size: 12px; margin: 6px 0 0 0;"></p>
+                </div>
+
+                <!-- Error state -->
+                <div id="videoError" style="display: none; text-align: center; padding: 32px 24px;">
+                    <div style="font-size: 40px; margin-bottom: 12px;">⚠️</div>
+                    <p id="videoErrorText" style="color: #f87171; font-size: 14px; margin: 0 0 12px 0;"></p>
+                    <button onclick="generateVideo()" style="padding: 8px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">🔄 Réessayer</button>
+                </div>
+
+                <!-- Video player -->
+                <video id="videoPlayer" controls style="display: none; width: 100%; border-radius: 12px; max-height: 380px; background: black;" playsinline></video>
+
+            </div>
+
+            <!-- Action buttons -->
+            <div style="display: flex; gap: 10px; margin-top: 4px;">
+                <button id="videoGenerateBtn" onclick="generateVideo()" style="flex: 1; padding: 13px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px; transition: opacity 0.2s;">
+                    ✨ Générer la Vidéo
+                </button>
+                <button id="videoDownloadBtn" onclick="downloadVideo()" style="display: none; padding: 13px 18px; background: #059669; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;">
+                    ⬇️ Télécharger
+                </button>
+                <button onclick="closeVideoModal()" style="padding: 13px 18px; background: #374151; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;">
+                    Fermer
+                </button>
+            </div>
+
+            <!-- Rate-limit note -->
+            <p style="margin: 0; font-size: 11px; color: #4b5563; text-align: center;">
+                ℹ️ Powered by Magic Hour API — génération en 30–90 s selon la disponibilité.
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes spinVideo { to { transform: rotate(360deg); } }
+</style>
 
 <!-- Modal Coach -->
 <div id="coachModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
@@ -1342,6 +1428,188 @@
 
     document.getElementById('coachModal')?.addEventListener('click', (e) => {
         if (e.target.id === 'coachModal') closeCoachModal();
+    });
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // Video Modal — AI generation via Magic Hour (NEW)
+    // ══════════════════════════════════════════════════════════════════════════
+    let _videoHobbyId      = null;
+    let _videoHobbyName    = null;
+    let _videoBlob         = null;   // kept for download
+    let _videoRetryTimeout = null;
+    let _videoPollCount    = 0;
+    const _videoPollMax    = 60;  // Max 60 polls = ~10 mins at 10s intervals
+
+    function openVideoModal(hobbyId, hobbyName, hobbyCategory) {
+        _videoHobbyId   = hobbyId;
+        _videoHobbyName = hobbyName;
+        _videoBlob      = null;
+
+        // Reset all states
+        _videoSetState('idle');
+        document.getElementById('videoDownloadBtn').style.display = 'none';
+        document.getElementById('videoPromptBox').style.display   = 'none';
+        document.getElementById('videoHobbyInfo').textContent     =
+            `🎯 ${hobbyName}  ·  📂 ${hobbyCategory}`;
+
+        document.getElementById('videoModal').style.display = 'flex';
+    }
+
+    function closeVideoModal() {
+        document.getElementById('videoModal').style.display = 'none';
+        clearTimeout(_videoRetryTimeout);
+        // Stop any ongoing playback
+        const player = document.getElementById('videoPlayer');
+        player.pause();
+        player.src = '';
+    }
+
+    function _videoSetState(state) {
+        document.getElementById('videoIdle').style.display    = state === 'idle'    ? 'block' : 'none';
+        document.getElementById('videoLoading').style.display = state === 'loading' ? 'block' : 'none';
+        document.getElementById('videoError').style.display   = state === 'error'   ? 'block' : 'none';
+        document.getElementById('videoPlayer').style.display  = state === 'ready'   ? 'block' : 'none';
+
+        // Disable generate button while loading
+        const btn = document.getElementById('videoGenerateBtn');
+        btn.disabled      = state === 'loading';
+        btn.style.opacity = state === 'loading' ? '0.5' : '1';
+        btn.style.cursor  = state === 'loading' ? 'not-allowed' : 'pointer';
+        btn.textContent   = state === 'loading' ? '⏳ Génération…' : '✨ Générer la Vidéo';
+    }
+
+    function generateVideo() {
+    if (!_videoHobbyId) return;
+    clearTimeout(_videoRetryTimeout);
+    _videoPollCount = 0;  // Reset poll counter
+
+    _videoSetState('loading');
+    document.getElementById('videoLoadingText').textContent = 'Submitting to Magic Hour…';
+    document.getElementById('videoEta').textContent         = 'Cold start can take 1–3 min — polling automatically.';
+    document.getElementById('videoDownloadBtn').style.display = 'none';
+
+    // Construct URL directly in JavaScript to avoid Twig route validation
+    const submitUrl = `/hobbies/${_videoHobbyId}/generate-video`;
+
+    _videoSubmit(submitUrl);
+}
+
+function _videoSubmit(url) {
+    fetch(url)
+        .then(res => res.json())
+        .then(data => _videoHandleResponse(data, url))  // pass url as fallback poll target
+        .catch(err => {
+            _videoSetState('error');
+            document.getElementById('videoErrorText').textContent = err.message;
+        });
+}
+
+function _videoHandleResponse(data, fallbackUrl) {
+    console.log('[Video] Handling response:', data);
+    
+    if (data.ok) {
+        console.log('[Video] Success! Video URL:', data.videoUrl);
+        // Done — use video URL directly from API response
+        const player = document.getElementById('videoPlayer');
+        player.src   = data.videoUrl;
+        player.load();
+
+        if (data.prompt) {
+            const box       = document.getElementById('videoPromptBox');
+            box.textContent = '💬 Prompt : ' + data.prompt;
+            box.style.display = 'block';
+        }
+
+        _videoSetState('ready');
+        document.getElementById('videoDownloadBtn').style.display = 'block';
+
+    } else if (data.loading && data.request_id) {
+        console.log('[Video] Job submitted, will poll with request_id:', data.request_id);
+        // Job submitted — poll its status
+        const eta = data.eta || 15;
+        document.getElementById('videoLoadingText').textContent = '⏳ Model generating…';
+
+        let countdown = eta;
+        document.getElementById('videoEta').textContent = `Checking again in ${countdown}s…`;
+        const tick = setInterval(() => {
+            countdown--;
+            document.getElementById('videoEta').textContent = `Checking again in ${countdown}s…`;
+            if (countdown <= 0) clearInterval(tick);
+        }, 1000);
+
+        _videoRetryTimeout = setTimeout(() => {
+            clearInterval(tick);
+            // Poll the status endpoint
+            _videoPoll(fallbackUrl, data.request_id);
+        }, eta * 1000);
+
+    } else if (data.loading) {
+        console.log('[Video] Still loading, retrying submission');
+        // Still warming up — retry submission
+        const eta = data.eta || 15;
+        document.getElementById('videoLoadingText').textContent = '⏳ Model generating…';
+
+        let countdown = eta;
+        document.getElementById('videoEta').textContent = `Checking again in ${countdown}s…`;
+        const tick = setInterval(() => {
+            countdown--;
+            document.getElementById('videoEta').textContent = `Checking again in ${countdown}s…`;
+            if (countdown <= 0) clearInterval(tick);
+        }, 1000);
+
+        _videoRetryTimeout = setTimeout(() => {
+            clearInterval(tick);
+            _videoSubmit(fallbackUrl);
+        }, eta * 1000);
+
+    } else {
+        console.error('[Video] Error:', data.error);
+        _videoSetState('error');
+        document.getElementById('videoErrorText').textContent =
+            data.error || 'An error occurred.';
+    }
+}
+
+function _videoPoll(hobbyUrl, requestId) {
+    _videoPollCount++;
+    
+    console.log(`[Video] Polling attempt ${_videoPollCount}/${_videoPollMax}, request_id: ${requestId}`);
+    
+    // Prevent infinite polling
+    if (_videoPollCount > _videoPollMax) {
+        _videoSetState('error');
+        document.getElementById('videoErrorText').textContent = 'Video generation timed out after ' + (_videoPollMax * 10) + ' seconds.';
+        console.error(`[Video] Polling timeout after ${_videoPollCount} attempts`);
+        return;
+    }
+    
+    // Construct poll URL: /hobbies/{id}/generate-video/poll
+    const pollUrl = `${hobbyUrl}/poll?request_id=${encodeURIComponent(requestId)}`;
+    
+    fetch(pollUrl)
+        .then(res => res.json())
+        .then(data => {
+            console.log(`[Video] Poll response:`, data);
+            _videoHandleResponse(data, hobbyUrl);
+        })
+        .catch(err => {
+            console.error(`[Video] Poll error:`, err);
+            _videoSetState('error');
+            document.getElementById('videoErrorText').textContent = 'Poll error: ' + err.message;
+        });
+}
+
+    function downloadVideo() {
+        if (!_videoBlob || !_videoHobbyName) return;
+        const a    = document.createElement('a');
+        a.href     = URL.createObjectURL(_videoBlob);
+        a.download = `${_videoHobbyName.replace(/\s+/g, '_')}_ai_video.mp4`;
+        a.click();
+    }
+
+    // Close video modal on backdrop click
+    document.getElementById('videoModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'videoModal') closeVideoModal();
     });
 </script>
 
