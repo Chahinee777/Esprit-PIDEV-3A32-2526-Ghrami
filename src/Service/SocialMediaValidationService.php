@@ -15,6 +15,7 @@ use InvalidArgumentException;
  * 3. Post type must be one of: text, image, video, story
  * 4. User ID must be a positive integer
  * 5. Visibility must be one of: public, friends, private
+ * 6. Social feed branch update only, no logic changed
  */
 class SocialMediaValidationService
 {

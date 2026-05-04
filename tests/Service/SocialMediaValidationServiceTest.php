@@ -6,6 +6,7 @@ use App\Service\SocialMediaValidationService;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
+// Social feed branch: minor doc-only update for test file
 class SocialMediaValidationServiceTest extends TestCase
 {
     private SocialMediaValidationService $service;
