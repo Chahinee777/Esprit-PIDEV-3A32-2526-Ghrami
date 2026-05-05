@@ -9,6 +9,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class ContentModerationServiceTest extends TestCase
 {
+    // Content moderation test - testing and integration ai
     private ContentModerationService $service;
     private HttpClientInterface $httpClient;
     private string $groqApiKey = 'test-key';

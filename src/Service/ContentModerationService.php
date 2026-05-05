@@ -9,6 +9,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * 
  * Detects inappropriate content (swearing, harassment, etc.) using AI.
  * Returns verdict on whether content is safe to post.
+ * Testing and integration ai
  */
 final class ContentModerationService
 {

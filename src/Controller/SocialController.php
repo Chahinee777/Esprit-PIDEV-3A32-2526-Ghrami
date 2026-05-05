@@ -29,6 +29,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 #[Route('/social')]
 final class SocialController extends AbstractController
 {
+    // Social controller with AI content moderation - testing and integration ai
     private const TUNISIAN_GOVERNORATES = [
         'Ariana', 'Béja', 'Ben Arous', 'Bizerte', 'Gabès', 'Gafsa', 'Jendouba',
         'Kairouan', 'Kasserine', 'Kébili', 'Le Kef', 'Mahdia', 'La Manouba',
