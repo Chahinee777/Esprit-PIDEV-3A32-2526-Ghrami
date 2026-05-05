@@ -14,6 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/notifications')]
 final class NotificationController extends AbstractController
 {
+    // Notification controller with AI integration - testing and integration ai
     #[Route('', name: 'app_notifications_index', methods: ['GET'])]
     public function index(NotificationService $notificationService, AiNotificationService $aiService): Response
     {

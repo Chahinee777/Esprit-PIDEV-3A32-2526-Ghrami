@@ -12,6 +12,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class AiNotificationServiceTest extends TestCase
 {
+    // AI notification service test - testing and integration ai
     private AiNotificationService $service;
     private EntityManagerInterface $em;
     private HttpClientInterface $httpClient;

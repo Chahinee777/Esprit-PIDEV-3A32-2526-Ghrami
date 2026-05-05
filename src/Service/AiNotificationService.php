@@ -11,6 +11,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * 
  * Intelligently scores, filters, and composes notifications into smart digests.
  * Works with existing Notification entity — NO database changes required.
+ * Testing and integration ai
  */
 final class AiNotificationService
 {
