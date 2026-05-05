@@ -120,15 +120,16 @@ Social post and comment validation
 
 ### Database Impact
 
-✅ **Safe to Run:** All 165 unit tests are isolated - **NO database writes**
-- Unit Tests use **mocks** for database/HTTP interactions
-- **AiNotificationServiceTest:** Mocks EntityManager and HTTP client (Groq API)
-- **Validation Tests:** Pure unit tests with no database access
-- **No Transactions Needed:** Tests don't create actual database records
-- **No Data Accumulation:** Safe to run multiple times (no cleanup needed)
-- **Isolated:** Each test is completely independent with mocked dependencies
+**Test Suites Breakdown:**
+- ✅ **Mocked Tests (5 suites, 37 tests):** No database writes
+  - AiNotificationServiceTest, ContentModerationServiceTest, FriendsConnectionValidationServiceTest
+  - Use mocks for database/HTTP - Safe to run repeatedly
+  
+- 🔴 **Data-Writing Tests (9 test files, 62 tests):** WRITE REAL DATA to test database
+  - **Service Tests (5):** BookingValidationServiceTest, MeetingsValidationServiceTest, MessagesValidationServiceTest, SocialMediaValidationServiceTest, HobbyValidationServiceTest
+  - **Integration Tests (4):** BookingValidationIntegrationTest, MeetingsValidationIntegrationTest, MessagesValidationIntegrationTest, SocialMediaValidationIntegrationTest
 
-ℹ️ **Note:** Some unit tests (Booking, Meetings, Messages, SocialMedia, Hobby) have been converted to write real data to database. See **Unit Tests Now Writing Real Data to Database** section below. For integration tests, see **Integration Tests** section.
+**Important:** All data goes to test database (`ghrami_db_test` via `--env=test`) - Dev database protected ✅
 
 ### Run All Tests:
 ```bash
@@ -172,64 +173,7 @@ php vendor/bin/phpunit -v
 
 ---
 
-## Unit Tests Now Writing Real Data to Database
-
-**Note:** The following 5 unit test suites have been converted to write real data to `ghrami_db` instead of using mocks. Each test:
-- Creates real entities (User, Booking, Meeting, Post, etc.)
-- Persists to database in transaction isolation
-- Rolls back automatically after test completion
-- **Safe to run repeatedly** with no data accumulation
-
-### 5 Converted Unit Test Suites (40 total tests):
-
-#### 1. **BookingValidationServiceTest.php** (10 tests) ← **WRITES TO DB - DATA PERSISTS**
-- Creation/add tests only for Booking entities with real User/ClassProvider/LearningClass
-- **Data persists in ghrami_db after test completes**
-- Tests: testValidateBookingWithAllRequiredFields, testValidateBookingWithConfirmedStatus, testValidateBookingWithAllValidStatuses (✓ passing)
-- Verify: Query `bookings`, `users`, `class_providers`, `learning_classes` tables to see test data
-
-#### 2. **MeetingsValidationServiceTest.php** (8 tests) ← **WRITES TO DB - DATA PERSISTS**
-- Creation/add tests only for Meeting entities with real User/Connection
-- UUID generation for Meeting and Connection IDs
-- **Data persists in ghrami_db after test completes**
-- Tests: testValidateMeetingWithAllRequiredFields, testValidateMeetingWithDescription, testValidateMeetingWithLocation (✓ passing)
-- Verify: Query `meetings`, `connections`, `users` tables to see test data
-
-#### 3. **MessagesValidationServiceTest.php** (8 tests) ← **WRITES TO DB - DATA PERSISTS**
-- Creation/add tests only for Message entities between real Users
-- **Data persists in ghrami_db after test completes**
-- Tests: testValidateMessageWithAllRequiredFields, testValidateMessageWithDifferentUserIds (✓ passing)
-- Verify: Query `messages` table to see test messages between users
-
-#### 4. **SocialMediaValidationServiceTest.php** (8 tests) ← **WRITES TO DB - DATA PERSISTS**
-- Creation/add tests only for Post entities with real Users
-- **Data persists in ghrami_db after test completes**
-- Tests: testValidatePostWithAllRequiredFields, testValidatePostWithImageType, testValidatePostWithVideoType (✓ passing)
-- Verify: Query `posts` table to see test posts
-
-#### 5. **HobbyValidationServiceTest.php** (6 tests) ← **WRITES TO DB - DATA PERSISTS**
-- Creation/add tests only for Hobby entities with real Users
-- **Data persists in ghrami_db after test completes**
-- Tests: testValidateWithValidNameAndCategory, testValidateWithNameOnly, testValidateWithAllValidCategories (✓ passing)
-- Example: Hobbies created in tests will exist in database (name: 'Guitar', 'Basketball', 'Go', 'Coding', etc.)
-
-### Run Converted Unit Tests:
-```bash
-php vendor/bin/phpunit tests/Service/BookingValidationServiceTest.php tests/Service/MeetingsValidationServiceTest.php tests/Service/MessagesValidationServiceTest.php tests/Service/SocialMediaValidationServiceTest.php tests/Service/HobbyValidationServiceTest.php
-```
-
-**Expected Result:** 40 tests, 46 assertions, ~2-3 seconds, 40+ MB memory (all passing)
-
----
-
-## Integration Tests (Write Real Data to Database)
-
-**Total Tests:** 24 across 4 integration test suites
-- 44 assertions
-- All tests passing ✅
-- **Tests write real data to database (`ghrami_db`)**
-- Configured in `.env.test` to use same database as dev environment
-- Transaction-based isolation: Each test runs in its own transaction and rolls back automatically
+## Integration Tests (Write Real Data to Test Database)
 
 ### Integration Test Suites Overview:
 

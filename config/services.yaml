@@ -69,6 +69,10 @@ services:
         arguments:
             $groqApiKey: '%env(GROQ_API_KEY)%'
 
+    App\Service\DailySummaryService:
+        arguments:
+            $groqApiKey: '%env(GROQ_API_KEY)%'
+
     App\Service\AiContentService:
         arguments:
             $groqApiKey: '%env(GROQ_API_KEY)%'

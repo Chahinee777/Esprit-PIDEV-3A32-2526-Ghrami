@@ -449,11 +449,29 @@
             </div>
         </div>
         
-        <!-- Friend Suggestions -->
+        <!-- Daily Summary -->
         <div class="card">
-            <h4 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">✨ Suggestions</h4>
-            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: #65676b;">
-                Connectez-vous avec d'autres membres partageant vos passions
+            <h4 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">📊 Votre Journée</h4>
+            <button id="daily-summary-btn" style="
+                width: 100%;
+                padding: 12px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                <span id="summary-btn-text">📈 Voir votre résumé quotidien</span>
+            </button>
+            <div id="summary-loading" style="display: none; text-align: center; padding: 12px; font-size: 13px; color: #65676b;">
+                ⏳ Génération du résumé...
             </div>
         </div>
     </aside>
@@ -600,7 +618,241 @@
     </div>
 </div>
 
+<!-- Daily Summary Modal -->
+<div id="dailySummaryModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: white; border-radius: 16px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column;">
+        
+        <!-- Modal Header -->
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; display: flex; justify-content: space-between; align-items: center; border-radius: 16px 16px 0 0;">
+            <h2 style="margin: 0; font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px;">📊 Votre Résumé d'Aujourd'hui</h2>
+            <button onclick="closeDailySummaryModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: white; padding: 0; width: 40px; height: 40px;">✕</button>
+        </div>
+
+        <!-- Modal Body -->
+        <div id="dailySummaryContent" style="flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
+            <!-- Loading State -->
+            <div id="summaryLoading" style="text-align: center; padding: 40px 20px;">
+                <div style="font-size: 48px; margin-bottom: 12px; animation: pulse 1.5s infinite;">⏳</div>
+                <p style="color: #65676b; margin: 0;">Génération de votre résumé...</p>
+            </div>
+
+            <!-- Summary Text -->
+            <div id="summaryText" style="display: none; font-size: 16px; line-height: 1.6; color: #1c1e21; padding: 16px; background: #f8f9ff; border-radius: 12px; border-left: 4px solid #667eea;"></div>
+
+            <!-- Statistics Grid -->
+            <div id="summaryStats" style="display: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
+                <!-- Stats will be populated here -->
+            </div>
+
+            <!-- Achievements -->
+            <div id="achievementsContainer" style="display: none;">
+                <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: #1c1e21;">🏆 Accomplissements</h3>
+                <div id="achievementsList" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Achievements will be populated here -->
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div id="recommendationsContainer" style="display: none;">
+                <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: #1c1e21;">💡 Recommandations</h3>
+                <div id="recommendationsList" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Recommendations will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div style="padding: 16px 24px; border-top: 1px solid #e4e6eb; display: flex; gap: 12px; justify-content: flex-end;">
+            <button onclick="closeDailySummaryModal()" style="padding: 10px 24px; background: #f0f2f5; color: #1c1e21; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='#e4e6eb'" onmouseout="this.style.background='#f0f2f5'">Fermer</button>
+            <button onclick="shareSummaryToFeed()" id="shareBtn" style="padding: 10px 24px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s;" onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">Partager sur le fil</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+</style>
+
 <script>
+    // Daily Summary Functions
+    document.getElementById('daily-summary-btn')?.addEventListener('click', function() {
+        openDailySummaryModal();
+    });
+
+    function openDailySummaryModal() {
+        const modal = document.getElementById('dailySummaryModal');
+        modal.style.display = 'flex';
+        
+        // Show loading state
+        document.getElementById('summaryLoading').style.display = 'block';
+        document.getElementById('summaryText').style.display = 'none';
+        document.getElementById('summaryStats').style.display = 'none';
+        document.getElementById('achievementsContainer').style.display = 'none';
+        document.getElementById('recommendationsContainer').style.display = 'none';
+
+        // Fetch daily summary
+        fetchDailySummary();
+    }
+
+    function closeDailySummaryModal() {
+        document.getElementById('dailySummaryModal').style.display = 'none';
+    }
+
+    function fetchDailySummary() {
+        fetch('{{ path('app_summary_daily') }}', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            console.log('Summary response status:', response.status);
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.error('Response error body:', text);
+                    throw new Error(`HTTP ${response.status}: ${text}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Summary data received:', data);
+            if (data.success && data.data) {
+                displayDailySummary(data.data);
+            } else {
+                showSummaryError(data.error || 'Failed to load summary');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching summary:', error);
+            showSummaryError('Unable to generate summary. Please try again. (' + error.message + ')');
+        });
+    }
+
+    function displayDailySummary(summaryData) {
+        document.getElementById('summaryLoading').style.display = 'none';
+        
+        // Display summary text
+        const summaryText = document.getElementById('summaryText');
+        summaryText.textContent = summaryData.summary || 'No summary available';
+        summaryText.style.display = 'block';
+
+        // Display statistics
+        displayStats(summaryData.stats);
+
+        // Display achievements
+        if (summaryData.achievements && summaryData.achievements.length > 0) {
+            displayAchievements(summaryData.achievements);
+        }
+
+        // Display recommendations
+        if (summaryData.recommendations && summaryData.recommendations.length > 0) {
+            displayRecommendations(summaryData.recommendations);
+        }
+    }
+
+    function displayStats(stats) {
+        const statsContainer = document.getElementById('summaryStats');
+        statsContainer.innerHTML = '';
+
+        const statItems = [
+            { label: '📝 Posts', value: stats.posts_created || 0 },
+            { label: '💬 Commentaires', value: stats.comments_made || 0 },
+            { label: '🎯 Hobbies', value: stats.hobbies_logged || 0 },
+            { label: '⏱️ Heures', value: (stats.hours_spent || 0).toFixed(1) },
+            { label: '👥 Connexions', value: stats.connections_made || 0 },
+            { label: '📚 Cours', value: (stats.classes_attended || 0) + (stats.classes_taught || 0) },
+            { label: '📅 Réunions', value: stats.meetings_attended || 0 },
+            { label: '🏆 Badges', value: stats.badges_earned || 0 },
+            { label: '❤️ Likes', value: stats.likes_received || 0 },
+            { label: '✉️ Messages', value: stats.messages_sent || 0 },
+        ];
+
+        statItems.forEach(item => {
+            const statDiv = document.createElement('div');
+            statDiv.style.cssText = 'background: #f8f9ff; border-radius: 12px; padding: 16px 12px; text-align: center; border: 1px solid #e4e6eb; transition: all 0.2s;';
+            statDiv.innerHTML = `
+                <div style="font-size: 24px; margin-bottom: 8px;">${item.value}</div>
+                <div style="font-size: 12px; color: #65676b; font-weight: 500;">${item.label}</div>
+            `;
+            statDiv.onmouseover = function() {
+                this.style.background = '#f0f2f5';
+                this.style.borderColor = '#667eea';
+            };
+            statDiv.onmouseout = function() {
+                this.style.background = '#f8f9ff';
+                this.style.borderColor = '#e4e6eb';
+            };
+            statsContainer.appendChild(statDiv);
+        });
+
+        statsContainer.style.display = 'grid';
+    }
+
+    function displayAchievements(achievements) {
+        const container = document.getElementById('achievementsContainer');
+        const list = document.getElementById('achievementsList');
+        list.innerHTML = '';
+
+        achievements.forEach(achievement => {
+            const item = document.createElement('div');
+            item.style.cssText = 'background: #f8f9ff; border-radius: 8px; padding: 12px 16px; border-left: 4px solid #ffc107; display: flex; align-items: center; gap: 12px;';
+            item.innerHTML = `<span style="font-weight: 600;">${achievement}</span>`;
+            list.appendChild(item);
+        });
+
+        container.style.display = 'block';
+    }
+
+    function displayRecommendations(recommendations) {
+        const container = document.getElementById('recommendationsContainer');
+        const list = document.getElementById('recommendationsList');
+        list.innerHTML = '';
+
+        recommendations.forEach(rec => {
+            const item = document.createElement('div');
+            item.style.cssText = 'background: #f8f9ff; border-radius: 8px; padding: 12px 16px; border-left: 4px solid #22c55e; display: flex; align-items: center; gap: 12px;';
+            item.innerHTML = `<span>${rec}</span>`;
+            list.appendChild(item);
+        });
+
+        container.style.display = 'block';
+    }
+
+    function showSummaryError(message) {
+        document.getElementById('summaryLoading').style.display = 'none';
+        const summaryText = document.getElementById('summaryText');
+        summaryText.textContent = message;
+        summaryText.style.display = 'block';
+    }
+
+    function shareSummaryToFeed() {
+        const summaryText = document.getElementById('summaryText').textContent;
+        if (!summaryText) {
+            alert('No summary to share');
+            return;
+        }
+
+        // You could also share the full stats here
+        // For now, just share the AI-generated summary text
+        const shareContent = `📊 Voici mon résumé d'aujourd'hui sur Ghrami:\n\n${summaryText}\n\n#Ghrami #MonJour`;
+        
+        // If you have a share post functionality, use it here
+        if (typeof openPostCreateForm === 'function') {
+            openPostCreateForm(shareContent);
+        } else {
+            // Fallback: copy to clipboard
+            navigator.clipboard.writeText(shareContent).then(() => {
+                alert('Résumé copié dans le presse-papiers!');
+            });
+        }
+    }
+
     // Story Modal Functions
     function openCreateStoryModal() {
         document.getElementById('createStoryModal').style.display = 'flex';
