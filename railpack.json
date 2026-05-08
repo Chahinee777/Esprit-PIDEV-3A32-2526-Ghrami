@@ -1,0 +1,16 @@
+{
+  "php": {
+    "extensions": [
+      "pdo",
+      "pdo_mysql",
+      "mbstring",
+      "xml",
+      "curl",
+      "intl",
+      "tokenizer",
+      "ctype",
+      "iconv",
+      "session"
+    ]
+  }
+}
