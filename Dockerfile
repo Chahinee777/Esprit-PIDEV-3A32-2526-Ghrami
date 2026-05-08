@@ -26,6 +26,7 @@ RUN echo '<VirtualHost *:80>\n\
         AllowOverride All\n\
         Require all granted\n\
         Options -Indexes +FollowSymLinks\n\
+        FallbackResource /index.php\n\
     </Directory>\n\
 </VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
