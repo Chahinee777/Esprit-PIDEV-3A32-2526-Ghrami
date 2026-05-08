@@ -32,6 +32,8 @@ COPY . /var/www/html
 
 WORKDIR /var/www/html
 
+RUN touch /var/www/html/.env
+
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
 RUN mkdir -p /var/www/html/var && chown -R www-data:www-data /var/www/html/var
