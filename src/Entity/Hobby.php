@@ -60,10 +60,10 @@ class Hobby
     #[Assert\Length(max: 1200, maxMessage: 'Description cannot exceed {{ limit }} characters.')]
     public ?string $description = null;
 
-    #[ORM\OneToMany(targetEntity: Progress::class, mappedBy: 'hobby', cascade: ['remove'])]
+    #[ORM\OneToMany(targetEntity: Progress::class, mappedBy: 'hobby', cascade: ['remove'], orphanRemoval: true)]
     public Collection $progress;
 
-    #[ORM\OneToMany(targetEntity: Milestone::class, mappedBy: 'hobby', cascade: ['remove'])]
+    #[ORM\OneToMany(targetEntity: Milestone::class, mappedBy: 'hobby', cascade: ['remove'], orphanRemoval: true)]
     public Collection $milestones;
 
     public function __construct()

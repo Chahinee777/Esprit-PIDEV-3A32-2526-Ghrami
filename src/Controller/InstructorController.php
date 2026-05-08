@@ -245,7 +245,7 @@ final class InstructorController extends AbstractController
             $class->title           = $title;
             $class->category        = $category !== '' ? $category : null;
             $class->description     = $description !== '' ? $description : null;
-            $class->price           = $price;
+            $class->price           = (string) $price;
             $class->duration        = $duration;
             $class->maxParticipants = $maxParticipants;
 
@@ -312,7 +312,7 @@ final class InstructorController extends AbstractController
         $class->title           = $title;
         $class->category        = $category !== '' ? $category : null;
         $class->description     = $description !== '' ? $description : null;
-        $class->price           = $price;
+        $class->price           = (string) $price;
         $class->duration        = $duration;
         $class->maxParticipants = $maxParticipants;
 
@@ -747,7 +747,7 @@ public function debugCreate(Request $request, EntityManagerInterface $em): Respo
             $class = new LearningClass();
             $class->provider        = $provider;
             $class->title           = 'Debug Test Class';
-            $class->price           = 9.99;
+            $class->price           = '9.99';
             $class->duration        = 60;
             $class->maxParticipants = 5;
             $em->persist($class);

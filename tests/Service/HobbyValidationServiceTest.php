@@ -36,7 +36,8 @@ class HobbyValidationServiceTest extends BaseIntegrationTest
 
     // ─────────────────────────────────────────────────────────────────────────
     // VALID CASES - Creates real hobby entities in database
-    // ─────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────php vendor/bin/phpstan analyse src/ --level=5
+
 
     /**
      * @test

@@ -40,9 +40,9 @@ class Booking
     )]
     public ?string $paymentStatus = 'pending';
 
-    #[ORM\Column(name: 'total_amount', type: Types::FLOAT)]
+    #[ORM\Column(name: 'total_amount', type: Types::DECIMAL, precision: 10, scale: 2)]
     #[Assert\PositiveOrZero(message: 'Total amount cannot be negative.')]
-    public float $totalAmount = 0;
+    public string $totalAmount = '0.00';
 
     #[ORM\Column(name: 'stripe_session_id', length: 255, nullable: true)]
     public ?string $stripeSessionId = null;

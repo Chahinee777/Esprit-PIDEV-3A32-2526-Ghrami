@@ -37,9 +37,9 @@ class LearningClass
     #[Assert\Length(max: 50, maxMessage: 'Category cannot exceed {{ limit }} characters.')]
     public ?string $category = null;
 
-    #[ORM\Column(type: Types::FLOAT)]
+    #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     #[Assert\PositiveOrZero(message: 'Price cannot be negative.')]
-    public float $price = 0;
+    public string $price = '0.00';
 
     #[ORM\Column(type: Types::INTEGER)]
     #[Assert\Positive(message: 'Duration must be greater than zero.')]

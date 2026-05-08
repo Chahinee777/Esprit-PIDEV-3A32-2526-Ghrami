@@ -1,10 +1,12 @@
 doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
-
-        # IMPORTANT: You MUST configure your server version,
-        # either here or in the DATABASE_URL env var (see .env file)
-        #server_version: '16'
+        server_version: '10.4.32-MariaDB'
+        
+        # Default table options with UTF-8 collation
+        default_table_options:
+            charset: utf8mb4
+            collation: utf8mb4_unicode_ci
 
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true

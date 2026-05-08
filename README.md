@@ -158,3 +158,29 @@ Support : support@ghrami.tn
 ---
 
 **Version:** 1.0.0 | **Dernière mise à jour:** Avril 2026
+
+---
+
+## 🚨 What's New (May 2026)
+
+- AI-powered **Daily Summary** modal (Groq llama-3.1-8b-instant) — shows personalised daily usage, achievements and recommendations.
+- Groq API integration added; configure `GROQ_API_KEY` in `.env` to enable AI summaries.
+- Money fields converted to `DECIMAL(10,2)` (`bookings.total_amount`, `classes.price`) to avoid floating-point errors. A migration script was added under `migrations/`.
+- PHP timezone set to `UTC` in `src/Kernel.php` to ensure consistent timestamps with the DB.
+- Improved error logging across the Daily Summary service for easier debugging.
+- Known issue: Messaging endpoint fallback behavior handled; if you see `Unable to generate summary` the UI will show fallback recommendations.
+
+## 🛠 Important Notes for Upgrading
+
+- If you previously used FLOAT for monetary columns, run the migration or alter the columns manually:
+	- `ALTER TABLE bookings MODIFY COLUMN total_amount DECIMAL(10,2) NOT NULL DEFAULT '0.00';`
+	- `ALTER TABLE classes MODIFY COLUMN price DECIMAL(10,2) NOT NULL DEFAULT '0.00';`
+- Ensure `.env` contains `GROQ_API_KEY` and database credentials before running `php bin/console doctrine:migrations:migrate`.
+
+---
+
+## 🎬 Promo Video Prompt
+
+Use the script below with your video production tool or AI video generator (e.g., Pictory, Synthesia, Descript):
+
+"Create a 60–90 second promotional video for Ghrami — a social learning platform connecting people through hobbies, skill-sharing and local classes. Start with an upbeat music bed and a 5-second logo reveal. Show quick scenes: (1) a user posting a photo and getting likes, (2) joining a local class, (3) tracking hobby progress with milestones, (4) earning a badge, (5) the AI-powered Daily Summary modal with stats and personalized tips. Use warm, vibrant color grading (purples and teals). Add captions highlighting: 'Connect. Learn. Share.' End with a CTA card: 'Join Ghrami — Sign up today at ghrami.local' and a 3-second screen with the website and social handles. Voiceover friendly, energetic, bilingual (French + English) options."
