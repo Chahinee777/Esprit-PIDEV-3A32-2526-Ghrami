@@ -5,8 +5,8 @@ set -e
 php bin/console cache:clear --no-warmup
 php bin/console cache:warmup
 
-# Run migrations
-php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+# For fresh database - force schema creation instead of migrations
+php bin/console doctrine:schema:update --force --complete
 
 # Start Apache
 exec "$@"
