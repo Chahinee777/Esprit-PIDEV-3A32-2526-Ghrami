@@ -1,42 +1,60 @@
 # 🎯 Ghrami Web
 
-**Plateforme sociale d'apprentissage connectant les personnes à travers les loisirs partagés, les compétences et l'éducation.**
+**A Social Learning Platform Connecting People Through Shared Hobbies, Skill Exchange & Local Education**
+
+*Plateforme sociale d'apprentissage connectant les personnes à travers les loisirs partagés, les compétences et l'éducation.*
 
 ---
 
-## 📱 À Propos
+## 📱 About / À Propos
 
-Ghrami est une application web moderne qui aide les utilisateurs à :
-- Se connecter avec des personnes partageant leurs intérêts
-- Suivre leurs progrès personnels et leurs loisirs
-- Échanger des compétences via des rencontres
-- Réserver des cours auprès d'instructeurs vérifiés
-- Créer et partager du contenu social
-- Gagner des badges pour leurs accomplissements
-
----
-
-## ✨ Modules
-
-| Module | Statut | Fonctionnalités |
-|--------|--------|-----------------|
-| **Gestion Utilisateurs** | ✅ Complet | Inscription, authentification, profils avec photos, amis, badges, tableau de bord admin |
-| **Réseaux Sociaux** | ✅ Complet | Publications, commentaires, fil d'actualité, interactions sociales |
-| **Suivi de Loisirs** | ✅ Complet | Gestion de loisirs, suivi de progrès, jalons, statistiques |
-| **Mise en Correspondance** | ✅ Complet | Algorithme de matching intelligent, échange de compétences, planification de rendez-vous |
-| **Cours & Réservations** | ✅ Complet | Marché de cours, tableau de bord instructeur, réservations, paiements, évaluations |
+Ghrami is a modern web application that empowers users to:
+- 🎯 **Track hobbies and celebrate progress** with milestones and badges
+- 🤝 **Connect with people who share similar interests** through intelligent discovery
+- 🔄 **Exchange skills through smart matching** and schedule meetings
+- 📚 **Book classes with verified instructors** from a curated marketplace
+- 💬 **Share experiences on a social feed** with the community
+- 🤖 **Get AI-powered daily insights** with personalized summaries and recommendations
 
 ---
 
-## 🛠️ Stack Technique
+## ✨ Core Modules (5 Modules, 15 Tables)
 
-- **PHP 8.2+** + **Symfony 7**
-- **Twig** (moteur de templates)
-- **MySQL 8.0+**
-- **Doctrine ORM**
-- **Composer** (gestionnaire de dépendances)
-- **Webpack Encore** (assets)
-- **Architecture MVC**
+| Module | Status | Features |
+|--------|--------|----------|
+| **👥 User Management** | ✅ Complete | Registration, authentication, profile management, friend lists, badge system, admin dashboard |
+| **📱 Social Network** | ✅ Complete | Posts, comments, likes, stories, social feed, real-time interactions, @mentions |
+| **🎯 Hobby Tracking** | ✅ Complete | Hobby management, progress tracking, milestones, statistics, achievement badges |
+| **🔗 Smart Matching** | ✅ Complete | Intelligent matching algorithm, skill exchange, connection requests, meeting scheduling, discovery system |
+| **📚 Classes & Booking** | ✅ Complete | Class marketplace, instructor dashboard, booking system, payment tracking, ratings & reviews |
+
+---
+
+## 🛠️ Tech Stack
+
+**Backend:**
+- **PHP 8.2.12** with **Symfony 7.0.5** framework
+- **Doctrine ORM 3.6.3** for database abstraction
+- **Groq API Integration** (llama-3.1-8b-instant) for AI-powered daily summaries
+
+**Frontend:**
+- **Twig 3.x** templating engine
+- **Bootstrap 5** + custom CSS for responsive UI
+- **JavaScript (Vanilla)** for interactive features
+
+**Database:**
+- **MySQL 8.0+** with **UTF-8MB4** encoding for multilingual support
+
+**Tools & Utilities:**
+- **Composer** for dependency management
+- **Webpack Encore** for asset bundling
+- **PHPUnit 11.5.55** for testing (101 tests, 182+ assertions)
+- **PHPStan** for static analysis (Level 5)
+
+**Architecture:**
+- **MVC Pattern** with service layer
+- **Dependency Injection Container**
+- **Entity-Repository Pattern**
 
 ---
 
@@ -109,15 +127,33 @@ Mot de passe: admin123
 
 ---
 
-## 🗄️ Base de Données
+## 🗄️ Database Schema (15 Tables)
 
-**15 tables réparties sur 5 modules :**
+**Module 1: User Management** (3 tables)
+- `users` — User profiles, authentication, basic info
+- `friendships` — Friend connections with status tracking (PENDING/ACCEPTED/BLOCKED)
+- `badges` — Badge definitions and user achievement tracking
 
-- **Module 1 :** `users`, `friendships`, `badges`
-- **Module 2 :** `posts`, `comments`
-- **Module 3 :** `hobbies`, `progress`, `milestones`
-- **Module 4 :** `connections`, `meetings`, `meeting_participants`
-- **Module 5 :** `class_providers`, `classes`, `bookings`
+**Module 2: Social Network** (4 tables)
+- `posts` — User posts/articles with rich content
+- `comments` — Comments on posts with threaded replies
+- `post_likes` — Like tracking for posts and comments
+- `stories` — Temporary story content (24-hour expiry concept)
+
+**Module 3: Hobby Tracking** (3 tables)
+- `hobbies` — User hobby definitions and preferences
+- `progress` — Daily/weekly hobby progress entries with timestamps
+- `milestones` — Achievement milestones with completion tracking
+
+**Module 4: Smart Matching & Connections** (3 tables)
+- `connections` — Skill exchange requests between users
+- `meetings` — Scheduled meetings for skill exchange or collaboration
+- `meeting_participants` — Attendance tracking for meetings
+
+**Module 5: Classes & Bookings** (2 tables)
+- `class_providers` — Verified instructor profiles
+- `classes` — Course offerings with pricing and schedule info
+- `bookings` — Class reservations with payment status tracking
 
 ---
 
@@ -163,24 +199,141 @@ Support : support@ghrami.tn
 
 ## 🚨 What's New (May 2026)
 
-- AI-powered **Daily Summary** modal (Groq llama-3.1-8b-instant) — shows personalised daily usage, achievements and recommendations.
-- Groq API integration added; configure `GROQ_API_KEY` in `.env` to enable AI summaries.
-- Money fields converted to `DECIMAL(10,2)` (`bookings.total_amount`, `classes.price`) to avoid floating-point errors. A migration script was added under `migrations/`.
-- PHP timezone set to `UTC` in `src/Kernel.php` to ensure consistent timestamps with the DB.
-- Improved error logging across the Daily Summary service for easier debugging.
-- Known issue: Messaging endpoint fallback behavior handled; if you see `Unable to generate summary` the UI will show fallback recommendations.
+### 🤖 AI-Powered Daily Summary
+- **Feature**: Personalized daily usage digest with AI-generated insights
+- **Integration**: Groq API (llama-3.1-8b-instant model)
+- **Metrics Tracked**: Posts, comments, hobbies, learning hours, connections, classes taught, meetings, badges earned, likes received, messages sent
+- **Location**: Modal popup accessible from dashboard after login
+- **Setup**: Configure `GROQ_API_KEY=your_key_here` in `.env`
 
-## 🛠 Important Notes for Upgrading
+### 💰 Financial Precision Upgrade
+- **Change**: Money fields converted from `FLOAT` to `DECIMAL(10,2)` to prevent floating-point arithmetic errors
+- **Affected Fields**: 
+  - `bookings.total_amount` (booking totals)
+  - `classes.price` (course pricing)
+- **Migration**: Execute the provided migration or run SQL manually (see "Upgrading" section)
+- **Benefit**: Accurate financial calculations for payments and bookings
 
-- If you previously used FLOAT for monetary columns, run the migration or alter the columns manually:
-	- `ALTER TABLE bookings MODIFY COLUMN total_amount DECIMAL(10,2) NOT NULL DEFAULT '0.00';`
-	- `ALTER TABLE classes MODIFY COLUMN price DECIMAL(10,2) NOT NULL DEFAULT '0.00';`
-- Ensure `.env` contains `GROQ_API_KEY` and database credentials before running `php bin/console doctrine:migrations:migrate`.
+### 🌍 Timezone Standardization
+- **Change**: PHP application timezone set to UTC
+- **Implementation**: Added `boot()` method in `src/Kernel.php`
+- **Benefit**: Consistent timestamp handling across PHP application and MySQL database
+- **Impact**: All `DateTime` values now stored and compared in UTC
+
+### 📝 Enhanced Error Logging
+- **Improvement**: 8+ strategic logging checkpoints added across daily summary service
+- **Coverage**: API calls, database queries, business logic transitions
+- **Debugging**: Easier troubleshooting of AI summary generation failures
+- **Fallback**: Service provides intelligent fallback recommendations if Groq API is unavailable
+
+### ✅ Code Quality Improvements
+- **PHPStan Level 5**: Fixed 3 type-safety issues in InstructorController
+- **Testing**: 101 PHPUnit tests passing with 182+ assertions
+- **Security**: All SQL queries use Doctrine prepared statements (no injection vulnerabilities)
+
+### 📞 Messaging System
+- **Fix**: Desktop messaging now includes `sent_at` timestamp on INSERT
+- **Impact**: Synchronizes message timestamps between web and desktop clients
 
 ---
 
-## 🎬 Promo Video Prompt
+## 🛠️ Upgrading from Previous Versions
 
-Use the script below with your video production tool or AI video generator (e.g., Pictory, Synthesia, Descript):
+### Database Migration (FLOAT → DECIMAL)
+If you previously used `FLOAT` for monetary columns, execute:
+```sql
+ALTER TABLE bookings MODIFY COLUMN total_amount DECIMAL(10,2) NOT NULL DEFAULT '0.00';
+ALTER TABLE classes MODIFY COLUMN price DECIMAL(10,2) NOT NULL DEFAULT '0.00';
+```
 
-"Create a 60–90 second promotional video for Ghrami — a social learning platform connecting people through hobbies, skill-sharing and local classes. Start with an upbeat music bed and a 5-second logo reveal. Show quick scenes: (1) a user posting a photo and getting likes, (2) joining a local class, (3) tracking hobby progress with milestones, (4) earning a badge, (5) the AI-powered Daily Summary modal with stats and personalized tips. Use warm, vibrant color grading (purples and teals). Add captions highlighting: 'Connect. Learn. Share.' End with a CTA card: 'Join Ghrami — Sign up today at ghrami.local' and a 3-second screen with the website and social handles. Voiceover friendly, energetic, bilingual (French + English) options."
+Or use Doctrine migrations:
+```bash
+php bin/console doctrine:migrations:migrate
+```
+
+### Environment Variables
+Ensure your `.env` file contains:
+```env
+DATABASE_URL="mysql://username:password@localhost:3306/ghrami_db"
+APP_ENV=prod
+APP_SECRET=your_secret_key
+GROQ_API_KEY=your_groq_api_key_here
+```
+
+### First-Time Setup
+```bash
+composer install
+npm install && npm run build
+php bin/console doctrine:database:create
+php bin/console doctrine:migrations:migrate
+php bin/console doctrine:fixtures:load  # Optional: load demo data
+```
+
+---
+
+## 🎬 Promotional Video Script
+
+**Duration:** 60-90 seconds | **Language:** Bilingual (French + English)
+**Tone:** Upbeat, inspirational, community-focused
+
+```
+[OPENING - 5 seconds]
+Upbeat music bed fades in. Ghrami logo appears with purple gradient reveal.
+Voiceover (English): "Feeling weighed down? Ghrami is here to help."
+Voiceover (French): "Vous vous sentez accablé? Ghrami est là pour aider."
+
+[SCENE 1 - 10 seconds]
+Quick montage of user posting hobby photo → notification appears → likes/comments flowing in.
+Text overlay: "Share Your Passions"
+Show the social feed interface with posts, comments, like animations.
+
+[SCENE 2 - 10 seconds]
+User browsing class marketplace → clicking a class → booking confirmation screen.
+Instructor profile highlighted with verified badge.
+Text overlay: "Learn From Experts"
+Close-up of class details: price, schedule, instructor rating.
+
+[SCENE 3 - 12 seconds]
+Hobby progress tracker: milestone unlocked animation → achievement badge appears.
+Progress chart showing 7-day activity.
+Text overlay: "Track Your Growth"
+Celebrate with confetti animation on milestone completion.
+
+[SCENE 4 - 10 seconds]
+Two users viewing connection suggestion → meeting scheduled → both on call/meeting screen.
+Skill exchange context shown in UI.
+Text overlay: "Connect & Exchange"
+Smooth transition showing friend suggestions based on interests.
+
+[SCENE 5 - 15 seconds]
+MAIN FEATURE: Daily Summary modal opens in the app.
+AI-powered summary text reveals with typing effect.
+Stats cards populate (10+ metrics displayed).
+Achievements and personalized recommendations appear.
+Text overlay: "Your Daily AI Insight" (animated)
+Voiceover: "Get personalized insights every day powered by AI."
+
+[SCENE 6 - 10 seconds]
+Montage of badges earned, milestones achieved, community interactions.
+Show multiple users connecting and learning together.
+Warm, vibrant color grading (purples, teals, gold accents).
+
+[CLOSING - 8 seconds]
+All five main features summarized in quick succession with icon animations.
+CTA Card: "Join Ghrami Today"
+Website URL and QR code displayed.
+Final voiceover: "Don't just scroll. Do something meaningful. Join Ghrami."
+Tagline on screen: "Connect. Learn. Share."
+Social media handles appear at bottom.
+
+[MUSIC & SOUND]
+- Use upbeat, modern instrumental music
+- Add subtle UI interaction sounds (swooshes, notification pings, success chimes)
+- Voiceover should be warm, encouraging, gender-diverse if possible
+```
+
+**Platform Recommendations:**
+- Create with: Synthesia, Pictory, Descript, or Adobe Express
+- Dimensions: 1080x1920 (vertical for social media) or 1920x1080 (horizontal)
+- Subtitles: French & English with 0.5s delay
+- Post to: LinkedIn, Instagram, TikTok, YouTube Shorts

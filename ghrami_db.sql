@@ -802,21 +802,6 @@ CREATE TABLE `shared_songs` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `spotify_user_tokens`
---
-
-CREATE TABLE `spotify_user_tokens` (
-  `user_id` bigint(20) NOT NULL,
-  `access_token` varchar(500) NOT NULL,
-  `refresh_token` varchar(500) DEFAULT NULL,
-  `expires_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
 -- Structure de la table `stories`
 --
 
@@ -826,7 +811,7 @@ CREATE TABLE `stories` (
   `caption` varchar(500) DEFAULT NULL,
   `image_url` varchar(500) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `expires_at` timestamp NOT NULL DEFAULT (current_timestamp() + interval 24 hour)
+  `expires_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1091,13 +1076,6 @@ ALTER TABLE `shared_songs`
   ADD KEY `idx_shared_songs_track` (`spotify_track_id`);
 
 --
--- Index pour la table `spotify_user_tokens`
---
-ALTER TABLE `spotify_user_tokens`
-  ADD PRIMARY KEY (`user_id`),
-  ADD KEY `idx_spotify_tokens_user` (`user_id`);
-
---
 -- Index pour la table `stories`
 --
 ALTER TABLE `stories`
@@ -1354,12 +1332,6 @@ ALTER TABLE `progress`
 --
 ALTER TABLE `shared_songs`
   ADD CONSTRAINT `shared_songs_ibfk_1` FOREIGN KEY (`post_id`) REFERENCES `posts` (`post_id`) ON DELETE CASCADE;
-
---
--- Contraintes pour la table `spotify_user_tokens`
---
-ALTER TABLE `spotify_user_tokens`
-  ADD CONSTRAINT `spotify_user_tokens_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
 -- Contraintes pour la table `stories`
